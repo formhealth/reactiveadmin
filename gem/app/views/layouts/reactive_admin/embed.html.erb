@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+
+  <title><%= [@page_title, ReactiveAdmin::AA.site_title(self)].compact.join(" | ") %></title>
+
+  <%= ReactiveAdmin::AA.embed_head(self) %>
+
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+</head>
+<body class="active_admin logged_in <%= controller.controller_path.tr("/", "_") %> <%= controller.action_name %>" data-reactiveadmin-embed>
+<div id="wrapper">
+  <div class="flashes">
+    <% flash_messages.each do |type, message| %>
+      <%= content_tag :div, message, class: "flash flash_#{type}" %>
+    <% end %>
+  </div>
+  <div id="active_admin_content" class="without_sidebar">
+    <div id="main_content_wrapper">
+      <div id="main_content">
+        <%= yield %>
+      </div>
+    </div>
+  </div>
+</div>
+<%= javascript_tag ReactiveAdmin::Embed.bridge_js, nonce: true %>
+</body>
+</html>

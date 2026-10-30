@@ -1,0 +1,3 @@
+<%= semantic_form_for @search, as: :filter, url: "/admin/posts", method: :get do |f| %>
+  <%= f.inputs { f.input :term, as: :string } %>
+<% end %>

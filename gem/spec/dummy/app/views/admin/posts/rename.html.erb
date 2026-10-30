@@ -1,0 +1,6 @@
+<%= semantic_form_for resource, as: :post, url: rename_admin_post_path(resource), method: :post do |f| %>
+  <%= f.inputs do %>
+    <%= f.input :title %>
+  <% end %>
+  <%= f.actions %>
+<% end %>

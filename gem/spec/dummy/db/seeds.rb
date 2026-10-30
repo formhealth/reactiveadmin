@@ -1,0 +1,25 @@
+# Sample data for the end-to-end crawl (`pnpm crawl:dummy` in apps/standalone); specs build their own.
+alice = Author.create!(name: "Alice Author", email: "alice@example.com", rating: 4.5, born_on: Date.new(1990, 1, 2))
+bob = Author.create!(name: "Bob Builder", email: "bob@example.com", rating: 2.0)
+Profile.create!(author: alice, bio: "Writes about Ruby.")
+news = Category.create!(name: "News", settings: {"layout" => "wide"})
+ruby = Tag.create!(name: "ruby")
+plan = Plan.create!(name: "Pro")
+
+AdminUser.create!(name: "Ada Admin", email: "ada@example.com", role: "admin")
+AdminUser.create!(name: "Ed Editor", email: "ed@example.com", role: "editor", author: alice)
+
+hello = Post.create!(author: alice, title: "Hello world", body: "First post", status: :published, published_at: Time.zone.local(2026, 1, 5, 12),
+  views_count: 1200, featured: true, category: news, metadata: {"seo" => {"slug" => "hello"}}, tags: [ruby])
+Post.create!(author: bob, title: "Bob's draft", status: :draft, views_count: 3)
+Post.create!(author: alice, title: "Old news", status: :archived, published_at: Time.zone.local(2025, 6, 1, 8))
+Comment.create!(post: hello, body: "Nice post", approved: true, context: {"ip" => "127.0.0.1"})
+Comment.create!(post: hello, body: "Needs review")
+Account.create!(author: alice, plan:, sponsor: bob)
+Memo.create!(title: "Standup", summary: "Notes", payload: {"items" => [1, 2]}, secret: "hunter2", priority: :high, author: alice, noted_at: Time.zone.local(2026, 2, 1, 9))
+Note.create!(title: "Reminder", body: "Water the plants", weight: 2)
+Locker.create!(label: "A1", code: "1234")
+Roster.create!(name: "Night shift", contacts: {"0" => {"email" => "a@example.com", "role" => "lead"}}, starts_on: Date.new(2026, 3, 1))
+Scan.create!(title: "Receipt")
+Ticket.create!(title: "Printer is on fire")
+StockLevel.create!(warehouse: "east", sku: "A-1", quantity: 12, details: {"bin" => "7"})

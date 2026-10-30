@@ -1,0 +1,8 @@
+<%= semantic_form_for "", url: plain_admin_ticket_path(resource), method: :put do |f| %>
+  <%= f.inputs do %>
+    <%= f.input :title, as: :string %>
+    <%= f.input :labels, as: :check_boxes, collection: %w[a b] %>
+    <%= f.input :cc, as: :select, multiple: true, collection: %w[x y] %>
+  <% end %>
+  <%= f.submit "Apply", data: {confirm: "Apply to the ticket?"} %>
+<% end %>

@@ -1,0 +1,12 @@
+<%= semantic_form_for "broadcast", url: "/admin/broadcasts/announce" do |f| %>
+  <p>Goes to every reader.</p>
+  <%= f.inputs do %>
+    <%= f.input :subject, required: true %>
+    <%= f.input :body, as: :text, input_html: {rows: 3} %>
+    <%= f.input :urgent, as: :boolean %>
+    <%= f.input :audience, as: :radio, collection: %w[all staff] %>
+    <%= f.input :tags, as: :check_boxes, collection: %w[news ops] %>
+    <%= f.input :region, as: :select, collection: (1..150).map { ["Region #{it}", it] } %>
+  <% end %>
+  <%= f.submit "Send announcement", data: {confirm: "Send to everyone?"} %>
+<% end %>

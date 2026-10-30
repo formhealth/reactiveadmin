@@ -1,0 +1,1 @@
+require "reactive_admin"

@@ -1,0 +1,18 @@
+source "https://rubygems.org"
+
+gemspec
+
+gem "rails", "~> 8.1.0"
+gem "activeadmin", "~> 3.5"
+gem "pundit"
+gem "sprockets-rails"
+gem "sqlite3"
+gem "pg"
+gem "rake"
+gem "puma"
+
+group :test do
+  gem "rspec-rails"
+  gem "json_schemer"
+  gem "standard", require: false
+end

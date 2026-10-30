@@ -1,0 +1,2 @@
+# Lint against the gemspec's minimum Ruby, so 4.0-only methods (Array#rfind) don't slip in.
+ruby_version: 3.4

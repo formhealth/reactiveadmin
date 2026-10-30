@@ -1,0 +1,21 @@
+name: Set up the client
+description: Install pnpm, Node and the workspace dependencies from the lockfile.
+
+inputs:
+  playwright:
+    description: Install Playwright's Chromium and its system dependencies.
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+    - if: inputs.playwright == 'true'
+      run: pnpm --filter standalone exec playwright install --with-deps chromium
+      shell: bash

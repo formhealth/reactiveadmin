@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+# Loads the schema and sample data into the dummy app's database (set DATABASE_URL to keep it apart
+# from the specs') and prints the admin's id, which the crawl signs in as.
+ENV["RAILS_ENV"] = "test"
+ENV["BUNDLE_GEMFILE"] ||= File.expand_path("../../../Gemfile", __dir__)
+
+require_relative "../config/environment"
+
+ActiveRecord::Migration.suppress_messages { load Rails.root.join("db/schema.rb") }
+load Rails.root.join("db/seeds.rb")
+puts AdminUser.find_by!(role: "admin").id

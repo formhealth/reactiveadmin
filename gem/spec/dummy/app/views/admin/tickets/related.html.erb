@@ -1,0 +1,20 @@
+<h2>Related tickets</h2>
+<%= semantic_form_for @search, as: :filter, url: related_admin_ticket_path(resource), method: :get do |f| %>
+  <%= f.inputs do %>
+    <%= f.input :term, as: :string %>
+    <%= f.input :pick, as: :select, collection: @search.choices %>
+  <% end %>
+  <%= f.submit "Filter" %>
+<% end %>
+
+<% if @search.term.present? %>
+  <h3><%= pluralize @search.matches.size, "match" %></h3>
+  <table>
+    <thead><tr><th>Title</th></tr></thead>
+    <tbody>
+      <% @search.matches.limit(5).each do |ticket| %>
+        <tr><td><%= ticket.title %></td></tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

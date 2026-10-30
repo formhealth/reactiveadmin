@@ -1,0 +1,6 @@
+<%= semantic_form_for resource, as: :ticket, url: retitle_admin_ticket_path(resource), method: :put do |f| %>
+  <%= f.inputs do %>
+    <%= f.input :title %>
+    <%= resource.no_such_method %>
+  <% end %>
+<% end %>

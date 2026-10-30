@@ -1,0 +1,5 @@
+# DATABASE_URL (Postgres in CI) overrides this entry.
+test:
+  adapter: sqlite3
+  database: tmp/test_<%= ENV.fetch("AUTH_ADAPTER", "default") %>.sqlite3
+  pool: 5

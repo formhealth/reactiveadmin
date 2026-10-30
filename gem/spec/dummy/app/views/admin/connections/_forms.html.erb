@@ -1,0 +1,8 @@
+<%= form_tag "/auth/raw" do %>
+  <%= hidden_field_tag :origin, "/admin/connections" %>
+  <%= submit_tag "Raw form connect" %>
+<% end %>
+<%= form_tag "/auth/search", method: :get do %>
+  <%= submit_tag "Not a post" %>
+<% end %>
+<form action="/auth/literal" method="post"><button type="submit">Literal connect</button></form>

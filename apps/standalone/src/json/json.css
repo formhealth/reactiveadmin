@@ -1,0 +1,77 @@
+.ra-json {
+  container-type: inline-size;
+}
+
+.ra-json:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.ra-json:focus [data-ra-active] {
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  outline: 1px solid var(--ring);
+}
+
+.ra-json [data-ra-active] .jer-edit-buttons {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .ra-json .jer-edit-buttons {
+    opacity: 1;
+  }
+}
+
+.ra-json .jer-value-null {
+  font-variant: normal;
+  font-size: inherit;
+}
+
+.ra-json .jer-edit-buttons button {
+  color: var(--muted-foreground);
+  border-radius: var(--radius-sm);
+}
+
+.ra-json .jer-edit-buttons button:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+
+/* Narrow: the row buttons overlay the row's end instead of taking width from the keys. */
+@container (max-width: 30rem) {
+  .ra-json .jer-collection-header-row,
+  .ra-json .jer-value-main-row {
+    position: relative;
+  }
+
+  .ra-json .jer-edit-buttons {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    z-index: 20;
+    margin: 0;
+    padding: 0 0.25em;
+    height: auto;
+    transform: translateY(-50%);
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 1px var(--border);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ra-json [data-ra-active] .jer-edit-buttons,
+  .ra-json .jer-edit-buttons:hover,
+  .ra-json .jer-collection-header-row:hover > .jer-edit-buttons,
+  .ra-json .jer-value-main-row:hover .jer-edit-buttons {
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ra-json * {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}

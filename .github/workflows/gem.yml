@@ -1,0 +1,116 @@
+name: gem
+
+on:
+  push:
+    branches: [main]
+    paths: ["gem/**", "openapi/**", ".ruby-version", ".github/workflows/gem.yml"]
+  workflow_dispatch:
+  pull_request:
+    paths: ["gem/**", "openapi/**", ".ruby-version", ".github/workflows/gem.yml"]
+
+concurrency:
+  group: gem-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: gem
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+          working-directory: gem
+      - run: bundle exec standardrb
+
+  # One run per authorization adapter (default, custom, pundit) against sqlite.
+  adapters:
+    name: rspec adapters (ruby ${{ matrix.ruby }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["3.4", "4.0"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+          working-directory: gem
+      - run: bundle exec rake adapters
+        env:
+          STRICT_GAPS: "1"
+
+  # Specs tagged :postgres skip themselves on sqlite, so this job is the only one that runs them.
+  postgres:
+    name: rspec adapters (postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: reactiveadmin_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+          working-directory: gem
+      - run: bundle exec rake adapters
+        env:
+          STRICT_GAPS: "1"
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/reactiveadmin_test
+
+  # Not a gate: boots the dummy app against ActiveAdmin 4 beta and lists what still breaks, so the
+  # AA 4 work (ReactiveAdmin::AA::V4) is measured instead of guessed. The gemspec stays `< 4`.
+  aa4-probe:
+    name: ActiveAdmin 4 probe (allowed to fail)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    env:
+      AA_PROBE: "1"
+      AUTH_ADAPTER: default
+      BUNDLE_GEMFILE: ${{ github.workspace }}/gem/gemfiles/aa4.gemfile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+          working-directory: gem
+      - name: Boot the dummy app
+        run: |
+          bundle exec ruby -e 'require "./spec/dummy/config/environment"; Rails.application.reload_routes_unless_loaded; puts "booted on ActiveAdmin #{ActiveAdmin::VERSION}"' 2>&1 | tee boot.log
+      - name: Run the suite
+        if: always()
+        run: bundle exec rspec --no-fail-fast 2>&1 | tee rspec.log
+      - name: Summarize load errors and failures
+        if: always()
+        run: |
+          {
+            echo "### ActiveAdmin 4 probe"
+            echo '```'
+            grep -hE "Error|^rspec |examples," boot.log rspec.log | sed -E 's/0x[0-9a-f]+//; s/ # .*//' | sort | uniq -c | sort -rn | head -40
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

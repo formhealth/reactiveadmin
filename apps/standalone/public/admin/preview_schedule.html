@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Preview schedule</title>
+    <!-- Mock of a classic page with custom JS, rendered chrome-free with ?embed=1. It reports its height to the shell. -->
+    <style>
+      :root { color-scheme: light dark; }
+      body { margin: 0; padding: 16px; font: 14px/20px 'IBM Plex Sans', system-ui, sans-serif; color: #17212b; background: #fff; }
+      @media (prefers-color-scheme: dark) { body { color: #e6ecef; background: #16202a; } }
+      h2 { margin: 0 0 4px; font-size: 16px; }
+      p { margin: 0 0 12px; color: #5d6873; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      th, td { padding: 6px 10px; border-bottom: 1px solid #d9dfe2; text-align: left; }
+      th { font-size: 13px; }
+      .bar { display: inline-block; height: 8px; border-radius: 4px; background: #2b5c8a; vertical-align: middle; }
+      button { height: 32px; margin-right: 8px; padding: 0 12px; border: 1px solid #d9dfe2; border-radius: 6px; background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+      button.primary { border-color: transparent; background: #2b5c8a; color: #fff; }
+      #result { margin-top: 12px; padding: 8px 12px; border-radius: 6px; background: #eaeff3; }
+    </style>
+  </head>
+  <body>
+    <h2>Preview schedule</h2>
+    <p>How next week's publishing slots would be split across sections if the new schedule were applied.</p>
+    <table>
+      <thead><tr><th>Channel</th><th>Current</th><th>Simulated</th><th>Share</th></tr></thead>
+      <tbody>
+        <tr><td>Web</td><td>12</td><td>14</td><td><span class="bar" style="width: 112px"></span></td></tr>
+        <tr><td>Newsletter</td><td>28</td><td>26</td><td><span class="bar" style="width: 208px"></span></td></tr>
+        <tr><td>Social</td><td>16</td><td>16</td><td><span class="bar" style="width: 128px"></span></td></tr>
+      </tbody>
+    </table>
+    <button class="primary" id="apply" type="button">Apply schedule</button>
+    <button id="open" type="button">Open authors</button>
+    <div id="result" hidden>Schedule applied for the week of Oct 19.</div>
+    <script>
+      const post = (message) => window.parent.postMessage(message, window.location.origin)
+      const resize = () => post({ type: 'reactiveadmin:resize', height: Math.ceil(document.body.getBoundingClientRect().height) })
+      document.getElementById('apply').addEventListener('click', () => {
+        document.getElementById('result').hidden = false
+        post({ type: 'reactiveadmin:flash', message: 'Schedule applied for the week of Oct 19' })
+        resize()
+      })
+      document.getElementById('open').addEventListener('click', () => post({ type: 'reactiveadmin:navigate', url: '/admin/authors' }))
+      new ResizeObserver(resize).observe(document.body)
+      window.addEventListener('load', resize)
+    </script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+<h2>Find tickets</h2>
+<%= semantic_form_for @search, as: :q, url: lookup_admin_ticket_path(resource), method: :post do |f| %>
+  <%= f.inputs do %>
+    <%= f.input :term, as: :string %>
+  <% end %>
+  <%= f.submit "Search" %>
+<% end %>
+
+<% if @search.valid? %>
+  <h3><%= pluralize @search.matches.size, "match" %></h3>
+  <table>
+    <thead><tr><th>Title</th><th>Actions</th></tr></thead>
+    <tbody>
+      <% @search.matches.each do |ticket| %>
+        <tr>
+          <td><%= ticket.title %></td>
+          <td>
+            <%= button_to "Close", close_admin_ticket_path(ticket), method: :post, data: {confirm: "Close #{ticket.title}?"} %>
+            <%= link_to "Escalate", escalate_admin_ticket_path(ticket), method: :post %>
+            <%= semantic_form_for "", url: retitle_admin_ticket_path(ticket), method: :put do |f| %>
+              <%= f.input :title, as: :string, label: false %>
+              <%= f.submit "Retitle" %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<% if @search.term == "offsite" %>
+  <%= semantic_form_for "", url: "https://example.com/x", method: :post do |f| %>
+    <%= f.input :note, as: :string %>
+  <% end %>
+<% end %>

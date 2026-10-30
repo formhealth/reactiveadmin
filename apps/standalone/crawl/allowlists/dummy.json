@@ -1,0 +1,9 @@
+{
+  "a11y": [
+    {
+      "rule": "listitem",
+      "path": "^/sketches/",
+      "reason": "the dummy's classic form partial emits a bare <li> that the HTML fallback renders outside a list; tracked as a client/gem finding"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+name: actionlint
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/**"]
+  workflow_dispatch:
+  pull_request:
+    paths: [".github/**"]
+
+concurrency:
+  group: actionlint-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color

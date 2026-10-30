@@ -1,0 +1,213 @@
+/* Classic ActiveAdmin/Formtastic markup restyled with the app's tokens. Everything is scoped to `.ra-frame`. */
+
+.ra-frame {
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--foreground);
+  outline: none;
+}
+.ra-frame :where(h1, h2, h3, h4) {
+  font-weight: 600;
+  text-wrap: balance;
+}
+.ra-frame h1 { font-size: 1.25rem; line-height: 1.75rem; }
+.ra-frame h2 { font-size: 1.125rem; line-height: 1.5rem; }
+.ra-frame h3 { font-size: 1rem; line-height: 1.5rem; }
+.ra-frame :where(p, h1, h2, h3, h4) { margin: 0; }
+.ra-frame :where(ul) { margin: 0; list-style: disc; padding-left: 1.25rem; }
+.ra-frame :where(ol) { margin: 0; list-style: decimal; padding-left: 1.25rem; }
+.ra-frame > * + * { margin-top: 1rem; }
+.ra-frame :where(code, pre, kbd) { font-family: var(--font-mono); font-size: 0.8125rem; }
+.ra-frame pre {
+  overflow: auto;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--muted);
+}
+.ra-frame hr { border: 0; border-top: 1px solid var(--border); }
+.ra-frame [hidden] { display: none !important; }
+
+.ra-frame a {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+  text-underline-offset: 4px;
+}
+.ra-frame a:hover { text-decoration-color: var(--foreground); }
+.ra-frame a[data-method='delete'] { color: var(--destructive); }
+
+/* Forms */
+.ra-frame form { display: flex; flex-direction: column; gap: 1.25rem; }
+.ra-frame fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.ra-frame legend { margin-bottom: 0.75rem; padding: 0; font-size: 1rem; font-weight: 600; }
+.ra-frame fieldset > ol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ra-frame :is(li.input, form > .field) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-width: 36rem;
+}
+.ra-frame label { font-weight: 600; }
+.ra-frame label abbr { margin-left: 0.125rem; color: var(--danger); text-decoration: none; }
+.ra-frame .inline-hints { color: var(--muted-foreground); font-size: 0.8125rem; line-height: 1.125rem; }
+.ra-frame .inline-errors { color: var(--danger); font-size: 0.8125rem; line-height: 1.125rem; font-weight: 600; }
+
+.ra-frame :is(input:not([type='checkbox'], [type='radio'], [type='hidden'], [type='submit'], [type='button'], [type='file'], [type='range'], [type='color']), select, textarea) {
+  width: 100%;
+  min-width: 0;
+  height: 2rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--input);
+  border-radius: 6px;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ra-frame textarea { height: auto; min-height: 5rem; resize: vertical; }
+.ra-frame select {
+  appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a8793' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+}
+.ra-frame select[multiple] { height: auto; padding-right: 0.625rem; background-image: none; }
+.ra-frame :is(input, select, textarea)::placeholder { color: var(--muted-foreground); }
+.ra-frame :is(input, select, textarea):focus-visible {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+.ra-frame :is(input, select, textarea):disabled {
+  cursor: not-allowed;
+  background-color: var(--muted);
+  opacity: 0.5;
+}
+.ra-frame .error :is(input, select, textarea) { border-color: var(--destructive); }
+.ra-frame :is(input[type='checkbox'], input[type='radio']) {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--primary);
+}
+.ra-frame :is(li.boolean label, li.choice label, label.choice) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+.ra-frame fieldset.choices > legend { margin-bottom: 0.375rem; font-size: 0.875rem; }
+.ra-frame fieldset.choices > ol { gap: 0.5rem; }
+.ra-frame input[type='file']::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.125rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Buttons: a submit is primary, everything button-shaped else is outlined. */
+.ra-frame :is(button:not([data-slot]), input[type='submit'], input[type='button'], a.button, .button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ra-frame :is(button:not([data-slot]), input[type='submit'], input[type='button'], a.button, .button):hover { background: var(--muted); }
+.ra-frame :is(button:not([data-slot]), input[type='submit'], input[type='button'], a.button, .button):focus-visible {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+.ra-frame :is(button:not([data-slot]), input[type='submit'], input[type='button']):disabled { cursor: not-allowed; opacity: 0.5; }
+.ra-frame :is(button[type='submit']:not([data-slot]), button:not([type], [data-slot]), input[type='submit']) {
+  border-color: transparent;
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.ra-frame :is(button[type='submit']:not([data-slot]), button:not([type], [data-slot]), input[type='submit']):hover {
+  background: color-mix(in oklab, var(--primary) 80%, transparent);
+}
+.ra-frame fieldset.actions { margin-top: 0.25rem; }
+.ra-frame form > .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.ra-frame fieldset.actions > ol { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+/* Tables */
+.ra-frame table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.ra-frame th {
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+.ra-frame td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.ra-frame tbody tr:last-child :is(td, th) { border-bottom: 0; }
+.ra-frame tbody tr:hover { background: color-mix(in oklab, var(--muted) 50%, transparent); }
+.ra-frame .attributes_table th { width: 12rem; border-bottom: 1px solid var(--border); font-weight: 400; color: var(--muted-foreground); }
+.ra-frame .attributes_table tr:hover { background: transparent; }
+
+/* Other AA building blocks */
+.ra-frame .panel { border: 1px solid var(--border); border-radius: 6px; background: var(--card); }
+.ra-frame .panel > h3 { margin: 0; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+.ra-frame .panel_contents { padding: 1rem; }
+.ra-frame > .panel:only-child { border: 0; background: none; }
+.ra-frame > .panel:only-child > h3 { padding: 0 0 0.75rem; }
+.ra-frame > .panel:only-child > .panel_contents { padding: 0; }
+.ra-frame .columns { display: flex; flex-wrap: wrap; gap: 1rem; }
+.ra-frame .columns > .column { flex: 1 1 16rem; min-width: 0; margin: 0; }
+.ra-frame .blank_slate {
+  display: block;
+  padding: 2rem;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+.ra-frame .flash { padding: 0.625rem 0.875rem; border: 1px solid var(--border); border-radius: 6px; background: var(--info-soft); }
+.ra-frame :is(.flash_alert, .flash_error) { background: var(--danger-soft); color: var(--danger); }
+.ra-frame .flash_warning { background: var(--warning-soft); color: var(--warning); }
+.ra-frame .status_tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.5rem;
+  border-radius: 4px;
+  background: var(--secondary);
+  font-size: 0.8125rem;
+  line-height: 1.375rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ra-frame .status_tag:is(.yes, .ok, .complete, .completed, .active) { background: var(--success-soft); color: var(--success); }
+.ra-frame .status_tag:is(.warn, .warning, .pending) { background: var(--warning-soft); color: var(--warning); }
+.ra-frame .status_tag:is(.error, .failed, .rejected) { background: var(--danger-soft); color: var(--danger); }
+.ra-frame .pagination { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0; list-style: none; }
+.ra-frame .pagination :is(a, span) { padding: 0.125rem 0.5rem; border-radius: 4px; text-decoration: none; }
+.ra-frame .pagination .current { background: var(--secondary); font-weight: 600; }

@@ -1,0 +1,10 @@
+<%= semantic_form_for [:admin, resource] do |f| %>
+  <%= f.inputs do %>
+    <li class="input"><p>Sketches are shared drafts.</p></li>
+    <%= f.input :title, as: :select, collection: %w[Alpha Beta], include_blank: false %>
+    <%= f.input :weight %>
+  <% end %>
+  <%= f.actions do %>
+    <%= f.action :submit, label: "Save sketch" %>
+  <% end %>
+<% end %>

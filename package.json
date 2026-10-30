@@ -1,0 +1,22 @@
+{
+  "name": "reactiveadmin",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/formhealth/reactiveadmin.git"
+  },
+  "packageManager": "pnpm@8.14.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --filter standalone dev",
+    "dev:mocks": "VITE_MOCKS=1 pnpm --filter standalone dev",
+    "gen": "pnpm --filter standalone gen",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r exec tsc --noEmit",
+    "crawl": "pnpm --filter standalone crawl",
+    "crawl:dummy": "pnpm --filter standalone crawl:dummy"
+  }
+}

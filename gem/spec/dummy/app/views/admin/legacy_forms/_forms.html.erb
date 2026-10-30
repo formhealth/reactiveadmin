@@ -1,0 +1,10 @@
+<form action="/admin/legacy_forms/raw" method="post"><input name="raw[x]"><button type="submit">Raw</button></form>
+<%= semantic_form_for "offsite", url: "https://elsewhere.example/x" do |f| %>
+  <%= f.inputs { f.input :a } %>
+<% end %>
+<%= semantic_form_for "search", url: "/admin/posts", method: :get do |f| %>
+  <%= f.inputs { f.input :q } %>
+<% end %>
+<%= semantic_form_for "outside", url: "/healthz" do |f| %>
+  <%= f.inputs { f.input :b } %>
+<% end %>

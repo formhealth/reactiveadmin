@@ -1,0 +1,20 @@
+# Probe, not a supported configuration: boots the dummy app against ActiveAdmin 4 so CI can list what
+# still breaks (see ReactiveAdmin::AA::V4). Needs AA_PROBE=1 so the gemspec lifts its `< 4` cap.
+source "https://rubygems.org"
+
+gemspec path: ".."
+
+gem "rails", "~> 8.1.0"
+gem "activeadmin", "4.0.0.beta23"
+gem "importmap-rails"
+gem "pundit"
+gem "sprockets-rails"
+gem "sqlite3"
+gem "pg"
+gem "rake"
+
+group :test do
+  gem "rspec-rails"
+  gem "json_schemer"
+  gem "standard", require: false
+end

@@ -1,0 +1,13 @@
+require "rspec/core/rake_task"
+
+RSpec::Core::RakeTask.new(:spec)
+
+desc "Run the suite once per authorization adapter"
+task :adapters do
+  %w[default custom pundit].each do |adapter|
+    puts "== AUTH_ADAPTER=#{adapter}"
+    sh({"AUTH_ADAPTER" => adapter}, "bundle exec rspec") { |ok, _| abort "#{adapter} failed" unless ok }
+  end
+end
+
+task default: :spec

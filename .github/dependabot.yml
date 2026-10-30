@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: bundler
+    directory: /gem
+    schedule:
+      interval: weekly
+    groups:
+      rails:
+        patterns: ["rails", "rails-*", "action*", "active*", "railties"]
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      storybook:
+        patterns: ["storybook", "@storybook/*"]
+      types:
+        patterns: ["@types/*"]
+    ignore:
+      # Node types track the runtime pinned in .nvmrc (24); bump with the runtime, not ahead of it.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 (native compiler) is a deliberate migration, not a routine bump.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
