@@ -6,7 +6,6 @@ on:
     paths: ["gem/**", "openapi/**", ".ruby-version", ".github/workflows/gem.yml"]
   workflow_dispatch:
   pull_request:
-    paths: ["gem/**", "openapi/**", ".ruby-version", ".github/workflows/gem.yml"]
 
 concurrency:
   group: gem-${{ github.ref }}

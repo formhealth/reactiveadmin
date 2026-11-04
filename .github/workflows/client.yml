@@ -6,7 +6,6 @@ on:
     paths: ["apps/**", "openapi/**", "gem/**", "package.json", "pnpm-*.yaml", ".nvmrc", ".github/actions/**", ".github/workflows/client.yml"]
   workflow_dispatch:
   pull_request:
-    paths: ["apps/**", "openapi/**", "gem/**", "package.json", "pnpm-*.yaml", ".nvmrc", ".github/actions/**", ".github/workflows/client.yml"]
 
 concurrency:
   group: client-${{ github.ref }}
