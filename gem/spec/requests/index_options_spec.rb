@@ -151,7 +151,26 @@ RSpec.describe "index options", type: :request do
     it "turns `as: :check_boxes` into multiple-choice checkboxes filtering with _in" do
       expect(filters["title"]).to include("control" => "checkboxes", "multiple" => true, "param" => "title_in")
       expect(filters["title"]["options"].pluck("value")).to eq(%w[Alpha Beta])
-      expect(filters["weight"]).to include("control" => "checkboxes", "param" => "weight_in")
+      expect(filters["weight"]).to include("control" => "checkboxes", "multiple" => true, "param" => "weight_in")
+      expect(filters["weight"]["options"].pluck("value")).to eq(%w[1 2 3])
+    end
+
+    it "filters numeric values with repeated q[weight_in][] params" do
+      [1, 2, 3].each { |weight| Note.create!(title: "n#{weight}", weight:) }
+      api_get("/api/admin/notes?q[weight_in][]=1&q[weight_in][]=3", schema: "IndexResponse")
+
+      expect(response).to have_http_status(:ok)
+      expect(json["rows"].size).to eq(2)
+    end
+
+    it "filters an association check_boxes filter with _in" do
+      sports = Category.create!(name: "Sports")
+      author = Author.create!(name: "Zed")
+      Post.create!(title: "Goal", category: sports, author:)
+      Post.create!(title: "Other", author:)
+      api_get("/api/admin/posts", {q: {category_id_in: [sports.id.to_s]}}, schema: "IndexResponse")
+
+      expect(json["rows"].size).to eq(1)
     end
 
     it "degrades a relation-backed list to a multiple typeahead" do
