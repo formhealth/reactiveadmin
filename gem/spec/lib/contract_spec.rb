@@ -67,6 +67,11 @@ RSpec.describe "openapi/core.yaml" do
       expect(Contract.response_schema("GET", "/api/admin/posts/42/comments/7", 200)).to eq("ShowResponse")
     end
 
+    it "matches pages nested under a parent to the page's own" do
+      expect(Contract.response_schema("GET", "/api/admin/posts/42/_pages/post_digests", 200)).to eq(Contract.response_schema("GET", "/api/admin/_pages/post_digests", 200))
+      expect(Contract.response_schema("GET", "/api/admin/posts/42/_pages/post_digests", 200)).not_to be_nil
+    end
+
     it "matches a custom namespace to the canonical paths" do
       allow(ReactiveAdmin.config).to receive(:namespace).and_return(:backoffice)
       allow(ReactiveAdmin::Registry).to receive(:find)

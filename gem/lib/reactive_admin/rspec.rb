@@ -75,7 +75,7 @@ module ReactiveAdmin
       end
 
       def nested_under_parent?(parts)
-        child = Registry.find(parts[2])
+        child = (parts[2] == "_pages") ? Registry.find_page(parts[3]) : Registry.find(parts[2])
         child&.belongs_to? && Registry.route_key(child.belongs_to_config.target) == parts[0]
       end
 
