@@ -4,7 +4,7 @@ PATH
     reactiveadmin (0.1.0)
       activeadmin (>= 3.5, < 4)
       nokogiri
-      rails (>= 7.2)
+      rails (>= 8.1)
 
 GEM
   remote: https://rubygems.org/

@@ -1,4 +1,4 @@
-ActiveRecord::Schema[7.2].define(version: 1) do
+ActiveRecord::Schema[8.1].define(version: 1) do
   create_table :active_admin_comments, force: :cascade do |t|
     t.string :namespace
     t.text :body

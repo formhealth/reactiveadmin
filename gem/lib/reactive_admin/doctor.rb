@@ -123,7 +123,7 @@ module ReactiveAdmin
     end
 
     def run
-      ReactiveAdmin.load_routes
+      Rails.application.reload_routes_unless_loaded
       ReactiveAdmin.diagnostics.clear
       report = ApiGuards.with_channel(:session) { ActiveRecord::Base.while_preventing_writes { silence { StyleSources.trace { build } } } }
       [*Exposure.audit(user: @user), *ApiGuards.audit, *ActionSafety.audit, *self.class.config_warnings].each { ReactiveAdmin.diagnostics.record(it[:kind], **it.except(:kind)) }
