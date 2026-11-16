@@ -14,27 +14,19 @@
 import type { GetOptionsContext } from './getOptionsContext';
 
 export type GetOptionsParams = {
-/**
- * Filter name, or FormField name (`<assoc>.<name>` inside has_many)
- */
-field: string;
-context: GetOptionsContext;
-/**
- * Record id when context=form for an edit form
- */
-id?: string;
-term?: string;
-/**
- * Max 100, default inline_options_limit
- * @minimum 1
- */
-limit?: number;
-/**
- * OptionsResponse.next_cursor of the previous page (opaque)
- */
-cursor?: string;
-/**
- * Comma-separated values to resolve labels for instead of searching (to display a selected typeahead value). At most 25, more is a 400.
- */
-value?: string[];
+  /** Filter name, or FormField name (`<assoc>.<name>` inside has_many) */
+  field: string;
+  context: GetOptionsContext;
+  /** Record id when context=form for an edit form */
+  id?: string;
+  term?: string;
+  /**
+   * Max 100, default inline_options_limit
+   * @minimum 1
+   */
+  limit?: number;
+  /** OptionsResponse.next_cursor of the previous page (opaque) */
+  cursor?: string;
+  /** Comma-separated values to resolve labels for instead of searching (to display a selected typeahead value). At most 25, more is a 400. */
+  value?: string[];
 };
