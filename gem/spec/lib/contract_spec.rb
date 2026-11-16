@@ -72,6 +72,14 @@ RSpec.describe "openapi/core.yaml" do
       expect(Contract.response_schema("GET", "/api/admin/posts/42/_pages/post_digests", 200)).not_to be_nil
     end
 
+    it "matches when the mount is configured with a trailing slash" do
+      old = ReactiveAdmin.config.mount_path
+      ReactiveAdmin.config.mount_path = "/api/"
+      expect(Contract.response_schema("GET", "/api/admin/posts", 200)).to eq("IndexResponse")
+    ensure
+      ReactiveAdmin.config.mount_path = old
+    end
+
     it "matches a custom namespace to the canonical paths" do
       allow(ReactiveAdmin.config).to receive(:namespace).and_return(:backoffice)
       allow(ReactiveAdmin::Registry).to receive(:find)

@@ -5,6 +5,13 @@ RSpec.describe ReactiveAdmin::Configuration do
     expect(config).to have_attributes(namespace: :admin, mount_path: "/api", inline_options_limit: 100, scope_options_by_policy: true)
   end
 
+  it "normalizes the mount path to one leading slash and no trailing slash" do
+    {"/api/" => "/api", "api" => "/api", "/backoffice/api/" => "/backoffice/api"}.each do |given, expected|
+      config.mount_path = given
+      expect(config.mount_path).to eq(expected)
+    end
+  end
+
   it "keys the cached meta payload by user id" do
     expect(config.meta_cache_key.call(Struct.new(:id).new(5))).to eq(5)
   end

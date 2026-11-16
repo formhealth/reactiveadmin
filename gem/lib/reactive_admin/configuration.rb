@@ -64,17 +64,22 @@ module ReactiveAdmin
       end
     end
 
-    attr_accessor :namespace, :mount_path, :inline_options_limit, :current_user,
+    attr_accessor :namespace, :inline_options_limit, :current_user,
       :meta_cache_key, :meta_cache_version, :meta_cache_ttl, :options_cache_ttl, :scope_options_by_policy,
       :after_authorize, :on_background_request, :doctor_user, :doctor_page_params, :masked_attributes, :mask_filter_parameters, :mask_csv, :html_trusted_hosts,
       :require_lock, :retryable_errors, :error_reporter,
       :inline_json_limit, :inline_text_limit, :value_token, :value_token_ttl, :strict_defaults, :exposed_resources, :max_per_page, :max_export_rows, :rate_limits, :sensitive_resources,
       :ransack_unguarded_actions, :auth
-    attr_reader :authorize_custom_actions, :implicit_defaults, :expose, :openapi, :mcp, :api_guards, :ui
+    attr_reader :mount_path, :authorize_custom_actions, :implicit_defaults, :expose, :openapi, :mcp, :api_guards, :ui
+
+    # Callers join and strip this as a prefix, so "/api/" or "api" must mean "/api".
+    def mount_path=(path)
+      @mount_path = "/#{path.to_s.delete_prefix("/").chomp("/")}"
+    end
 
     def initialize
       @namespace = :admin
-      @mount_path = "/api"
+      self.mount_path = "/api"
       @inline_options_limit = 100
       # ->(controller) { user }; falls back to the namespace's current_user_method.
       @current_user = nil
