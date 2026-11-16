@@ -6,7 +6,8 @@ module ApiHelpers
   def json = response.parsed_body
 
   # Sends a request the way the client does and enforces what must hold for every response: the
-  # body is JSON (never an html page), errors match the contract, and `schema` matches on success.
+  # body is JSON (never an html page), errors match the contract, and a success matches `schema`, or
+  # else whatever core.yaml declares for the verb, path and status.
   def api(verb, path, body = nil, schema: nil, headers: {}, params: nil)
     headers = JSON_HEADERS.merge(headers)
     payload = body && (body.is_a?(String) ? body : body.to_json)
@@ -40,10 +41,25 @@ module ApiHelpers
     expect(response.media_type).to eq("application/json"), "expected JSON, got #{response.media_type} (#{response.status})"
     return unless response.parsed_body
 
-    if response.status >= 400
-      expect(json).to match_contract((response.status == 422 && json.key?("errors")) ? "ValidationError" : "Error")
-    elsif schema
-      expect(json).to match_contract(schema)
+    schema = if response.status >= 400
+      (response.status == 422 && json.key?("errors")) ? "ValidationError" : "Error"
+    else
+      schema || inferred_schema
+    end
+    expect(json).to match_contract(schema) if schema
+  end
+
+  def inferred_schema = undeclared_get? ? nil : Contract.response_schema(request.request_method, request.path, response.status)
+
+  # GET custom actions and AA pages under the mount aren't in core.yaml, though their paths fit its templates.
+  def undeclared_get?
+    return false unless request.get?
+
+    name = controller.action_name
+    case controller
+    when ActiveAdmin::PageController then name != "reactiveadmin_page"
+    when ActiveAdmin::ResourceController then %w[index show new edit].exclude?(name) && !name.start_with?("reactiveadmin_")
+    else false
     end
   end
 

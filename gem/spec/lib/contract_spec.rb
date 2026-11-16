@@ -43,5 +43,27 @@ RSpec.describe "openapi/core.yaml" do
 
       expect(Contract.valid?("Node", node)).to be(false)
     end
+
+    it "rejects keys the contract doesn't declare" do
+      expect(Contract.errors("Option", {"label" => "A", "value" => "a", "extra" => 1})).to include(/extra/)
+    end
+  end
+
+  describe "the schema a response is checked against" do
+    it "follows the most literal path" do
+      expect(Contract.response_schema("GET", "/api/admin/posts/new", 200)).to eq("FormResponse")
+      expect(Contract.response_schema("GET", "/api/admin/posts/1?x=1", 200)).to eq("ShowResponse")
+      expect(Contract.response_schema("POST", "/api/admin/posts", 201)).to eq("WriteResult")
+    end
+
+    it "points into an inline union" do
+      schema = Contract.response_schema("GET", "/api/admin/_pages/reports", 200)
+
+      expect(Contract.valid?(schema, {"options" => [], "truncated" => false})).to be(true)
+    end
+
+    it "is nil where the contract declares nothing" do
+      expect(Contract.response_schema("GET", "/api/admin/posts/1/publish", 200)).to be_nil
+    end
   end
 end

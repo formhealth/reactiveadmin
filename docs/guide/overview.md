@@ -105,7 +105,6 @@ The following limitations apply today. Track what still needs work in your app w
 ### Packaging
 
 - **Distribution.** The gem installs from GitHub, not RubyGems, and the client isn't published as an npm package yet.
-- **The contract file.** The OpenAPI builder reads `openapi/core.yaml` from the repository, so a packaged gem would need that file bundled.
 - **Document size.** The OpenAPI document for an app with a hundred or more registrations is about 1 MB.
 
 ## Next steps

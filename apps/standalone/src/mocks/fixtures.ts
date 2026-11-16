@@ -229,6 +229,7 @@ const resource = (key: string, label: string, plural_label: string, extra: Parti
   key,
   label,
   plural_label,
+  meta_path: `/api/admin/${key}/_meta`,
   actions: ['index', 'show'],
   permissions: { index: true, show: true },
   filters: [],
@@ -269,7 +270,7 @@ export const resourceMetas: ResourceMeta[] = [
 ]
 
 export const resourceSummaries: ResourceSummary[] = resourceMetas.map(
-  ({ key, label, plural_label, menu_parent, menu_priority, actions, permissions }) => ({ key, label, plural_label, menu_parent, menu_priority, actions, permissions, meta_path: `/api/admin/${key}/_meta` }),
+  ({ key, label, plural_label, menu_parent, menu_priority, actions, permissions, meta_path }) => ({ key, label, plural_label, menu_parent, menu_priority, actions, permissions, meta_path }),
 )
 
 const leaf = (id: string, label: string): MenuItem => ({ id, label, resource: id, children: [] })

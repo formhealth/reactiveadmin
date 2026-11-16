@@ -74,7 +74,7 @@ bin/rails reactiveadmin:client:build
 - [MCP server](docs/guide/mcp.md)
 - [Security](docs/guide/security.md)
 - [Rolling out the new admin](docs/guide/rollout.md)
-- [Testing](docs/guide/testing.md): the end-to-end crawl
+- [Testing](docs/guide/testing.md): the end-to-end crawl, and contract examples for your request specs
 - [Contributing](CONTRIBUTING.md)
 
 ## Security notes

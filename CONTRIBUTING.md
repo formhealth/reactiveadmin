@@ -6,7 +6,7 @@ Thanks for helping. This repository has two halves that meet at one file:
 | --- | --- |
 | `gem/` | The Ruby gem, plus a dummy Rails app (`gem/spec/dummy`: posts, authors, comments, tickets) that the specs and the crawl run against |
 | `apps/standalone/` | The React client (Vite, TypeScript, shadcn/ui, Tailwind CSS, TanStack, React Query), its Storybook and the end-to-end crawl |
-| `openapi/core.yaml` | The contract between the gem and the client |
+| `gem/openapi/core.yaml` | The contract between the gem and the client, packaged with the gem (`openapi/core.yaml` links to it) |
 | `docs/guide/` | User documentation |
 
 ## Set up

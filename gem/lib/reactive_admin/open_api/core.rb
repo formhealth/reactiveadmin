@@ -2,9 +2,9 @@ require "yaml"
 
 module ReactiveAdmin
   module OpenApi
-    # openapi/core.yaml (OpenAPI 3.0) as a source of 3.1 components and operation templates.
+    # openapi/core.yaml (OpenAPI 3.0, packaged with the gem) as a source of 3.1 components and operation templates.
     module Core
-      PATH = File.expand_path("../../../../openapi/core.yaml", __dir__)
+      PATH = File.expand_path("../../../openapi/core.yaml", __dir__)
       KINDS = %w[parameters headers requestBodies responses schemas].freeze
 
       module_function
