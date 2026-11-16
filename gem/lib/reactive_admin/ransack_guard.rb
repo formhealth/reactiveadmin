@@ -50,9 +50,10 @@ module ReactiveAdmin
 
     # Search names a declared filter can produce, without predicate: the attribute itself and the
     # names AA's association inputs search on (`post_id`, or the foreign key of a has_many through).
-    def self.bases(config)
+    # With a view, filters its `if:`/`unless:` hides from the user are left out.
+    def self.bases(config, view = nil)
       klass = config.resource_class
-      AA.filters(config).keys.flat_map do |attr|
+      AA.filters(config).reject { |_, opts| view && Filters.skip?(view, opts) }.keys.flat_map do |attr|
         name = attr.to_s
         reflection = klass.reflect_on_association(name)
         next [name] unless reflection
@@ -72,10 +73,10 @@ module ReactiveAdmin
     end
 
     # The first key that no declared filter explains, or nil.
-    def self.violation(config, query)
+    def self.violation(config, query, view = nil)
       return "q" unless query.respond_to?(:keys)
 
-      bases = bases(config)
+      bases = bases(config, view)
       query.keys.map(&:to_s).find { !allowed?(bases, it) }
     end
 
@@ -92,7 +93,7 @@ module ReactiveAdmin
       return unless reactiveadmin_request? && params.key?(:q)
       return if RansackGuard.own_query?(active_admin_config, controller_path, action_name)
 
-      key = RansackGuard.violation(active_admin_config, params[:q])
+      key = RansackGuard.violation(active_admin_config, params[:q], view_context)
       render_api_error(:invalid, "Unsupported filter: #{key.truncate(MAX_KEY_LENGTH)}", 400) if key
     end
   end

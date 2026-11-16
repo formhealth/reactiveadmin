@@ -143,9 +143,28 @@ RSpec.describe ReactiveAdmin::Choices do
     end
   end
 
+  describe ".cache_key" do
+    it "varies by user, even for users whose fingerprints match" do
+      config = ReactiveAdmin::Registry.find("posts")
+      other = create_editor(author: bob, email: "other-editor@example.com")
+      key = ->(user) { described_class.cache_key(config, "filter", "category", ReactiveAdmin::Doctor::Sample.new(config, user).view) }
+
+      expect(key.call(editor)).not_to eq(key.call(other))
+    end
+  end
+
   describe ".column" do
+    def values_for(user)
+      view.controller.define_singleton_method(:current_admin_user) { user }
+      described_class.column(Post.all, "views_count", view).list([], 10)[:options].pluck(:value)
+    end
+
     it "offers the distinct values of a plain column" do
-      expect(described_class.column(Post, "views_count", view).list([], 10)[:options].pluck(:value)).to eq(%w[0 3 1200])
+      expect(values_for(admin)).to eq(%w[0 3 1200])
+    end
+
+    it "offers only the values of rows the user may read" do
+      expect(values_for(editor)).to eq(Post.all.select { can_see_post?(editor, it) }.map(&:views_count).uniq.sort.map(&:to_s))
     end
   end
 end

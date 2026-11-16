@@ -18,6 +18,7 @@ ActiveAdmin.register Post do
   filter :category, as: :check_boxes, collection: -> { Category.all }
   filter :author_id_eq, label: "Author", as: :typeahead, source: :authors
   filter :tags
+  filter :created_at, if: proc { current_admin_user.role == "admin" }
 
   index do
     selectable_column

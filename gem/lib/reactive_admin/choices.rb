@@ -32,9 +32,15 @@ module ReactiveAdmin
       end
     end
 
-    # Distinct values of a plain column.
-    def column(klass, name, view)
-      scope = klass.unscope(:order).where.not(name => nil).distinct.select(name).reorder(name)
+    # Distinct values of a plain column, among the rows the user may read: the resource's own relation, under its
+    # policy scope, so the values of rows the index hides aren't listed. Read through a subquery, so the
+    # relation's includes and joins don't meet the distinct select.
+    def column(relation, name, view)
+      readable = Authorizer.for(view.controller).scope(relation).unscope(:order)
+      klass = relation.klass
+      key = klass.primary_key
+      base = key.is_a?(String) ? klass.where(key => readable.select(key)) : readable.unscope(:includes, :preload)
+      scope = base.where.not(name => nil).distinct.select(name).reorder(name)
       records(OptionSource.implicit(scope, label: name, value: name), view, scope, policy: false)
     end
 
@@ -44,8 +50,9 @@ module ReactiveAdmin
 
     # Varies by everything an options list can depend on, including who is asking.
     def cache_key(config, context, field, view, id: nil, parent_id: nil)
-      who = ReactiveAdmin.user_fingerprint(view.controller)
-      ["reactiveadmin/options", Registry.route_key(config), context, field, parent_id, id, who].compact.join("/")
+      controller = view.controller
+      who = [ReactiveAdmin.current_user(controller)&.id, ReactiveAdmin.user_fingerprint(controller)].compact.join(":")
+      ["reactiveadmin/options", Registry.route_key(config), context, field, parent_id, id, who.presence].compact.join("/")
     end
 
     def option(label, value, hint: nil) = {label: CGI.unescapeHTML(label.to_s), value: value.to_s, hint: hint&.to_s}.compact

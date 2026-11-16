@@ -17,6 +17,18 @@ RSpec.describe "ransack guard on custom actions", type: :request do
     expect(json).to include("message" => "Unsupported filter: body_cont")
   end
 
+  it "refuses the q of a filter its if: hides from the user" do
+    sign_in create_editor(author: Author.create!(name: "Eve"))
+    api_get("/api/admin/posts", q: {created_at_gteq: "2026-01-01"})
+
+    expect(response).to have_http_status(:bad_request)
+    expect(json).to include("message" => "Unsupported filter: created_at_gteq")
+
+    sign_in AdminUser.find_by!(role: "admin")
+    api_get("/api/admin/posts", q: {created_at_gteq: "2026-01-01"})
+    expect(response).to have_http_status(:ok)
+  end
+
   it "lets a custom action have the declared filters' q" do
     api_get(stats, q: {title_cont: "x"})
 

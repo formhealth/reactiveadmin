@@ -174,6 +174,18 @@ RSpec.describe "_options", type: :request do
       expect(labels).to match_array(expected)
     end
 
+    it "offers only the column values of rows the adapter lets the editor read" do
+      fetch(field: "title", context: "filter")
+
+      expect(labels).to match_array([first_post, second_post, third_post].select { can_see_post?(editor, it) }.map(&:title))
+    end
+
+    it "is a 404 for a filter its if: hides from the editor" do
+      api_get(path, field: "created_at", context: "filter")
+
+      expect(response).to have_http_status(:not_found)
+    end
+
     it "refuses options of a resource the adapter denies" do
       api_get("/api/admin/categories/_options", field: "name", context: "filter")
 
