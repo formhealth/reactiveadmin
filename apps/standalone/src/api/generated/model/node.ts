@@ -35,7 +35,7 @@ import type { Ref } from './ref';
  * | ref{label, ref?} | link{label, href, ref?, view?, external} | status{label, variant}
  * | json{value} | code{text, language?}: preformatted text that is not JSON (a stack trace, an id, a snippet); render monospaced and never as html
  * | html{html (sanitized; see `rake reactiveadmin:html_policy`)} | group{children}
- * | box{tag, layout?, width?, span?, text_align?, spacing?, max_width?, grow?, marks?, tone?, nowrap?, children} | panel{title, children}
+ * | box{tag, layout?, width?, span?, text_align?, spacing?, max_width?, grow?, marks?, tone?, nowrap?, children} | panel{title, header_actions?, children}: `header_actions` (action|link nodes) belong in the title bar, beside the title
  * | attributes_table{title?, rows[{label, value: Node[]}]} | table{headers[], rows: Node[][]}
  * | action{action: Action with placement inline}: a button or link inside content that performs a non-GET request
  *   (rails-ujs data-method/data-confirm links, button_to forms); never render these as plain links
@@ -120,6 +120,8 @@ export interface Node {
      */
   height_px?: number;
   action?: Action;
+  /** panel nodes: actions and links shown in the title bar (`header_action:`); absent when there are none */
+  header_actions?: Node[];
   /**
      * json nodes: present instead of `value` when the server summarizes (minimization or size); fetch the full value via expand_path
      * @nullable

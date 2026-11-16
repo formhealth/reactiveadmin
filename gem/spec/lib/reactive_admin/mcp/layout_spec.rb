@@ -110,5 +110,13 @@ RSpec.describe ReactiveAdmin::Mcp::Layout do
 
       expect(described_class.actions(layout)).to eq([{"key" => "flag"}])
     end
+
+    it "finds actions in a panel's header and renders its header links" do
+      panel = {"type" => "panel", "title" => "Notes", "children" => [text("Body")],
+               "header_actions" => [{"type" => "action", "action" => {"key" => "flag"}}, {"type" => "link", "label" => "All notes", "href" => "/admin/notes"}]}
+
+      expect(described_class.actions([panel])).to eq([{"key" => "flag"}])
+      expect(described_class.render([panel])).to include("Body", "All notes")
+    end
   end
 end

@@ -54,6 +54,12 @@ RSpec.describe ReactiveAdmin::FormContent do
       expect(nodes).to eq([{type: "heading", level: 3, children: [{type: "text", text: "New Plan"}]}])
     end
 
+    it "keeps a panel left with only its title and header actions" do
+      nodes = content.nodes(%(<div class="panel"><h3>Plan<div class="header_action"><a href="/admin/posts">All</a></div></h3><div class="panel_contents"></div></div>))
+
+      expect(nodes).to match([a_hash_including(type: "panel", title: "Plan", header_actions: [a_hash_including(type: "link", label: "All")])])
+    end
+
     it "keeps a panel that holds something" do
       nodes = content.nodes(%(<div class="panel"><h3>Plan</h3><div class="panel_contents"><p>x</p></div></div>))
 

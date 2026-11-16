@@ -67,7 +67,7 @@ module ReactiveAdmin
         next node unless SHELLS.include?(node[:type])
 
         node = node.merge(children: tidy(node[:children]))
-        next node if node[:children].any?
+        next node if node[:children].any? || node[:header_actions].present?
 
         title(node[:title]) if node[:title].present?
       end

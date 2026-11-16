@@ -1,4 +1,5 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
+import { expect, within } from 'storybook/test'
 import type { Action, Node as NodeData } from '@/api/generated/model'
 import { NodeContext } from './context'
 import { Node } from './Node'
@@ -117,6 +118,16 @@ export const MaxWidthAndGrow: Story = {
 export const PanelFooterToolbar: Story = {
   args: { node: panel('Notes', text('Prefers mornings.'), { type: 'toolbar', children: [act, link('All notes')] }) },
   parameters: { viewportSize: { width: 700, height: 260 } },
+}
+
+export const PanelHeaderActions: Story = {
+  args: { node: { ...panel('Notes', text('Prefers mornings.')), header_actions: [link('All notes'), act] } },
+  parameters: { viewportSize: { width: 700, height: 220 } },
+  play: async ({ canvasElement }) => {
+    const header = canvasElement.querySelector<HTMLElement>('[data-slot="card-header"]')!
+    await expect(within(header).getByRole('link', { name: 'All notes' })).toBeVisible()
+    await expect(within(header).getByRole('button', { name: 'Resend welcome email' })).toBeVisible()
+  },
 }
 
 export const OrderedList: Story = {

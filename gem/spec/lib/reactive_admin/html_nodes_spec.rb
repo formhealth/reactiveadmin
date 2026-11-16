@@ -348,6 +348,38 @@ RSpec.describe ReactiveAdmin::HtmlNodes do
       expect(host_nodes('<div><a href="javascript:x()">bad</a></div>').first[:type]).to eq("box")
     end
 
+    it "reads header_action markup into header_actions, not the title" do
+      html = %(<div class="panel"><h3>T<div class="header_action"><a href="/a">A</a> #{button}</div></h3><div class="panel_contents">body</div></div>)
+      panel = host_nodes(html).first
+
+      expect(panel).to include(title: "T", children: [{type: "text", text: "body"}])
+      expect(panel[:header_actions].pluck(:type)).to eq(%w[link action])
+    end
+
+    it "reads every header_action, and reports each one it can't type" do
+      html = '<div class="panel"><h3>T<div class="header_action"><a href="/a">A</a></div><div class="header_action"><a href="/b">B</a></div><div class="header_action"><em>x</em></div></h3></div>'
+
+      kinds = ReactiveAdmin::Degradation.with_collection do
+        expect(nodes(html).first[:header_actions].pluck(:label)).to eq(%w[A B])
+        ReactiveAdmin::Degradation.entries.pluck(:kind)
+      end
+      expect(kinds).to eq(%w[panel_header_action])
+    end
+
+    it "reports an icon-only header link with an unsafe href instead of failing" do
+      html = '<div class="panel"><h3>T<div class="header_action"><a href="javascript:void(0)"><i class="icon"></i></a></div></h3><div class="panel_contents">body</div></div>'
+
+      panel, kinds = ReactiveAdmin::Degradation.with_collection { [nodes(html).first, ReactiveAdmin::Degradation.entries.pluck(:kind)] }
+      expect(panel).to eq(type: "panel", title: "T", children: [{type: "text", text: "body"}])
+      expect(kinds).to eq(%w[panel_header_action])
+    end
+
+    it "drops a header_action it can't type" do
+      html = '<div class="panel"><h3>T<div class="header_action"><em>x</em></div></h3><div class="panel_contents">body</div></div>'
+
+      expect(host_nodes(html).first).to eq(type: "panel", title: "T", children: [{type: "text", text: "body"}])
+    end
+
     it "keeps a trailing toolbar inside its panel" do
       html = %(<div class="panel"><h3>T</h3><div class="panel_contents">body<div class="flex">#{button}</div></div></div>)
 

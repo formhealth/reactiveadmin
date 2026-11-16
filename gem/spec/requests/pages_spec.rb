@@ -29,6 +29,18 @@ RSpec.describe "register_page", type: :request do
       expect(by_key(json["actions"])["sidekiq"]).to include("href" => "http://www.example.com/sidekiq", "external" => true, "kind" => "link")
     end
 
+    it "types a panel's header_action as header_actions, apart from the title" do
+      api_get("/api/admin/_pages/panel_headers", schema: "PageResponse")
+
+      linked, acting, plain = json["layout"]
+      expect(linked).to include("title" => "Linked", "header_actions" => [{"type" => "link", "label" => "Edit", "href" => "/admin/posts", "external" => false}])
+      expect(acting["title"]).to eq("Acting")
+      expect(acting["header_actions"].sole).to include("type" => "action", "action" => include("label" => "Archive", "method" => "post", "confirm" => "Sure?", "placement" => "inline"))
+      expect(plain).to include("title" => "Plain", "children" => [{"type" => "text", "text" => "Body"}])
+      expect(plain).not_to have_key("header_actions")
+      expect(json["degraded"].pluck("kind")).to include("panel_header_action")
+    end
+
     it "serves the page at AA's own path under the mount too" do
       api_get("/api/admin/dashboard", schema: "PageResponse")
 
