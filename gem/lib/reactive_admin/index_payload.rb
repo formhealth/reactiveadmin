@@ -17,7 +17,7 @@ module ReactiveAdmin
       # Must run first: it applies filtering/scoping/sorting and memoizes the pre-scope chain.
       records = AA.collection(@controller)
       recorder = columns_recorder
-      if (sort = unsupported_sort(recorder))
+      if (sort = unsupported_sort(sorting_recorder(recorder)))
         raise ApiErrors::BadRequest, "Unsupported sort: #{sort}"
       end
       keys = column_keys(recorder, recorder.columns)
@@ -59,7 +59,7 @@ module ReactiveAdmin
 
     # The requested `order`'s sort key when the index doesn't offer it. Ordering by a column the
     # page hides would leak how its values compare.
-    def unsupported_sort(recorder = columns_recorder)
+    def unsupported_sort(recorder = sorting_recorder(columns_recorder))
       QueryGuard.order_violation(@config, @controller.params[:order], recorder.columns.select { orderable?(it) }.map(&:sort_key))
     end
 
@@ -68,6 +68,12 @@ module ReactiveAdmin
     def columns_recorder = @views.table? ? record_columns : new_recorder
 
     def table_with_block = IndexViews.table_with_block(@config, as: @controller.params[:as])
+
+    # Other views show no columns, so a sort picked in the declared table (it stays in the URL) is checked against the table's.
+    def sorting_recorder(recorder)
+      table = IndexViews.new(@config, as: "table")
+      (@views.table? || !table.table?) ? recorder : record_columns(table)
+    end
 
     def record_columns(views = @views)
       block = views.presenter&.block

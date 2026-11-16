@@ -368,6 +368,98 @@ RSpec.describe "index options", type: :request do
     end
   end
 
+  describe "presenter options per view" do
+    def pins(as = nil) = list("pinboards", as && {as:})["meta"]
+
+    def formats(as = nil) = api_get("/api/admin/pinboards/_meta", as && {as:}, schema: "ResourceMeta")["download_formats"]
+
+    it "lists the declared views, naming a custom class by its index_name" do
+      expect(meta_of("pinboards")["index_views"].pluck("as")).to eq(%w[table grid blog exploding])
+    end
+
+    it "takes the title of the view shown" do
+      expect(pins["title"]).to eq("Pin table")
+      expect(pins("grid")["title"]).to eq("Pin grid")
+      expect(pins("blog")["title"]).to eq("Pin blog")
+    end
+
+    it "takes the grid's column count from the grid only" do
+      expect(pins("grid")["grid_columns"]).to eq(4)
+      expect(pins("blog")).not_to have_key("grid_columns")
+    end
+
+    it "applies the paginator and per_page of the view shown" do
+      expect(pins["per_page_options"]).to eq([5, 10])
+      expect(pins).not_to have_key("paginator")
+      expect(pins("grid")).to include("paginator" => false)
+      expect(pins("grid")).not_to have_key("per_page_options")
+      expect(pins("blog")["per_page_options"]).to eq([3, 6])
+    end
+
+    it "takes the blank slate link from the view shown" do
+      expect(pins).not_to have_key("blank_slate")
+      expect(pins("grid")["blank_slate"]).to eq("label" => "Pin the first one", "href" => "/admin/pinboards/new")
+    end
+
+    it "takes the download links from the view shown" do
+      expect(formats).to eq(["csv"])
+      expect(formats("grid")).to eq([])
+      expect(formats("blog")).to eq(["csv"])
+    end
+
+    it "degrades a custom IndexAs class that raises to the display name, without leaking values" do
+      Sketch.create!(title: "Secret plans")
+      meta = pins("exploding")
+
+      expect(meta).to include("view" => "block", "as" => "exploding")
+      expect(nodes_of(json["rows"].first["layout"], "text").pluck("text")).to eq(["Secret plans"])
+      expect(json["degraded"]).to include(a_hash_including("kind" => "item_view_failed", "where" => "index/view[exploding]"))
+      expect(json["degraded"].to_json).not_to include("Secret plans")
+    end
+  end
+
+  describe "views with sorting, filters, scopes and export" do
+    before do
+      Note.create!(title: "Beta", weight: 2)
+      Note.create!(title: "Alpha", weight: 1)
+      Note.create!(title: "Gamma", weight: 3)
+    end
+
+    %w[grid blog block].each do |as|
+      it "keeps the order, filters and paging in the #{as} view" do
+        list("notes", as:, order: "title_asc")
+        expect(json["rows"].size).to eq(3)
+        expect(json["rows"].map { it["layout"].to_json[/Alpha|Beta|Gamma/] }).to eq(%w[Alpha Beta Gamma])
+
+        list("notes", as:, order: "title_desc", q: {title_in: %w[Alpha Gamma]}, per_page: 1)
+        expect(json["rows"].map { it["layout"].to_json[/Alpha|Beta|Gamma/] }).to eq(%w[Gamma])
+        expect(index_meta).to include("total_count" => 2, "total_pages" => 2)
+      end
+    end
+
+    it "checks a table sort against the declared table when a grid is the default" do
+      list("walls", order: "title_asc", as: "table")
+      expect(json["rows"].map { it["cells"]["title"]["text"] }).to eq(%w[Alpha Beta Gamma])
+
+      list("walls", order: "title_asc", as: "grid")
+      expect(index_meta).to include("view" => "grid")
+      expect(json["rows"].map { it["layout"].to_json[/Alpha|Beta|Gamma/] }).to eq(%w[Alpha Beta Gamma])
+
+      api_get("/api/admin/walls.csv", order: "title_asc")
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "exports the same CSV whichever view is shown" do
+      api_get("/api/admin/notes.csv", order: "title_asc")
+      table = response.body
+
+      api_get("/api/admin/notes.csv", order: "title_asc", as: "grid")
+
+      expect(response.body).to eq(table)
+      expect(table).to include("Alpha")
+    end
+  end
+
   describe "order_by" do
     before do
       Note.create!(title: "Longest title here")
