@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { IndexResponse } from '@/api/generated/model'
 import { apiError } from '@/mocks/handlers'
-import { columns, scopeDefs } from '@/mocks/fixtures'
+import { columns, resourceMetas, scopeDefs } from '@/mocks/fixtures'
 import { ResourceIndex } from './ResourceIndex'
 
 const LIST = '/api/admin/posts'
@@ -172,7 +172,8 @@ export const AuthorRowActionsMenu: Story = {
   },
 }
 
-// Rows from one resource never stand in for another's while it loads.
+// Rows from one resource never stand in for another's while it loads. The skeleton also hides rows until the
+// destination's metadata arrives, so the check waits for something only that metadata renders.
 export const NavigateToAnotherResource: Story = {
   decorators: [
     (Story) => (
@@ -184,6 +185,7 @@ export const NavigateToAnotherResource: Story = {
   ],
   parameters: {
     ...respondWith(
+      http.get('/api/admin/desks/_meta', () => HttpResponse.json({ ...resourceMetas.find((r) => r.key === 'desks'), download_formats: ['csv'] })),
       http.get('/api/admin/desks', async () => {
         await delay('infinite')
         return HttpResponse.json(emptyList)
@@ -194,6 +196,7 @@ export const NavigateToAnotherResource: Story = {
     const canvas = within(canvasElement)
     await expect((await canvas.findAllByRole('button', { name: /^Actions for/ })).length).toBeGreaterThan(0)
     await userEvent.click(canvas.getByRole('link', { name: 'Desks' }))
-    await waitFor(() => expect(canvas.queryAllByRole('button', { name: /^Actions for/ })).toHaveLength(0))
+    await waitFor(() => expect(canvas.getByRole('link', { name: 'Export CSV' })).toHaveAttribute('href', expect.stringContaining('/api/admin/desks.csv')))
+    await expect(canvas.queryAllByRole('button', { name: /^Actions for/ })).toHaveLength(0)
   },
 }
