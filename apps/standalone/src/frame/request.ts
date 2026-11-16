@@ -1,4 +1,5 @@
 import { sameOrigin, withClassic } from '@/lib/classic'
+import { safeFrameWrite } from '@/lib/safeUrl'
 
 export const FRAME_HEADER = 'X-Reactiveadmin-Frame'
 
@@ -12,12 +13,14 @@ type Submit = { action?: string | null; method?: string | null; enctype?: string
 
 // Mirrors what the browser would send for the form: `_method` and the submitter stay in the body (Rack's method
 // override reads them), the CSRF token moves to a header (added by the caller), and GET forms become a query.
+// Undefined for another origin, and for a write anywhere but an admin page (see `safeFrameWrite`).
 export function buildFrameRequest({ action, method, enctype, data, base: from = base() }: Submit): FrameRequest | undefined {
   const target = sameOrigin(action || from, from)
-  if (!target) return undefined
+  const get = !method || method.toLowerCase() === 'get'
+  if (!target || (!get && !safeFrameWrite(action || from, from))) return undefined
   data.delete('authenticity_token')
 
-  if (!method || method.toLowerCase() === 'get') {
+  if (get) {
     target.search = ''
     for (const [key, value] of data) if (typeof value === 'string') target.searchParams.append(key, value)
     return { url: target.pathname + target.search, init: { method: 'GET', headers: headers() } }
@@ -35,8 +38,8 @@ export function buildFrameRequest({ action, method, enctype, data, base: from = 
 // rails-ujs turns `a[data-method]` into a POST form carrying `_method`; non-GET links do the same here.
 export function buildLinkRequest(href: string, method = 'get', from = base()): FrameRequest | undefined {
   const target = sameOrigin(href, from)
-  if (!target) return undefined
   const verb = method.toLowerCase()
+  if (!target || (verb !== 'get' && !safeFrameWrite(href, from))) return undefined
   const url = target.pathname + target.search
   if (verb === 'get') return { url, init: { method: 'GET', headers: headers() } }
   const body = new URLSearchParams(verb === 'post' ? {} : { _method: verb })

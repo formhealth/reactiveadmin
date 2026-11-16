@@ -39,6 +39,13 @@ const RESERVED = new RegExp(`^(${[...new Set(['/admin', '/api', adminPath, mount
 // resolves dot segments, which would turn `/auth/../admin/x` into an admin path unseen.
 const UNRESOLVED_PATH = /(^|\/)\.\.?(\/|$)|%2e|%2f|%5c|\\/i
 
+// A frame's write carries this session's CSRF token, so it only goes to an admin page of this origin, named without
+// dot segments or encoded separators that could resolve somewhere else.
+export function safeFrameWrite(url: string, from = globalThis.location?.href): boolean {
+  const target = sameOrigin(url, from)
+  return !!target && isAdminPath(target.pathname) && !UNRESOLVED_PATH.test(url.trim().split(/[?#]/, 1)[0])
+}
+
 export function safeNavigation(action: Action, from = globalThis.location?.href): boolean {
   const target = action.href ? sameOrigin(action.href, from) : undefined
   const reserved = RESERVED.test(target?.pathname ?? '')
