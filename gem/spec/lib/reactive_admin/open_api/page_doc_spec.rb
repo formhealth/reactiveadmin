@@ -15,6 +15,7 @@ RSpec.describe ReactiveAdmin::OpenApi::PageDoc do
 
     expect(action).to include(operationId: "dashboardRecalc", security: [{"sessionCookie" => [], "csrfToken" => []}, {"bearerAuth" => []}])
     expect(action[:requestBody]).to eq("$ref": "#/components/requestBodies/ActionParams")
+    expect(action[:responses]).to include(200 => {"$ref": "#/components/responses/ActionWrite"}, 501 => {"$ref": "#/components/responses/Unsupported"})
   end
 
   it "names the tag from the page's menu key" do

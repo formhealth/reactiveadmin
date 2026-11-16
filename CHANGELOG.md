@@ -16,6 +16,10 @@ These close gaps in the API and change what some clients get. Review them before
 - **Frames.** A frame form or `data-method` link that isn't a GET is sent, with the session's CSRF token, only to an admin page; anything else is refused.
 - The CSV formula escaping flag is per request, so concurrent classic and API exports no longer share it.
 
+### Changed
+
+- **Custom actions in the contract.** `core.yaml` declares GET member actions (`runMemberActionGet`, answering `ActionGetResponse`: a form, page content, options or a redirect's result), lets action writes answer `ActionWriteResponse` (a result or a re-rendered form), and declares their `501 unsupported`. The OpenAPI document gives member, collection and page actions the same responses.
+
 ## 0.1.0
 
 First public release. The gem and the client are early: interfaces may change before 1.0.

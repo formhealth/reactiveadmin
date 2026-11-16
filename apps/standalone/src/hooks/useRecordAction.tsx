@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { apiFetch } from '@/api/fetcher'
-import type { Action, ActionResult, FormResponse } from '@/api/generated/model'
+import type { Action, ActionGetResponse, ActionResult, FormResponse } from '@/api/generated/model'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,8 +63,8 @@ export function useRecordAction(ctx: ActionContext = {}) {
 
   const openForm = async (action: Action, path: string) => {
     try {
-      const response = await apiFetch<FormResponse>(path)
-      if (response.form) setForm({ action, response })
+      const response = await apiFetch<ActionGetResponse>(path)
+      if ('form' in response && 'action' in response) setForm({ action, response })
       else toast.error(`"${action.label}" can't be opened here`)
     } catch (error) {
       toastError(error)
@@ -117,7 +117,7 @@ export function useRecordAction(ctx: ActionContext = {}) {
           response={form.response}
           submitLabel={form.action.label}
           classicHref={form.action.href ?? undefined}
-          send={(entries) => saveRecord(form.response, entries) as Promise<ActionResult>}
+          send={(entries) => saveRecord<ActionResult>(form.response, entries)}
           onDone={(result) => {
             setForm(undefined)
             done(form.action, result)

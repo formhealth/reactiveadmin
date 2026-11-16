@@ -60,6 +60,9 @@ module ReactiveAdmin
         {"x-reactiveadmin-session-only": (true if ApiGuards.session_only?(config, names)), "x-reactiveadmin-guard": custom&.name}.compact
       end
 
+      # What a custom action answers, as core.yaml declares for runMemberActionGet and its writes.
+      def action_responses(get) = {200 => shared(get ? "ActionGet" : "ActionWrite"), 501 => shared("Unsupported")}
+
       # Verbs of a declared action (`member_action :x, method: [:get, :post]`).
       def verbs_of(declaration)
         Array.wrap(declaration.http_verb).map { it.to_s.downcase } & VERBS

@@ -291,6 +291,29 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
   /admin/{resource}/{id}/{action}:
+    get:
+      operationId: runMemberActionGet
+      tags: [core]
+      description: |
+        A GET member action. Its template answers as a FormResponse (Formtastic form) or a PageResponse (read-only
+        content), as `Action.view` says; with `context=template` a template form field's options (OptionsResponse);
+        a redirect answers an ActionResult; an html page the API can't describe answers 501 `unsupported`. Collection
+        actions are served the same way at `/admin/{resource}/{action}`, and page actions at `/admin/{page}/{action}`:
+        those paths can't be declared apart from `/admin/{resource}/{id}` and `/admin/{resource}`, so this operation
+        stands for them too.
+      parameters:
+        - { $ref: "#/components/parameters/Resource" }
+        - { $ref: "#/components/parameters/Id" }
+        - { $ref: "#/components/parameters/Action" }
+        - { name: context, in: query, description: "template asks for a template form field's options (its `options_path` carries context and field)", schema: { type: string, enum: [template] } }
+        - { name: field, in: query, description: "With context=template", schema: { type: string } }
+        - { name: term, in: query, description: "With context=template", schema: { type: string } }
+      responses:
+        "200": { $ref: "#/components/responses/ActionGet" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "501": { $ref: "#/components/responses/Unsupported" }
     post:
       operationId: runMemberActionPost
       tags: [core]
@@ -298,18 +321,19 @@ paths:
         A member action declared with `member_action` (HTTP verb per `Action.method`). The action's
         redirect + flash become an ActionResult; an alert/error flash becomes a 422. Authorized with
         the same permission that gates `Action.enabled`. Collection actions are served the same way at
-        `/admin/{resource}/{action}` (no id).
+        `/admin/{resource}/{action}` (no id), and page actions at `/admin/{page}/{action}`.
       parameters:
         - { $ref: "#/components/parameters/Resource" }
         - { $ref: "#/components/parameters/Id" }
         - { $ref: "#/components/parameters/Action" }
       requestBody: { $ref: "#/components/requestBodies/ActionParams" }
       responses:
-        "200": { $ref: "#/components/responses/ActionResult" }
+        "200": { $ref: "#/components/responses/ActionWrite" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "422": { $ref: "#/components/responses/Invalid" }
+        "501": { $ref: "#/components/responses/Unsupported" }
     put:
       operationId: runMemberActionPut
       tags: [core]
@@ -320,11 +344,12 @@ paths:
         - { $ref: "#/components/parameters/Action" }
       requestBody: { $ref: "#/components/requestBodies/ActionParams" }
       responses:
-        "200": { $ref: "#/components/responses/ActionResult" }
+        "200": { $ref: "#/components/responses/ActionWrite" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "422": { $ref: "#/components/responses/Invalid" }
+        "501": { $ref: "#/components/responses/Unsupported" }
         "409": { $ref: "#/components/responses/Conflict" }
     patch:
       operationId: runMemberActionPatch
@@ -336,11 +361,12 @@ paths:
         - { $ref: "#/components/parameters/Action" }
       requestBody: { $ref: "#/components/requestBodies/ActionParams" }
       responses:
-        "200": { $ref: "#/components/responses/ActionResult" }
+        "200": { $ref: "#/components/responses/ActionWrite" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "422": { $ref: "#/components/responses/Invalid" }
+        "501": { $ref: "#/components/responses/Unsupported" }
         "409": { $ref: "#/components/responses/Conflict" }
     delete:
       operationId: runMemberActionDelete
@@ -352,11 +378,12 @@ paths:
         - { $ref: "#/components/parameters/Action" }
       requestBody: { $ref: "#/components/requestBodies/ActionParams" }
       responses:
-        "200": { $ref: "#/components/responses/ActionResult" }
+        "200": { $ref: "#/components/responses/ActionWrite" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "422": { $ref: "#/components/responses/Invalid" }
+        "501": { $ref: "#/components/responses/Unsupported" }
   /admin/{resource}:
     post:
       operationId: createRecord
@@ -547,7 +574,33 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ActionResult" }
+    ActionGet:
+      description: What a GET custom action answers; see runMemberActionGet.
+      headers: { X-Reactiveadmin-Degraded: { $ref: "#/components/headers/Degraded" } }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ActionGetResponse" }
+    ActionWrite:
+      description: "The action ran: an ActionResult, or a FormResponse when it rendered its template again (see the ActionResult response)."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ActionWriteResponse" }
+    Unsupported:
+      description: The action renders an html page the API can't describe (`unsupported`); use the classic admin.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
   schemas:
+    ActionGetResponse:
+      oneOf:
+        - $ref: "#/components/schemas/FormResponse"
+        - $ref: "#/components/schemas/PageResponse"
+        - $ref: "#/components/schemas/OptionsResponse"
+        - $ref: "#/components/schemas/ActionResult"
+    ActionWriteResponse:
+      oneOf:
+        - $ref: "#/components/schemas/ActionResult"
+        - $ref: "#/components/schemas/FormResponse"
     McpRequest:
       type: object
       required: [jsonrpc, method]

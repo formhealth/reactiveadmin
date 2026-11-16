@@ -21,7 +21,7 @@ export function InlineForm({ response, onDone }: { response: FormResponse; onDon
   const mapUrl = useMapClassic()
   const label = response.submit_label || 'Submit'
 
-  const send = (entries: Entry[]) => saveRecord(response, entries) as Promise<ActionResult>
+  const send = (entries: Entry[]) => saveRecord<ActionResult>(response, entries)
 
   // Like a page action in the classic admin: the page it redirects to is shown again, a redirect elsewhere is followed.
   const sent = (result: ActionResult) => {

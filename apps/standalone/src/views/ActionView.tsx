@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { apiFetch, errorMessage } from '@/api/fetcher'
-import type { Action, ActionResult, FormResponse, PageResponse } from '@/api/generated/model'
+import type { Action, ActionGetResponse, ActionResult, ActionWriteResponse, FormResponse, PageResponse } from '@/api/generated/model'
 import { FormSkeleton } from '@/components/FormSkeleton'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -31,24 +31,20 @@ type BodyProps = {
   onClose: () => void
 }
 
-// A write that renders its template again (a search) answers with the page as a FormResponse, not an ActionResult.
-type Sent = ActionResult | FormResponse
+// A template with a form answers a FormResponse, and so does a write that renders it again (a search); a read-only
+// template answers its content as a PageResponse, and a redirect as an ActionResult.
+const isForm = (answer: ActionGetResponse | ActionWriteResponse): answer is FormResponse => 'form' in answer && 'action' in answer
+const isContent = (answer: ActionGetResponse): answer is PageResponse => 'layout' in answer && 'key' in answer
+const isResult = (answer: ActionGetResponse): answer is ActionResult => 'ok' in answer
 
-const isPage = (result: Sent): result is FormResponse => 'form' in result && 'action' in result
-
-// A template with a form answers a FormResponse; a read-only one answers its content as a PageResponse.
-type Answer = FormResponse | PageResponse
-
-const isForm = (answer: Answer): answer is FormResponse => 'form' in answer
-
-const send = (response: FormResponse) => (entries: Parameters<typeof saveRecord>[1]) => saveRecord(response, entries) as Promise<Sent>
+const send = (response: FormResponse) => (entries: Parameters<typeof saveRecord>[1]) => saveRecord<ActionWriteResponse>(response, entries)
 
 type PageFormProps = {
   response: FormResponse
   label: string
   classicHref?: string
   ctx: { resource?: string; id?: string }
-  onResult: (result: Sent) => void
+  onResult: (result: ActionWriteResponse) => void
   onClose: () => void
 }
 
@@ -97,7 +93,7 @@ function NativeView({ action, path, container, resource, id, onResult, onClose }
   const { data, error, dataUpdatedAt: updatedAt, isFetching, isPlaceholderData } = useQuery({
     // Under the resource's prefix, so the writes of this page's actions refetch it.
     queryKey: [`/admin/${resource ?? '_'}/action-form`, path, query.search],
-    queryFn: () => apiFetch<Answer>(withSearch(path, query.search)),
+    queryFn: () => apiFetch<ActionGetResponse>(withSearch(path, query.search)),
     // The page stays up while a new query loads, but another action's page never stands in for this one.
     placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === path ? previous : undefined),
     gcTime: 0,
@@ -118,11 +114,16 @@ function NativeView({ action, path, container, resource, id, onResult, onClose }
   useEffect(() => {
     if (error) fail(error)
   }, [error])
+  // A GET action that redirected has run: it is done like a write.
+  const redirected = useEffectEvent(onResult)
+  useEffect(() => {
+    if (data && isResult(data)) redirected(data)
+  }, [data])
 
   const current = answer?.at === dataUpdatedAt ? answer : undefined
   const shown = current?.response ?? data
   const key = `${dataUpdatedAt}-${current?.count ?? 0}`
-  const sent = (result: Sent) => (isPage(result) ? setAnswer({ response: result, at: dataUpdatedAt, count: (current?.count ?? 0) + 1 }) : onResult(result))
+  const sent = (result: ActionWriteResponse) => (isForm(result) ? setAnswer({ response: result, at: dataUpdatedAt, count: (current?.count ?? 0) + 1 }) : onResult(result))
   const classicHref = action.href ?? undefined
   const ctx = { resource, id }
   const label = (shown && isForm(shown) && shown.submit_label) || action.label
@@ -131,7 +132,7 @@ function NativeView({ action, path, container, resource, id, onResult, onClose }
     (isForm(shown) ? (
       <PageForm key={key} response={shown} label={label} classicHref={classicHref} ctx={ctx} onResult={sent} onClose={onClose} />
     ) : (
-      <Content nodes={shown.layout} ctx={ctx} />
+      isContent(shown) && <Content nodes={shown.layout} ctx={ctx} />
     ))
 
   const view = (body: React.ReactNode) => <ViewQueryContext value={query}>{body}</ViewQueryContext>
@@ -146,7 +147,7 @@ function NativeView({ action, path, container, resource, id, onResult, onClose }
         <FormSkeleton />
       ),
     )
-  if (!shown) return null
+  if (!shown || !(isForm(shown) || isContent(shown))) return null
   // Results need more room than a short form's dialog gives them, and a filter form is shown with its results.
   if (!isForm(shown) || shown.layout || shown.action.method === 'get')
     return view(

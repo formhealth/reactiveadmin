@@ -54,6 +54,13 @@ RSpec.describe ReactiveAdmin::OpenApi::ResourceDoc do
     expect(ids).to include("postPublish", "postRenameGet", "postRenamePost", "postsStats", "postsImport")
   end
 
+  it "answers custom actions with core's action unions" do
+    rename = build("posts")[:paths]["/api/admin/posts/{id}/rename"]
+
+    expect(rename.dig("get", :responses, 200)).to eq("$ref": "#/components/responses/ActionGet")
+    expect(rename.dig("post", :responses, 200)).to eq("$ref": "#/components/responses/ActionWrite")
+  end
+
   it "drops a resource's batch endpoint when it declares none" do
     expect(build("tags")[:paths]).not_to have_key("/api/admin/tags/batch_action") if ReactiveAdmin::AA.batch_actions(ReactiveAdmin::Registry.find("tags")).none?
     expect(build("posts")[:paths]).to have_key("/api/admin/posts/batch_action")

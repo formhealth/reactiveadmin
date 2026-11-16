@@ -1,5 +1,7 @@
 module ApiHelpers
   JSON_HEADERS = {"ACCEPT" => "application/json", "CONTENT_TYPE" => "application/json"}.freeze
+  # A nested index (`/admin/authors/1/posts`) fits this template too.
+  MEMBER_ACTION = "/admin/{resource}/{id}/{action}"
 
   def sign_in(user) = post("/test/sign_in", params: {id: user.id})
 
@@ -7,7 +9,7 @@ module ApiHelpers
 
   # Sends a request the way the client does and enforces what must hold for every response: the
   # body is JSON (never an html page), errors match the contract, and a success matches `schema`, or
-  # else whatever core.yaml declares for the verb, path and status.
+  # else whatever core.yaml declares for the verb, path and status. `schema: false` is for a host's own JSON.
   def api(verb, path, body = nil, schema: nil, headers: {}, params: nil)
     headers = JSON_HEADERS.merge(headers)
     payload = body && (body.is_a?(String) ? body : body.to_json)
@@ -44,22 +46,27 @@ module ApiHelpers
     schema = if response.status >= 400
       (response.status == 422 && json.key?("errors")) ? "ValidationError" : "Error"
     else
-      schema || inferred_schema
+      schema.nil? ? inferred_schema : schema
     end
     expect(json).to match_contract(schema) if schema
   end
 
-  def inferred_schema = undeclared_get? ? nil : Contract.response_schema(request.request_method, request.path, response.status)
+  # Custom actions and AA pages are served at paths core.yaml can't tell from a record's or an index's, so they
+  # are matched by what the controller ran.
+  def inferred_schema
+    status = response.status
+    case served_as
+    when :page then Contract.operation_schema("getPage", status)
+    when :action then Contract.operation_schema("runMemberAction#{request.request_method.capitalize}", status)
+    else Contract.response_schema(request.request_method, request.path, status) unless Contract.template(request.path) == MEMBER_ACTION
+    end
+  end
 
-  # GET custom actions and AA pages under the mount aren't in core.yaml, though their paths fit its templates.
-  def undeclared_get?
-    return false unless request.get?
-
+  def served_as
     name = controller.action_name
     case controller
-    when ActiveAdmin::PageController then name != "reactiveadmin_page"
-    when ActiveAdmin::ResourceController then %w[index show new edit].exclude?(name) && !name.start_with?("reactiveadmin_")
-    else false
+    when ActiveAdmin::PageController then (%w[index reactiveadmin_page].include?(name) ? :page : :action)
+    when ActiveAdmin::ResourceController then :action unless %w[index show new edit create update destroy batch_action].include?(name) || name.start_with?("reactiveadmin_")
     end
   end
 

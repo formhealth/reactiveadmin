@@ -7,10 +7,11 @@ export const lockEntries = (lock?: FormLock): Entry[] => (lock ? [['lock[field]'
 
 // The one place forms write. A form the server marked non-submittable never reaches the network.
 // JSON unless a file is present, in which case Rails reads it as multipart.
-export function saveRecord({ action: { method, path }, lock, submittable }: FormResponse, entries: Entry[]) {
+// `T`: what the form's target answers; a custom action's form gets an ActionWriteResponse.
+export function saveRecord<T = WriteResult>({ action: { method, path }, lock, submittable }: FormResponse, entries: Entry[]) {
   if (submittable === false) return Promise.reject(new Error("This form can't be saved here"))
   const all = [...entries, ...lockEntries(lock)]
-  return apiFetch<WriteResult>(
+  return apiFetch<T>(
     path,
     hasFile(all)
       ? { method: method.toUpperCase(), body: toFormData(all) }

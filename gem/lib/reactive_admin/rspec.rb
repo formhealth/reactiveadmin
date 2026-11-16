@@ -37,8 +37,18 @@ module ReactiveAdmin
       def valid?(schema, data) = errors(schema, data).empty?
 
       # What core.yaml declares for `status` on the operation that serves `path`; nil when it declares nothing.
-      def response_schema(verb, path, status)
-        keys = ["paths", template(path), verb.to_s.downcase, "responses", status.to_s]
+      def response_schema(verb, path, status) = (route = template(path)) && schema_at(["paths", route, verb.to_s.downcase], status)
+
+      # The same for the operation with `operation_id`.
+      def operation_schema(operation_id, status)
+        document["paths"].each do |route, operations|
+          operations.each { |verb, operation| return schema_at(["paths", route, verb], status) if operation.is_a?(Hash) && operation["operationId"] == operation_id }
+        end
+        nil
+      end
+
+      def schema_at(operation, status)
+        keys = [*operation, "responses", status.to_s]
         ref = document.dig(*keys, "$ref")
         keys = ref.delete_prefix("#/").split("/") if ref
         keys += ["content", "application/json", "schema"]
