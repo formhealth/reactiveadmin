@@ -8,7 +8,7 @@ module ReactiveAdmin
         # The input Formtastic would render for `method`: AA's `as:` default unless `options[:as]` says otherwise.
         def build_input(builder, view, method, options)
           options[:as] ||= builder.send(:default_input_type, method, options)
-          builder.send(:namespaced_input_class, options[:as]).new(builder, view, builder.object, builder.object_name, method, options)
+          Input.new(builder.send(:namespaced_input_class, options[:as]).new(builder, view, builder.object, builder.object_name, method, options))
         end
 
         # :check_boxes and :hidden inputs name their params differently from the rest.

@@ -20,6 +20,7 @@ module ReactiveAdmin
   module AA
     autoload :V3, "reactive_admin/aa/v3"
     autoload :V4, "reactive_admin/aa/v4"
+    autoload :Input, "reactive_admin/aa/input"
 
     class << self
       def version = Gem::Version.new(::ActiveAdmin::VERSION)

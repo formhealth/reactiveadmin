@@ -27,8 +27,7 @@ module AaBoundary
     "lib/reactive_admin/show_payload.rb" => "Its Page is the Arbre element a show block renders into",
     "lib/reactive_admin/page_payload.rb" => "Its Content is the Arbre element a register_page's content block renders into",
     "lib/reactive_admin/page_forms.rb" => "Overrides the form helpers AA and Formtastic define, to record a page's forms",
-    "lib/reactive_admin/template_form.rb" => "Overrides the form helpers AA and Formtastic define, to record a template's form",
-    "lib/reactive_admin/form_field.rb" => "Reads Formtastic's input API"
+    "lib/reactive_admin/template_form.rb" => "Overrides the form helpers AA and Formtastic define, to record a template's form"
   }.freeze
 
   module_function
