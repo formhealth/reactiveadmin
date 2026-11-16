@@ -13,7 +13,7 @@
  */
 
 export type ExportRecordsCsvParams = {
-q?: {[key: string]: string};
-scope?: string;
-order?: string;
+  q?: {[key: string]: string};
+  scope?: string;
+  order?: string;
 };

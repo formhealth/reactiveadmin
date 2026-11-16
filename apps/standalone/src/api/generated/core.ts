@@ -74,6 +74,26 @@ import { apiFetch } from '../fetcher';
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
+const getHeaders = (...sources: (RequestInit['headers'] | Record<string, string | undefined>)[]) => {
+  const seen = new Set<string>();
+  const layers: [string, string | readonly string[]][][] = [];
+  for (const source of sources.reverse()) {
+    if (!source) continue;
+    const entries = source instanceof Headers
+      ? source.entries()
+      : Symbol.iterator in source
+        ? Array.from(source as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string])
+        : Object.entries<string | readonly string[] | undefined>(source);
+    const layer: [string, string | readonly string[]][] = [];
+    for (const [name, value] of entries) {
+      if (value !== undefined && !seen.has(name.toLowerCase())) layer.push([name, value]);
+    }
+    for (const [name] of layer) seen.add(name.toLowerCase());
+    layers.push(layer);
+  }
+  return Object.fromEntries(layers.reverse().flat()) as Extract<RequestInit['headers'], Record<string, unknown>>;
+};
+
 
 const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
@@ -166,7 +186,6 @@ export function useGetManifest<TData = Awaited<ReturnType<typeof getManifest>>, 
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getManifest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
 export function useGetManifest<TData = Awaited<ReturnType<typeof getManifest>>, TError = ErrorResponse>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getManifest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
@@ -240,6 +259,7 @@ export type GetOpenApiQueryResult = NonNullable<Awaited<ReturnType<typeof getOpe
 export type GetOpenApiQueryError = ErrorResponse | RateLimitedResponse
 
 
+/** An OpenAPI 3.1 document of this host's admin API, limited to the resources, pages and actions the signed-in user may use. Answers plain application/json (the vnd format is accepted too) so docs viewers can fetch it. It is typed from declarations only: never record data, option values, or anything masked or not exposed. Cached per code version and permission fingerprint. */
 export function useGetOpenApi<TData = Awaited<ReturnType<typeof getOpenApi>>, TError = ErrorResponse | RateLimitedResponse>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOpenApi>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -250,6 +270,7 @@ export function useGetOpenApi<TData = Awaited<ReturnType<typeof getOpenApi>>, TE
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** An OpenAPI 3.1 document of this host's admin API, limited to the resources, pages and actions the signed-in user may use. Answers plain application/json (the vnd format is accepted too) so docs viewers can fetch it. It is typed from declarations only: never record data, option values, or anything masked or not exposed. Cached per code version and permission fingerprint. */
 export function useGetOpenApi<TData = Awaited<ReturnType<typeof getOpenApi>>, TError = ErrorResponse | RateLimitedResponse>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOpenApi>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -260,11 +281,12 @@ export function useGetOpenApi<TData = Awaited<ReturnType<typeof getOpenApi>>, TE
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** An OpenAPI 3.1 document of this host's admin API, limited to the resources, pages and actions the signed-in user may use. Answers plain application/json (the vnd format is accepted too) so docs viewers can fetch it. It is typed from declarations only: never record data, option values, or anything masked or not exposed. Cached per code version and permission fingerprint. */
 export function useGetOpenApi<TData = Awaited<ReturnType<typeof getOpenApi>>, TError = ErrorResponse | RateLimitedResponse>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOpenApi>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/** An OpenAPI 3.1 document of this host's admin API, limited to the resources, pages and actions the signed-in user may use. Answers plain application/json (the vnd format is accepted too) so docs viewers can fetch it. It is typed from declarations only: never record data, option values, or anything masked or not exposed. Cached per code version and permission fingerprint. */
 export function useGetOpenApi<TData = Awaited<ReturnType<typeof getOpenApi>>, TError = ErrorResponse | RateLimitedResponse>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOpenApi>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
@@ -350,6 +372,10 @@ export type GetResourceMetaQueryResult = NonNullable<Awaited<ReturnType<typeof g
 export type GetResourceMetaQueryError = ErrorResponse
 
 
+/**
+ * Full metadata for one resource (filters, scopes, batch actions, action items). Cached server-side per resource and permission set; clients fetch on first visit and prefetch on menu hover.
+ * For a resource listed under a parent, send the parent id as the query param `ResourceMeta.belongs_to.param` names (`post_id=7`).
+ */
 export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(
  resource: string,
     params: undefined |  GetResourceMetaParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>> & Pick<
@@ -361,6 +387,10 @@ export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResource
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * Full metadata for one resource (filters, scopes, batch actions, action items). Cached server-side per resource and permission set; clients fetch on first visit and prefetch on menu hover.
+ * For a resource listed under a parent, send the parent id as the query param `ResourceMeta.belongs_to.param` names (`post_id=7`).
+ */
 export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(
  resource: string,
     params?: GetResourceMetaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>> & Pick<
@@ -372,12 +402,19 @@ export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResource
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * Full metadata for one resource (filters, scopes, batch actions, action items). Cached server-side per resource and permission set; clients fetch on first visit and prefetch on menu hover.
+ * For a resource listed under a parent, send the parent id as the query param `ResourceMeta.belongs_to.param` names (`post_id=7`).
+ */
 export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(
  resource: string,
     params?: GetResourceMetaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/**
+ * Full metadata for one resource (filters, scopes, batch actions, action items). Cached server-side per resource and permission set; clients fetch on first visit and prefetch on menu hover.
+ * For a resource listed under a parent, send the parent id as the query param `ResourceMeta.belongs_to.param` names (`post_id=7`).
+ */
 export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(
  resource: string,
     params?: GetResourceMetaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
@@ -463,6 +500,7 @@ export type GetPageQueryResult = NonNullable<Awaited<ReturnType<typeof getPage>>
 export type GetPageQueryError = ErrorResponse
 
 
+/** An AA register_page rendered through the fallback ladder (content walked into nodes; forms native when Formtastic, otherwise frame/iframe nodes). A page whose content has a GET form (a `form` node with `action.method` get) reads that form's fields from the query string, named as the form's field `params`; the response is the page with those results. */
 export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(
  page: string,
     params: undefined |  GetPageParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>> & Pick<
@@ -474,6 +512,7 @@ export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError =
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** An AA register_page rendered through the fallback ladder (content walked into nodes; forms native when Formtastic, otherwise frame/iframe nodes). A page whose content has a GET form (a `form` node with `action.method` get) reads that form's fields from the query string, named as the form's field `params`; the response is the page with those results. */
 export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(
  page: string,
     params?: GetPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>> & Pick<
@@ -485,12 +524,13 @@ export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError =
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** An AA register_page rendered through the fallback ladder (content walked into nodes; forms native when Formtastic, otherwise frame/iframe nodes). A page whose content has a GET form (a `form` node with `action.method` get) reads that form's fields from the query string, named as the form's field `params`; the response is the page with those results. */
 export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(
  page: string,
     params?: GetPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/** An AA register_page rendered through the fallback ladder (content walked into nodes; forms native when Formtastic, otherwise frame/iframe nodes). A page whose content has a GET form (a `form` node with `action.method` get) reads that form's fields from the query string, named as the form's field `params`; the response is the page with those results. */
 export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(
  page: string,
     params?: GetPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
@@ -580,6 +620,7 @@ export type GetRecordValueQueryResult = NonNullable<Awaited<ReturnType<typeof ge
 export type GetRecordValueQueryError = ErrorResponse | RateLimitedResponse
 
 
+/** Full value of a summarized json node or truncated text node (Node.expand_path). Audited server-side as a sensitive-data view; never cached. Call the expand_path exactly as given: it carries the signed token. A missing, forged, expired or other-user token answers 403 forbidden. */
 export function useGetRecordValue<TData = Awaited<ReturnType<typeof getRecordValue>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     id: string,
@@ -592,6 +633,7 @@ export function useGetRecordValue<TData = Awaited<ReturnType<typeof getRecordVal
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** Full value of a summarized json node or truncated text node (Node.expand_path). Audited server-side as a sensitive-data view; never cached. Call the expand_path exactly as given: it carries the signed token. A missing, forged, expired or other-user token answers 403 forbidden. */
 export function useGetRecordValue<TData = Awaited<ReturnType<typeof getRecordValue>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     id: string,
@@ -604,13 +646,14 @@ export function useGetRecordValue<TData = Awaited<ReturnType<typeof getRecordVal
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** Full value of a summarized json node or truncated text node (Node.expand_path). Audited server-side as a sensitive-data view; never cached. Call the expand_path exactly as given: it carries the signed token. A missing, forged, expired or other-user token answers 403 forbidden. */
 export function useGetRecordValue<TData = Awaited<ReturnType<typeof getRecordValue>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     id: string,
     params: GetRecordValueParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRecordValue>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/** Full value of a summarized json node or truncated text node (Node.expand_path). Audited server-side as a sensitive-data view; never cached. Call the expand_path exactly as given: it carries the signed token. A missing, forged, expired or other-user token answers 403 forbidden. */
 export function useGetRecordValue<TData = Awaited<ReturnType<typeof getRecordValue>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     id: string,
@@ -686,6 +729,7 @@ export type GetSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getSes
 export type GetSessionQueryError = ErrorResponse
 
 
+/** Current user plus the CSRF token to send as `X-CSRF-Token` on every write (CSRF stays enforced; a missing/stale token yields 422 `invalid_csrf`). */
 export function useGetSession<TData = Awaited<ReturnType<typeof getSession>>, TError = ErrorResponse>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -696,6 +740,7 @@ export function useGetSession<TData = Awaited<ReturnType<typeof getSession>>, TE
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** Current user plus the CSRF token to send as `X-CSRF-Token` on every write (CSRF stays enforced; a missing/stale token yields 422 `invalid_csrf`). */
 export function useGetSession<TData = Awaited<ReturnType<typeof getSession>>, TError = ErrorResponse>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -706,11 +751,12 @@ export function useGetSession<TData = Awaited<ReturnType<typeof getSession>>, TE
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** Current user plus the CSRF token to send as `X-CSRF-Token` on every write (CSRF stays enforced; a missing/stale token yields 422 `invalid_csrf`). */
 export function useGetSession<TData = Awaited<ReturnType<typeof getSession>>, TError = ErrorResponse>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/** Current user plus the CSRF token to send as `X-CSRF-Token` on every write (CSRF stays enforced; a missing/stale token yields 422 `invalid_csrf`). */
 export function useGetSession<TData = Awaited<ReturnType<typeof getSession>>, TError = ErrorResponse>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSession>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
@@ -746,25 +792,11 @@ export const getPostMcpUrl = () => {
  */
 export const postMcp = async (mcpRequest: McpRequest, options?: Parameters<typeof apiFetch>[1]): Promise<McpResponse | void> => {
 
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return apiFetch<McpResponse | void>(getPostMcpUrl(),
+  return apiFetch<McpResponse | void>(getPostMcpUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(mcpRequest)
   }
 );}
@@ -807,7 +839,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type PostMcpMutationError = McpResponse | Error | ErrorResponse
     export type PostMcpMutationVariables = {data: McpRequest}
 
-    export const usePostMcp = <TError = McpResponse | Error | ErrorResponse,
+    /**
+ * Model Context Protocol endpoint (Streamable HTTP transport, revision 2025-06-18, JSON responses only, no sessions or SSE).
+ * One JSON-RPC 2.0 message per POST: `initialize`, `ping`, `tools/list` and `tools/call`. Notifications answer 202 with no body.
+ * Bearer tokens only: a session cookie is refused with 401. A 401 carries `WWW-Authenticate: Bearer resource_metadata="..."` when
+ * `config.mcp.resource_metadata_url` is set. Answers 404 when MCP is disabled (for the user), and 403 for a foreign `Origin`.
+ * Every tool dispatches to the API routes in this document as the caller, so their authorization, audit and limits apply.
+ */
+export const usePostMcp = <TError = McpResponse | Error | ErrorResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postMcp>>, TError,PostMcpMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof postMcp>>,
@@ -832,25 +871,11 @@ export const getRunBatchActionUrl = (resource: string,) => {
 export const runBatchAction = async (resource: string,
     batchActionRequest: BatchActionRequest, options?: Parameters<typeof apiFetch>[1]): Promise<ActionResultResponse> => {
 
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return apiFetch<ActionResultResponse>(getRunBatchActionUrl(resource),
+  return apiFetch<ActionResultResponse>(getRunBatchActionUrl(resource),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(batchActionRequest)
   }
 );}
@@ -893,7 +918,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RunBatchActionMutationError = ErrorResponse | InvalidResponse
     export type RunBatchActionMutationVariables = {resource: string;data: BatchActionRequest}
 
-    export const useRunBatchAction = <TError = ErrorResponse | InvalidResponse,
+    /** AA batch action over the selected ids. Outcome is the action's redirect + flash converted to an ActionResult. */
+export const useRunBatchAction = <TError = ErrorResponse | InvalidResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runBatchAction>>, TError,RunBatchActionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof runBatchAction>>,
@@ -977,6 +1003,16 @@ export type GetOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof getOpt
 export type GetOptionsQueryError = ErrorResponse | RateLimitedResponse
 
 
+/**
+ * Typeahead source for a filter or form control whose collection is too large to inline
+ * (`Filter.options_path` / `FormField.options_path` already carry field, context and id).
+ * Every whitespace-separated token of `term` must start a word of the option (label, name or email
+ * columns, as the source declares); exact matches rank first, then prefix matches. A pasted id also
+ * finds its record. Page through large result sets with `next_cursor`. Requires READ on the resource.
+ * Form options of a nested resource are served at `/admin/{parent}/{parent_id}/{resource}/_options`
+ * (carried by `FormField.options_path`); a has_many field is addressed as `<assoc>.<name>`, and
+ * collections that depend on the parent record are evaluated for the record in `id`.
+ */
 export function useGetOptions<TData = Awaited<ReturnType<typeof getOptions>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: GetOptionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOptions>>, TError, TData>> & Pick<
@@ -988,6 +1024,16 @@ export function useGetOptions<TData = Awaited<ReturnType<typeof getOptions>>, TE
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * Typeahead source for a filter or form control whose collection is too large to inline
+ * (`Filter.options_path` / `FormField.options_path` already carry field, context and id).
+ * Every whitespace-separated token of `term` must start a word of the option (label, name or email
+ * columns, as the source declares); exact matches rank first, then prefix matches. A pasted id also
+ * finds its record. Page through large result sets with `next_cursor`. Requires READ on the resource.
+ * Form options of a nested resource are served at `/admin/{parent}/{parent_id}/{resource}/_options`
+ * (carried by `FormField.options_path`); a has_many field is addressed as `<assoc>.<name>`, and
+ * collections that depend on the parent record are evaluated for the record in `id`.
+ */
 export function useGetOptions<TData = Awaited<ReturnType<typeof getOptions>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: GetOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOptions>>, TError, TData>> & Pick<
@@ -999,12 +1045,31 @@ export function useGetOptions<TData = Awaited<ReturnType<typeof getOptions>>, TE
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * Typeahead source for a filter or form control whose collection is too large to inline
+ * (`Filter.options_path` / `FormField.options_path` already carry field, context and id).
+ * Every whitespace-separated token of `term` must start a word of the option (label, name or email
+ * columns, as the source declares); exact matches rank first, then prefix matches. A pasted id also
+ * finds its record. Page through large result sets with `next_cursor`. Requires READ on the resource.
+ * Form options of a nested resource are served at `/admin/{parent}/{parent_id}/{resource}/_options`
+ * (carried by `FormField.options_path`); a has_many field is addressed as `<assoc>.<name>`, and
+ * collections that depend on the parent record are evaluated for the record in `id`.
+ */
 export function useGetOptions<TData = Awaited<ReturnType<typeof getOptions>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: GetOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOptions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/**
+ * Typeahead source for a filter or form control whose collection is too large to inline
+ * (`Filter.options_path` / `FormField.options_path` already carry field, context and id).
+ * Every whitespace-separated token of `term` must start a word of the option (label, name or email
+ * columns, as the source declares); exact matches rank first, then prefix matches. A pasted id also
+ * finds its record. Page through large result sets with `next_cursor`. Requires READ on the resource.
+ * Form options of a nested resource are served at `/admin/{parent}/{parent_id}/{resource}/_options`
+ * (carried by `FormField.options_path`); a has_many field is addressed as `<assoc>.<name>`, and
+ * collections that depend on the parent record are evaluated for the record in `id`.
+ */
 export function useGetOptions<TData = Awaited<ReturnType<typeof getOptions>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: GetOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOptions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
@@ -1090,6 +1155,7 @@ export type GetLabelsQueryResult = NonNullable<Awaited<ReturnType<typeof getLabe
 export type GetLabelsQueryError = ErrorResponse
 
 
+/** Display names of records by id, for the command palette's recents. Returns only resource, id and display_name. Each record needs READ (the same finder and authorization as show); missing or refused ids are omitted. At most 20 ids are looked up. Top-level resources only: a resource nested under a required parent has no _labels route. Metadata, so it may be sent as a background request; it is not a view of the record. */
 export function useGetLabels<TData = Awaited<ReturnType<typeof getLabels>>, TError = ErrorResponse>(
  resource: string,
     params: GetLabelsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLabels>>, TError, TData>> & Pick<
@@ -1101,6 +1167,7 @@ export function useGetLabels<TData = Awaited<ReturnType<typeof getLabels>>, TErr
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** Display names of records by id, for the command palette's recents. Returns only resource, id and display_name. Each record needs READ (the same finder and authorization as show); missing or refused ids are omitted. At most 20 ids are looked up. Top-level resources only: a resource nested under a required parent has no _labels route. Metadata, so it may be sent as a background request; it is not a view of the record. */
 export function useGetLabels<TData = Awaited<ReturnType<typeof getLabels>>, TError = ErrorResponse>(
  resource: string,
     params: GetLabelsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLabels>>, TError, TData>> & Pick<
@@ -1112,12 +1179,13 @@ export function useGetLabels<TData = Awaited<ReturnType<typeof getLabels>>, TErr
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** Display names of records by id, for the command palette's recents. Returns only resource, id and display_name. Each record needs READ (the same finder and authorization as show); missing or refused ids are omitted. At most 20 ids are looked up. Top-level resources only: a resource nested under a required parent has no _labels route. Metadata, so it may be sent as a background request; it is not a view of the record. */
 export function useGetLabels<TData = Awaited<ReturnType<typeof getLabels>>, TError = ErrorResponse>(
  resource: string,
     params: GetLabelsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLabels>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/** Display names of records by id, for the command palette's recents. Returns only resource, id and display_name. Each record needs READ (the same finder and authorization as show); missing or refused ids are omitted. At most 20 ids are looked up. Top-level resources only: a resource nested under a required parent has no _labels route. Metadata, so it may be sent as a background request; it is not a view of the record. */
 export function useGetLabels<TData = Awaited<ReturnType<typeof getLabels>>, TError = ErrorResponse>(
  resource: string,
     params: GetLabelsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLabels>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
@@ -1218,6 +1286,13 @@ export type LookupOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof loo
 export type LookupOptionsQueryError = ErrorResponse | RateLimitedResponse
 
 
+/**
+ * Labels for the selected values of several typeahead fields in one request, so a form with many
+ * typeaheads costs one call. Same sources, authorization (READ) and policy scoping as `_options`; a
+ * value the user may not read is simply absent from its list. Served at the same nested paths as
+ * `_options`. It has its own `lookup` rate bucket, separate from `options` (search).
+ * At most 25 values per field and 100 in total; more is a 400.
+ */
 export function useLookupOptions<TData = Awaited<ReturnType<typeof lookupOptions>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: LookupOptionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof lookupOptions>>, TError, TData>> & Pick<
@@ -1229,6 +1304,13 @@ export function useLookupOptions<TData = Awaited<ReturnType<typeof lookupOptions
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * Labels for the selected values of several typeahead fields in one request, so a form with many
+ * typeaheads costs one call. Same sources, authorization (READ) and policy scoping as `_options`; a
+ * value the user may not read is simply absent from its list. Served at the same nested paths as
+ * `_options`. It has its own `lookup` rate bucket, separate from `options` (search).
+ * At most 25 values per field and 100 in total; more is a 400.
+ */
 export function useLookupOptions<TData = Awaited<ReturnType<typeof lookupOptions>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: LookupOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof lookupOptions>>, TError, TData>> & Pick<
@@ -1240,12 +1322,25 @@ export function useLookupOptions<TData = Awaited<ReturnType<typeof lookupOptions
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * Labels for the selected values of several typeahead fields in one request, so a form with many
+ * typeaheads costs one call. Same sources, authorization (READ) and policy scoping as `_options`; a
+ * value the user may not read is simply absent from its list. Served at the same nested paths as
+ * `_options`. It has its own `lookup` rate bucket, separate from `options` (search).
+ * At most 25 values per field and 100 in total; more is a 400.
+ */
 export function useLookupOptions<TData = Awaited<ReturnType<typeof lookupOptions>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: LookupOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof lookupOptions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/**
+ * Labels for the selected values of several typeahead fields in one request, so a form with many
+ * typeaheads costs one call. Same sources, authorization (READ) and policy scoping as `_options`; a
+ * value the user may not read is simply absent from its list. Served at the same nested paths as
+ * `_options`. It has its own `lookup` rate bucket, separate from `options` (search).
+ * At most 25 values per field and 100 in total; more is a 400.
+ */
 export function useLookupOptions<TData = Awaited<ReturnType<typeof lookupOptions>>, TError = ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: LookupOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof lookupOptions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
@@ -1341,7 +1436,6 @@ export function useGetNewForm<TData = Awaited<ReturnType<typeof getNewForm>>, TE
  resource: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNewForm>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
 export function useGetNewForm<TData = Awaited<ReturnType<typeof getNewForm>>, TError = ErrorResponse>(
  resource: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNewForm>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
@@ -1443,7 +1537,6 @@ export function useGetEditForm<TData = Awaited<ReturnType<typeof getEditForm>>, 
     id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEditForm>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
 export function useGetEditForm<TData = Awaited<ReturnType<typeof getEditForm>>, TError = ErrorResponse>(
  resource: string,
     id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEditForm>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
@@ -1542,6 +1635,14 @@ export type RunMemberActionGetQueryResult = NonNullable<Awaited<ReturnType<typeo
 export type RunMemberActionGetQueryError = ErrorResponse | UnsupportedResponse
 
 
+/**
+ * A GET member action. Its template answers as a FormResponse (Formtastic form) or a PageResponse (read-only
+ * content), as `Action.view` says; with `context=template` a template form field's options (OptionsResponse);
+ * a redirect answers an ActionResult; an html page the API can't describe answers 501 `unsupported`. Collection
+ * actions are served the same way at `/admin/{resource}/{action}`, and page actions at `/admin/{page}/{action}`:
+ * those paths can't be declared apart from `/admin/{resource}/{id}` and `/admin/{resource}`, so this operation
+ * stands for them too.
+ */
 export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMemberActionGet>>, TError = ErrorResponse | UnsupportedResponse>(
  resource: string,
     id: string,
@@ -1555,6 +1656,14 @@ export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMembe
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * A GET member action. Its template answers as a FormResponse (Formtastic form) or a PageResponse (read-only
+ * content), as `Action.view` says; with `context=template` a template form field's options (OptionsResponse);
+ * a redirect answers an ActionResult; an html page the API can't describe answers 501 `unsupported`. Collection
+ * actions are served the same way at `/admin/{resource}/{action}`, and page actions at `/admin/{page}/{action}`:
+ * those paths can't be declared apart from `/admin/{resource}/{id}` and `/admin/{resource}`, so this operation
+ * stands for them too.
+ */
 export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMemberActionGet>>, TError = ErrorResponse | UnsupportedResponse>(
  resource: string,
     id: string,
@@ -1568,6 +1677,14 @@ export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMembe
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * A GET member action. Its template answers as a FormResponse (Formtastic form) or a PageResponse (read-only
+ * content), as `Action.view` says; with `context=template` a template form field's options (OptionsResponse);
+ * a redirect answers an ActionResult; an html page the API can't describe answers 501 `unsupported`. Collection
+ * actions are served the same way at `/admin/{resource}/{action}`, and page actions at `/admin/{page}/{action}`:
+ * those paths can't be declared apart from `/admin/{resource}/{id}` and `/admin/{resource}`, so this operation
+ * stands for them too.
+ */
 export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMemberActionGet>>, TError = ErrorResponse | UnsupportedResponse>(
  resource: string,
     id: string,
@@ -1575,7 +1692,14 @@ export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMembe
     params?: RunMemberActionGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof runMemberActionGet>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/**
+ * A GET member action. Its template answers as a FormResponse (Formtastic form) or a PageResponse (read-only
+ * content), as `Action.view` says; with `context=template` a template form field's options (OptionsResponse);
+ * a redirect answers an ActionResult; an html page the API can't describe answers 501 `unsupported`. Collection
+ * actions are served the same way at `/admin/{resource}/{action}`, and page actions at `/admin/{page}/{action}`:
+ * those paths can't be declared apart from `/admin/{resource}/{id}` and `/admin/{resource}`, so this operation
+ * stands for them too.
+ */
 export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMemberActionGet>>, TError = ErrorResponse | UnsupportedResponse>(
  resource: string,
     id: string,
@@ -1618,25 +1742,11 @@ export const runMemberActionPost = async (resource: string,
     action: string,
     actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionWriteResponse> => {
 
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return apiFetch<ActionWriteResponse>(getRunMemberActionPostUrl(resource,id,action),
+  return apiFetch<ActionWriteResponse>(getRunMemberActionPostUrl(resource,id,action),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(actionParamsBody)
   }
 );}
@@ -1679,7 +1789,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RunMemberActionPostMutationError = ErrorResponse | InvalidResponse | UnsupportedResponse
     export type RunMemberActionPostMutationVariables = {resource: string;id: string;action: string;data?: ActionParamsBody}
 
-    export const useRunMemberActionPost = <TError = ErrorResponse | InvalidResponse | UnsupportedResponse,
+    /**
+ * A member action declared with `member_action` (HTTP verb per `Action.method`). The action's
+ * redirect + flash become an ActionResult; an alert/error flash becomes a 422. Authorized with
+ * the same permission that gates `Action.enabled`. Collection actions are served the same way at
+ * `/admin/{resource}/{action}` (no id), and page actions at `/admin/{page}/{action}`.
+ */
+export const useRunMemberActionPost = <TError = ErrorResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPost>>, TError,RunMemberActionPostMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof runMemberActionPost>>,
@@ -1708,25 +1824,11 @@ export const runMemberActionPut = async (resource: string,
     action: string,
     actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionWriteResponse> => {
 
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return apiFetch<ActionWriteResponse>(getRunMemberActionPutUrl(resource,id,action),
+  return apiFetch<ActionWriteResponse>(getRunMemberActionPutUrl(resource,id,action),
   {
     ...options,
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(actionParamsBody)
   }
 );}
@@ -1769,7 +1871,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RunMemberActionPutMutationError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse
     export type RunMemberActionPutMutationVariables = {resource: string;id: string;action: string;data?: ActionParamsBody}
 
-    export const useRunMemberActionPut = <TError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse,
+    /** See runMemberActionPost. */
+export const useRunMemberActionPut = <TError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPut>>, TError,RunMemberActionPutMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof runMemberActionPut>>,
@@ -1798,25 +1901,11 @@ export const runMemberActionPatch = async (resource: string,
     action: string,
     actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionWriteResponse> => {
 
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return apiFetch<ActionWriteResponse>(getRunMemberActionPatchUrl(resource,id,action),
+  return apiFetch<ActionWriteResponse>(getRunMemberActionPatchUrl(resource,id,action),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(actionParamsBody)
   }
 );}
@@ -1859,7 +1948,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RunMemberActionPatchMutationError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse
     export type RunMemberActionPatchMutationVariables = {resource: string;id: string;action: string;data?: ActionParamsBody}
 
-    export const useRunMemberActionPatch = <TError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse,
+    /** See runMemberActionPost. */
+export const useRunMemberActionPatch = <TError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPatch>>, TError,RunMemberActionPatchMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof runMemberActionPatch>>,
@@ -1888,25 +1978,11 @@ export const runMemberActionDelete = async (resource: string,
     action: string,
     actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionWriteResponse> => {
 
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return apiFetch<ActionWriteResponse>(getRunMemberActionDeleteUrl(resource,id,action),
+  return apiFetch<ActionWriteResponse>(getRunMemberActionDeleteUrl(resource,id,action),
   {
     ...options,
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(actionParamsBody)
   }
 );}
@@ -1949,7 +2025,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RunMemberActionDeleteMutationError = ErrorResponse | InvalidResponse | UnsupportedResponse
     export type RunMemberActionDeleteMutationVariables = {resource: string;id: string;action: string;data?: ActionParamsBody}
 
-    export const useRunMemberActionDelete = <TError = ErrorResponse | InvalidResponse | UnsupportedResponse,
+    /** See runMemberActionPost. */
+export const useRunMemberActionDelete = <TError = ErrorResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionDelete>>, TError,RunMemberActionDeleteMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof runMemberActionDelete>>,
@@ -1976,25 +2053,11 @@ export const getCreateRecordUrl = (resource: string,) => {
 export const createRecord = async (resource: string,
     recordParams: RecordParams, options?: Parameters<typeof apiFetch>[1]): Promise<WriteResult> => {
 
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return apiFetch<WriteResult>(getCreateRecordUrl(resource),
+  return apiFetch<WriteResult>(getCreateRecordUrl(resource),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(recordParams)
   }
 );}
@@ -2037,7 +2100,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateRecordMutationError = ErrorResponse | InvalidResponse
     export type CreateRecordMutationVariables = {resource: string;data: RecordParams}
 
-    export const useCreateRecord = <TError = ErrorResponse | InvalidResponse,
+    /**
+ * Body is AA's own param key wrapping the permitted attributes (`FormResponse.form` params show the
+ * names, e.g. `{"post": {"published_on": "2026-01-01"}}`). Nested has_many rows use
+ * `<assoc>_attributes` keyed by index with `_destroy`. `json` controls take structured JSON values.
+ */
+export const useCreateRecord = <TError = ErrorResponse | InvalidResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRecord>>, TError,CreateRecordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createRecord>>,
@@ -2149,7 +2217,6 @@ export function useListRecords<TData = Awaited<ReturnType<typeof listRecords>>, 
     params?: ListRecordsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecords>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
 export function useListRecords<TData = Awaited<ReturnType<typeof listRecords>>, TError = BadRequestResponse | ErrorResponse>(
  resource: string,
     params?: ListRecordsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRecords>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
@@ -2246,6 +2313,7 @@ export type ExportRecordsCsvQueryResult = NonNullable<Awaited<ReturnType<typeof 
 export type ExportRecordsCsvQueryError = BadRequestResponse | ErrorResponse | RateLimitedResponse
 
 
+/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or no `csv` block under strict defaults. Errors are JSON as elsewhere. */
 export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportRecordsCsv>>, TError = BadRequestResponse | ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: undefined |  ExportRecordsCsvParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportRecordsCsv>>, TError, TData>> & Pick<
@@ -2257,6 +2325,7 @@ export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportReco
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or no `csv` block under strict defaults. Errors are JSON as elsewhere. */
 export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportRecordsCsv>>, TError = BadRequestResponse | ErrorResponse | RateLimitedResponse>(
  resource: string,
     params?: ExportRecordsCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportRecordsCsv>>, TError, TData>> & Pick<
@@ -2268,12 +2337,13 @@ export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportReco
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or no `csv` block under strict defaults. Errors are JSON as elsewhere. */
 export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportRecordsCsv>>, TError = BadRequestResponse | ErrorResponse | RateLimitedResponse>(
  resource: string,
     params?: ExportRecordsCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportRecordsCsv>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
+/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or no `csv` block under strict defaults. Errors are JSON as elsewhere. */
 export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportRecordsCsv>>, TError = BadRequestResponse | ErrorResponse | RateLimitedResponse>(
  resource: string,
     params?: ExportRecordsCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportRecordsCsv>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
@@ -2376,7 +2446,6 @@ export function useGetRecord<TData = Awaited<ReturnType<typeof getRecord>>, TErr
     id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRecord>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
 export function useGetRecord<TData = Awaited<ReturnType<typeof getRecord>>, TError = ErrorResponse>(
  resource: string,
     id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRecord>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
@@ -2412,25 +2481,11 @@ export const updateRecord = async (resource: string,
     id: string,
     recordParams: RecordParams, options?: Parameters<typeof apiFetch>[1]): Promise<WriteResult> => {
 
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return apiFetch<WriteResult>(getUpdateRecordUrl(resource,id),
+  return apiFetch<WriteResult>(getUpdateRecordUrl(resource,id),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
     body: JSON.stringify(recordParams)
   }
 );}
@@ -2473,7 +2528,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateRecordMutationError = ErrorResponse | ConflictResponse | InvalidResponse
     export type UpdateRecordMutationVariables = {resource: string;id: string;data: RecordParams}
 
-    export const useUpdateRecord = <TError = ErrorResponse | ConflictResponse | InvalidResponse,
+    /** Same body shape as createRecord. Validation failures (including a host override re-rendering the form) are 422 `invalid`. */
+export const useUpdateRecord = <TError = ErrorResponse | ConflictResponse | InvalidResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRecord>>, TError,UpdateRecordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateRecord>>,
