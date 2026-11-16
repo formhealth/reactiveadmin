@@ -22,7 +22,7 @@ module ReactiveAdmin
       private
 
       def shell?(request)
-        Ui.settings.enabled && (request.get? || request.head?) && in_namespace?(request.path_info) &&
+        Ui.settings.enabled && Ui.offered? && (request.get? || request.head?) && in_namespace?(request.path_info) &&
           request.cookies[COOKIE] == "new" && document?(request) && !escaped?(request) && Assets.ready?
       end
 

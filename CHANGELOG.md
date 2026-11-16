@@ -12,6 +12,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - Performance budgets for the crawl (`--budget=p95=1500`, `--budget=index.max=4000`, `--budget-file`): the run exits non-zero and the report lists the screens over the limit.
 - `--parity` compares each index's first page (row count and record ids, never values) with classic ActiveAdmin. Table rows, cards and grid items carry `data-row-id`.
 - Keyboard navigation on index pages: `j`/`k` or the arrow keys move a visible row cursor in the table, card and grid views, `Enter` opens the row, `x` selects it when the resource has batch actions, and `/` focuses the filters. Press `?` for a dialog listing the shortcuts on the current screen.
+- The gem ships a prebuilt React client (`gem/vendor/client`, built by `rake package`), so installing it from RubyGems needs no repository checkout and no Node.js. It is stamped with the gem version and manifest `schema_version`, and served only while they match. Builds refer to their own files relatively, so the packaged client works under any `ui.asset_prefix` or CDN, and `RA_ASSET_PREFIX` is gone. `config.ui.client_assets` and a host's own build (`rake reactiveadmin:client:build`) both win over it.
+- **Behavior change:** the middleware serves the client's page only once `config.ui.available` names who may use it. Until then, upgrading changes nothing, even though a client is now installed.
+- A `packaged gem` CI job that builds the gem, installs it from a local index and smoke-tests the manifest and the client page.
 
 ### Security
 

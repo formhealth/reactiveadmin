@@ -10,7 +10,7 @@ RSpec.describe ReactiveAdmin::Ui::ClientBuild do
     end
   end
 
-  def build(**) = described_class.new(out:, prefix: "/reactiveadmin", source:, root:, runner:, **)
+  def build(**) = described_class.new(out:, source:, root:, runner:, **)
 
   after { FileUtils.remove_entry(root) }
 
@@ -20,7 +20,7 @@ RSpec.describe ReactiveAdmin::Ui::ClientBuild do
     workspace = source.parent.parent.to_s
     expect(calls).to eq([
       [{}, %w[pnpm install --frozen-lockfile], workspace],
-      [{"RA_OUT_DIR" => out.to_s, "RA_ASSET_PREFIX" => "/reactiveadmin/"}, %w[pnpm --filter standalone build:host], workspace]
+      [{"RA_OUT_DIR" => out.to_s}, %w[pnpm --filter standalone build:host], workspace]
     ])
   end
 

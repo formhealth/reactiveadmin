@@ -32,7 +32,7 @@ jobs:
       - run: pnpm build
       - name: Host build (the files and manifest a Rails shell loads)
         run: |
-          RA_OUT_DIR="$RUNNER_TEMP/host-build" RA_ASSET_PREFIX=/reactiveadmin/ pnpm --filter standalone build:host
+          RA_OUT_DIR="$RUNNER_TEMP/host-build" pnpm --filter standalone build:host
           grep -q '"index.html"' "$RUNNER_TEMP/host-build/manifest.json"
           grep -q '"src/classic/uiToggle.ts"' "$RUNNER_TEMP/host-build/manifest.json"
 

@@ -107,6 +107,12 @@ RSpec.describe "the client's shell at classic URLs", type: :request do
       expect_classic("/admin/posts")
     end
 
+    it "answers classic until the host says who may use the new admin" do
+      ReactiveAdmin.config.ui.available = ReactiveAdmin::Configuration::Ui::NOBODY
+
+      expect_classic("/admin/posts")
+    end
+
     it "answers classic when turned off" do
       ReactiveAdmin.config.ui.enabled = false
 
@@ -127,6 +133,17 @@ RSpec.describe "the client's shell at classic URLs", type: :request do
 
       get "/reactiveadmin/manifest.json"
       expect(response.headers["cache-control"]).not_to include("immutable")
+    end
+
+    it "don't include the packaged build's version stamp" do
+      ReactiveAdmin::Ui::Assets.root.join(ReactiveAdmin::Ui::PackagedClient::INFO).write("{}")
+      get "/reactiveadmin/#{ReactiveAdmin::Ui::PackagedClient::INFO}"
+      expect(response).to have_http_status(:not_found)
+
+      %w[%72eactiveadmin-client.json assets/../reactiveadmin-client.json .%2Freactiveadmin-client.json].each do |path|
+        get "/reactiveadmin/#{path}"
+        expect(response).to have_http_status(:not_found), path
+      end
     end
   end
 

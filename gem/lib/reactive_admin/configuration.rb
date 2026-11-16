@@ -61,7 +61,7 @@ module ReactiveAdmin
       # Default: public/reactiveadmin in the host.
       attr_accessor :client_assets
       # URL prefix the built client is served under. A path (the gem serves it when nothing else does) or
-      # an absolute URL (a CDN, which must be built with the same prefix).
+      # an absolute URL (a CDN). Builds refer to their own files relatively, so no rebuild is needed for either.
       attr_accessor :asset_prefix
 
       def initialize

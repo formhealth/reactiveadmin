@@ -13,6 +13,7 @@ tmp
 !.env.example
 
 gem/pkg
+gem/vendor/client
 gem/.bundle
 gem/tmp
 

@@ -1,4 +1,5 @@
 require "rspec/core/rake_task"
+require "rubygems/package"
 
 RSpec::Core::RakeTask.new(:spec)
 
@@ -11,3 +12,24 @@ task :adapters do
 end
 
 task default: :spec
+
+# Never publishes: pushing the .gem is a separate, manual step (see CONTRIBUTING.md).
+namespace :package do
+  desc "Build the React client into vendor/client, stamped for this gem version (needs node >= 24 and pnpm)"
+  task :client do
+    %w[version manifest ui/client_build ui/packaged_client].each { require_relative "lib/reactive_admin/#{it}" }
+    puts "built #{ReactiveAdmin::Ui::PackagedClient.build!}"
+  rescue ReactiveAdmin::Ui::ClientBuild::Error, ReactiveAdmin::Ui::PackagedClient::Error => e
+    abort e.message
+  end
+end
+
+desc "Build pkg/reactiveadmin-<version>.gem with the prebuilt client inside"
+task package: "package:client" do
+  gem_file = "pkg/reactiveadmin-#{ReactiveAdmin::VERSION}.gem"
+  mkdir_p "pkg"
+  sh "gem", "build", "reactiveadmin.gemspec", "--output", gem_file
+  files = Gem::Package.new(gem_file).spec.files
+  abort "#{gem_file} lacks the client build" unless files.include?("vendor/client/manifest.json")
+  puts "packaged #{gem_file} (#{files.count { it.start_with?("vendor/client/") }} client files)"
+end
