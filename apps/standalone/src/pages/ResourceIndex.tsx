@@ -152,7 +152,7 @@ export function ResourceIndex() {
   const title = data?.meta.title ?? summary?.plural_label
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-row-count={data?.rows.length}>
       <WithSidebars
         sidebars={data?.meta.sidebars}
         ctx={{ resource }}

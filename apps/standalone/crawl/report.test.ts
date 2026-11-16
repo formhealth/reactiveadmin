@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildReport, toMarkdown } from './report.ts'
+import { checkBudgets } from './budgets.ts'
+import { compareRows } from './parity.ts'
+import { buildReport, parityMismatches, passed, toMarkdown } from './report.ts'
 import { percentile, timing } from './stats.ts'
 import type { ScreenResult } from './visit.ts'
 
@@ -44,5 +46,27 @@ describe('report', () => {
 
   it('reports a clean run as passed', () => {
     expect(toMarkdown(buildReport('http://x', new Date(), [screen('/', 'home', 1)], []))).toContain('**PASSED**')
+  })
+
+  it('fails a run whose budget is exceeded and names the screens', () => {
+    const slow = [screen('/posts', 'index', 900)]
+    const violations = checkBudgets({ index: { p95: 500 } }, slow)
+    const run = buildReport('http://x', new Date(), slow, [], { budgets: { limits: { index: { p95: 500 } }, violations } })
+    const md = toMarkdown(run)
+    expect(passed(run)).toBe(false)
+    expect(md).toContain('**FAILED**')
+    expect(md).toContain('## Budgets exceeded')
+    expect(md).toContain('**index p95** 900 ms, budget 500 ms')
+    expect(md).toContain('`/posts` 900 ms')
+  })
+
+  it('fails a run with a parity mismatch but not one with unreadable pages', () => {
+    const ok = [screen('/posts', 'index', 1)]
+    const unread = buildReport('http://x', new Date(), ok, [], { parity: [compareRows('taggings', undefined, ['1'])] })
+    expect(passed(unread)).toBe(true)
+    const differs = buildReport('http://x', new Date(), ok, [], { parity: [compareRows('posts', ['1', '2'], ['1', '3'])] })
+    expect(passed(differs)).toBe(false)
+    expect(parityMismatches(differs)).toHaveLength(1)
+    expect(toMarkdown(differs)).toMatch(/\| `posts` \| mismatch \| 2 \| 2 \| 2 \| 3 \|/)
   })
 })
