@@ -7,6 +7,7 @@ import { RowMenu } from '@/components/RowMenu'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { cursorClass, type RowCursor } from '@/hooks/useRowCursor'
 import type { Selection } from '@/hooks/useSelection'
 import { hasRowActions } from '@/lib/permissions'
 import { isUuid } from '@/lib/ids'
@@ -22,6 +23,7 @@ type DataTableProps = {
   onOrder: (order: string | undefined) => void
   stale?: boolean
   selection?: Selection
+  cursor?: RowCursor
   // AA `actions defaults: false` leaves only the row's own actions; `actions name:` titles the column.
   defaultRowActions?: boolean
   rowActionsLabel?: string
@@ -57,7 +59,7 @@ function SortHeader({ column, order, onOrder }: { column: Column; order?: string
   )
 }
 
-export function DataTable({ resource, columns, rows, order, onOrder, stale, selection, defaultRowActions = true, rowActionsLabel }: DataTableProps) {
+export function DataTable({ resource, columns, rows, order, onOrder, stale, selection, cursor, defaultRowActions = true, rowActionsLabel }: DataTableProps) {
   const navigate = useNavigate()
   const { search } = useLocation()
   const hasActions = rows.some((row) => hasRowActions(row, defaultRowActions))
@@ -118,8 +120,9 @@ export function DataTable({ resource, columns, rows, order, onOrder, stale, sele
               <TableRow
                 key={row.id}
                 data-row-id={row.id}
+                {...cursor?.rowProps(row.id)}
                 data-state={selection?.ids.has(row.id) ? 'selected' : undefined}
-                className={cn('bg-card transition-none hover:bg-muted focus-within:bg-muted data-[state=selected]:bg-info-soft', row.original.tone && rowTone[row.original.tone], canShow && 'cursor-pointer')}
+                className={cn(cursorClass, 'data-cursor:-outline-offset-2 bg-card transition-none hover:bg-muted focus-within:bg-muted data-[state=selected]:bg-info-soft', row.original.tone && rowTone[row.original.tone], canShow && 'cursor-pointer')}
                 onClick={(e) => canShow && e.currentTarget.contains(e.target as Node) && !(e.target as HTMLElement).closest('a,button') && navigate(path, { state: { search } })}
               >
                 {selection && (

@@ -9,6 +9,7 @@ import { SignInRequired } from '@/components/ErrorState'
 import { Brand } from '@/components/menu/Brand'
 import { LazyCommandPalette, LazyMobileMenu } from '@/components/menu/lazy'
 import { Sidebar } from '@/components/menu/Sidebar'
+import { ShortcutsProvider } from '@/components/ShortcutsDialog'
 import { UserMenu } from '@/components/menu/UserMenu'
 import { Button } from '@/components/ui/button'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
@@ -18,6 +19,9 @@ import { hosted } from '@/lib/base'
 import { goClassic, lacksScreen } from '@/lib/boot'
 import { isLanding } from '@/lib/landing'
 import { clearManifest, saveManifest, SCHEMA_VERSION } from '@/lib/manifestCache'
+import { isChord, shortcuts } from '@/lib/shortcuts'
+
+const paletteShortcut = shortcuts.find((s) => s.id === 'palette')!
 
 function Notice({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -69,7 +73,7 @@ export function Layout() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if (isChord(paletteShortcut, e)) {
         e.preventDefault()
         setPaletteOpen((open) => !open)
       }
@@ -123,7 +127,9 @@ export function Layout() {
           </div>
         )}
         <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-5 sm:px-6">
-          <Outlet />
+          <ShortcutsProvider>
+            <Outlet />
+          </ShortcutsProvider>
         </main>
       </div>
 

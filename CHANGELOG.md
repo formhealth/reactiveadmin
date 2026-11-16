@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The crawl runs against a host app: `--base-url` takes a host's admin URL, `--auth` names a login hook, and the `reactiveadmin-crawl` bin runs it from a checkout. Docs warn that crawling real data creates audit reads and recommend a dedicated user.
 - Performance budgets for the crawl (`--budget=p95=1500`, `--budget=index.max=4000`, `--budget-file`): the run exits non-zero and the report lists the screens over the limit.
 - `--parity` compares each index's first page (row count and record ids, never values) with classic ActiveAdmin. Table rows, cards and grid items carry `data-row-id`.
+- Keyboard navigation on index pages: `j`/`k` or the arrow keys move a visible row cursor in the table, card and grid views, `Enter` opens the row, `x` selects it when the resource has batch actions, and `/` focuses the filters. Press `?` for a dialog listing the shortcuts on the current screen.
 
 ### Security
 

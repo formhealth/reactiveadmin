@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router'
 import type { Column, Row } from '@/api/generated/model'
 import { RowMenu } from '@/components/RowMenu'
 import { Checkbox } from '@/components/ui/checkbox'
+import { cursorClass, type RowCursor } from '@/hooks/useRowCursor'
 import type { Selection } from '@/hooks/useSelection'
 import { cn } from '@/lib/utils'
 import { rowTone } from '@/lib/tone'
@@ -9,9 +10,9 @@ import { NamedNode } from '@/nodes/Node'
 
 const MAX_FIELDS = 6
 
-type RecordCardsProps = { resource: string; columns: Column[]; rows: Row[]; stale?: boolean; selection?: Selection; defaultRowActions?: boolean }
+type RecordCardsProps = { resource: string; columns: Column[]; rows: Row[]; stale?: boolean; selection?: Selection; cursor?: RowCursor; defaultRowActions?: boolean }
 
-export function RecordCards({ resource, columns, rows, stale, selection, defaultRowActions = true }: RecordCardsProps) {
+export function RecordCards({ resource, columns, rows, stale, selection, cursor, defaultRowActions = true }: RecordCardsProps) {
   const { search } = useLocation()
   const primary = columns.find((c) => c.key !== 'id') ?? columns[0]
 
@@ -24,7 +25,8 @@ export function RecordCards({ resource, columns, rows, stale, selection, default
         <li
           key={row.id}
           data-row-id={row.id}
-          className={cn('relative rounded-lg border bg-card p-3 [&_a]:relative [&_a]:z-10 [&_[data-relative]]:hidden', row.tone && rowTone[row.tone], selection?.ids.has(row.id) && 'border-primary/50 bg-info-soft')}
+          {...cursor?.rowProps(row.id)}
+          className={cn(cursorClass, 'data-cursor:-outline-offset-2 relative rounded-lg border bg-card p-3 [&_a]:relative [&_a]:z-10 [&_[data-relative]]:hidden', row.tone && rowTone[row.tone], selection?.ids.has(row.id) && 'border-primary/50 bg-info-soft')}
         >
           {row.permissions.show && (
             <Link

@@ -110,4 +110,19 @@ Allowlist, kept deliberately small:
 - `aria-hidden-focus` ignores elements Radix marks `data-aria-hidden` while a modal is open; focus is trapped, so the hidden content is unreachable.
 - Per story, `parameters.a11y.config.rules` or `parameters.a11y.disable` opt out of a rule or the whole check; add a comment saying why.
 
-Keyboard: `Cmd/Ctrl+K` opens the page palette; arrow keys, `Home`/`End` move through the menu tree; `/` focuses the first filter, `j`/`k` move between rows, `Enter` opens the focused row.
+## Keyboard shortcuts
+
+Press `?` on any screen for the list that applies there. `src/lib/shortcuts.ts` is the one registry behind the keys and that dialog; add a shortcut there and bind a handler with `useHotkeys`.
+
+| Key | Where | Action |
+| --- | --- | --- |
+| `Cmd/Ctrl+K` | Everywhere | Open the command palette |
+| `?` | Everywhere | Show the shortcuts |
+| `j` / `ArrowDown`, `k` / `ArrowUp` | Index | Move the row cursor (table, cards and grid views) |
+| `Enter` | Index | Open the cursor row, if you may view it |
+| `x` | Index with batch actions | Select the cursor row |
+| `/` | Index with filters | Focus the first filter |
+
+The cursor row is the one tab stop in its list and takes focus, so screen readers announce it. It resets when the page or the rows change. Plain keys are ignored while typing in a field and inside dialogs, menus, listboxes and comboboxes.
+
+Arrow keys, `Home` and `End` also move through the menu tree.
