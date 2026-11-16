@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Behavior change:** the middleware serves the client's page only once `config.ui.available` names who may use it. Until then, upgrading changes nothing, even though a client is now installed.
 - A `packaged gem` CI job that builds the gem, installs it from a local index and smoke-tests the manifest and the client page.
 - A `release` workflow: pushing a `v<version>` tag builds the gem with the client, smoke-tests it, publishes it to RubyGems with trusted publishing after maintainer approval, and creates a GitHub release from the CHANGELOG. The gem now includes the README, LICENSE and CHANGELOG, and lists Form Health as its author.
+- `rails generate reactiveadmin:install`, which asks how to start (guided by default: `config.expose = :listed` with a generated `app/admin/menu.rb` listing every registration to prune, and an initializer annotated with `TODO(setup)` notes; quick: `expose :all`; strict: nothing served until listed), which attributes to mask (proposed from `db/schema.rb`), whether to turn on MCP, and who may switch to the new admin, adding the switch to the dashboard. Every answer is also a flag (`--preset`, `--mask`, `--mcp`, `--ui`, `--yes`). It mounts the routes, serves ActiveAdmin's namespace, boots the app to check the setup, and changes nothing when run again.
 
 ### Security
 

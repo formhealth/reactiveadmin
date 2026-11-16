@@ -29,9 +29,42 @@ Then install the bundle:
 bundle install
 ```
 
-## Configure the namespace and mount path
+## Run the install generator
 
-Create `config/initializers/reactive_admin.rb`:
+```sh
+bin/rails generate reactiveadmin:install
+```
+
+In a terminal, the generator asks four questions. Each has a default and a matching flag, so scripts, CI and agents can run it without prompts (`--yes` takes every default).
+
+| Question | Flag | Choices (default first) |
+| --- | --- | --- |
+| How should ReactiveAdmin start? | `--preset` | `guided`, `quick`, `strict` |
+| Attributes to mask everywhere in the API | `--mask=a,b`, `--no-mask` | the secrets it finds in `db/schema.rb` |
+| Turn on the MCP endpoint for AI agents? | `--mcp` | `off`, `read_only`, `full` |
+| Who may switch to the new admin? | `--ui` | `nobody`, `admins`, `everyone` |
+
+The presets decide what the API serves:
+
+- **guided** sets `config.expose = :listed` and writes `app/admin/menu.rb`, a `ReactiveAdmin.menu` that lists every registration in `app/admin`. The API serves only what stays in it, so you prune it. The initializer lists every setting with its default and a `TODO(setup)` note on each one to decide, so you can work through it yourself or hand it to an agent.
+- **quick** sets `config.expose = :all`: everything ActiveAdmin registers is served, with the secure defaults. The initializer is short and there's no menu.
+- **strict** is guided with nothing served yet (the menu's lines are commented out) and `config.strict_defaults = true`, so a section without a block shows no columns.
+
+The rest of the generator:
+
+- **Masking.** It reads `db/schema.rb` and proposes `config.masked_attributes` for secrets and identity numbers (tokens, keys, dates of birth, SSNs) that Rails' `filter_parameters` doesn't already cover. It names contact details such as emails and phone numbers without proposing them, since operators usually need to see them.
+- **MCP.** `read_only` and `full` turn on `config.mcp.enabled` and set `config.mcp.default`, and leave a `TODO(setup)` for the bearer tokens agents sign in with. `full` warns that agents can then write wherever your policy allows.
+- **The new admin.** `admins` and `everyone` set `config.ui.available` and add the switch (`text_node reactiveadmin_ui_toggle`) to the `content` block of `app/admin/dashboard.rb`.
+- **Routes.** It adds `ReactiveAdmin.routes(self)` after `ActiveAdmin.routes(self)` in `config/routes.rb`.
+- **Authorization.** When Pundit or CanCanCan is bundled but ActiveAdmin doesn't use its adapter, it warns, since ReactiveAdmin authorizes through ActiveAdmin's `config.authorization_adapter`. It doesn't change `config/initializers/active_admin.rb`.
+- **Namespace.** It serves the namespace `config/initializers/active_admin.rb` sets, or `--namespace NAME`. It writes nothing for the root namespace, or for an assignment it can't read, until you pass `--namespace`.
+- **A boot check.** It boots the app and prints how many resources and pages the API serves (`--skip-check` skips it), then the next steps.
+
+Running it again changes nothing: it keeps an existing initializer (`reactive_admin.rb` or `reactiveadmin.rb`) and menu, and doesn't mount the routes or add the switch twice.
+
+### Set it up by hand
+
+To skip the generator, create `config/initializers/reactive_admin.rb`:
 
 ```ruby
 ReactiveAdmin.configure do |config|
@@ -42,9 +75,7 @@ end
 
 `namespace` names the ActiveAdmin namespace to serve. `mount_path` is the prefix for the API. With these values, the API lives under `/api/admin`. See [Configuration](configuration.md) for every option.
 
-## Mount the routes
-
-In `config/routes.rb`, call `ReactiveAdmin.routes(self)` after `ActiveAdmin.routes(self)`:
+Then, in `config/routes.rb`, call `ReactiveAdmin.routes(self)` after `ActiveAdmin.routes(self)`:
 
 ```ruby
 Rails.application.routes.draw do
@@ -54,6 +85,8 @@ end
 ```
 
 The gem redraws your ActiveAdmin routes under the mount path. It answers in its own format, so the classic admin is unaffected.
+
+## Check the mount
 
 Start Rails on port 3003:
 

@@ -15,9 +15,11 @@ module AaBoundary
     /send\(:(active_admin_config|resource|build_resource|collection|collection_before_scope|current_scope|scope_chain|apply_decorations|authorize_resource!|find_resource|scoped_collection)\b/
   ].freeze
 
-  # path (relative to gem/) => why code outside the adapter may name AA internals. Empty on purpose: add an
+  # path (relative to gem/) => why code outside the adapter may name AA internals. Add an
   # entry only for a documented integration surface, with the reason.
-  ALLOWLIST = {}.freeze
+  ALLOWLIST = {
+    "lib/generators/reactiveadmin/install/install_generator.rb" => "names AA's adapter classes and routes call as text it writes into the host; never loads AA"
+  }.freeze
 
   module_function
 

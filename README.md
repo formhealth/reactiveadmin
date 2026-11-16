@@ -30,19 +30,11 @@ gem "reactiveadmin", github: "formhealth/reactiveadmin", glob: "gem/*.gemspec"
 
 ## Quick start
 
-```ruby
-# config/initializers/reactive_admin.rb
-ReactiveAdmin.configure do |config|
-  config.namespace = :admin
-  config.mount_path = "/api"
-end
-
-# config/routes.rb
-Rails.application.routes.draw do
-  ActiveAdmin.routes(self)
-  ReactiveAdmin.routes(self)
-end
+```sh
+bin/rails generate reactiveadmin:install
 ```
+
+The generator writes `config/initializers/reactive_admin.rb` with secure defaults (`config.expose = :listed`, `implicit_defaults = :secure`), adds `ReactiveAdmin.routes(self)` after `ActiveAdmin.routes(self)` in `config/routes.rb`, and prints the next steps. Running it again changes nothing. With `expose = :listed`, the API serves only the resources you place in `ReactiveAdmin.menu` or list in `config.exposed_resources`; see [Security](docs/guide/security.md#exposure).
 
 With your app on port 3003 and a signed-in classic admin session, `http://localhost:3003/api/admin/_manifest` lists every resource the API serves. Add `reactive do ... end` blocks to resources that need hints; see the [DSL reference](docs/guide/dsl.md).
 
