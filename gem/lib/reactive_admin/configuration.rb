@@ -69,7 +69,7 @@ module ReactiveAdmin
       :after_authorize, :on_background_request, :doctor_user, :doctor_page_params, :masked_attributes, :mask_filter_parameters, :mask_csv, :html_trusted_hosts,
       :require_lock, :retryable_errors, :error_reporter,
       :inline_json_limit, :inline_text_limit, :value_token, :value_token_ttl, :strict_defaults, :exposed_resources, :max_per_page, :max_export_rows, :rate_limits, :sensitive_resources,
-      :ransack_unguarded_actions, :auth
+      :ransack_unguarded_actions, :auth, :audit_views
     attr_reader :mount_path, :authorize_custom_actions, :implicit_defaults, :expose, :openapi, :mcp, :api_guards, :ui
 
     # Callers join and strip this as a prefix, so "/api/" or "api" must mean "/api", and a root mount "".
@@ -166,6 +166,8 @@ module ReactiveAdmin
       # Actions by resource route key whose `q` param is their own search form, not a ransack filter:
       # `{categories: [:search_by_tag]}`. The same as `reactive { own_query_params }`.
       @ransack_unguarded_actions = {}
+      # Publish an `audit.reactiveadmin` event of kind `view` for every API show and edit read.
+      @audit_views = false
       @openapi = OpenApiSettings.new({}, "openapi/admin.yaml", nil)
       @rate_limits = {options: [30, 10.seconds], lookup: [120, 1.minute], export: [5, 1.minute], value: [60, 1.minute], mcp: [120, 1.minute], default: nil}
       # How API requests authenticate: nil is the session (AA's `authentication_method`, CSRF on writes).

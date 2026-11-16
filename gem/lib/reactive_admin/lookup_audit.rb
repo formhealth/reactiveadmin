@@ -17,8 +17,8 @@ module ReactiveAdmin
     def record(controller, model:, kind:, result_count:, field: nil)
       return unless sensitive?(model)
 
-      ActiveSupport::Notifications.instrument("lookup.reactiveadmin", resource: WriteAudit.resource_key(controller), field:, kind:,
-        target: Registry.route_key(AA.resource_for(Registry.namespace, model)), result_count:, user_id: ReactiveAdmin.current_user(controller)&.id)
+      Audit.instrument("lookup", controller, {resource: WriteAudit.resource_key(controller), field:, kind:,
+        target: Registry.route_key(AA.resource_for(Registry.namespace, model)), result_count:, user_id: ReactiveAdmin.current_user(controller)&.id})
     rescue => e
       Rails.logger.error("[reactiveadmin] lookup audit failed: #{e.class}")
     end

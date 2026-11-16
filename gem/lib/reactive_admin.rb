@@ -58,6 +58,7 @@ module ReactiveAdmin
   autoload :ScrubbedError, "reactive_admin/scrubbed_error"
   autoload :WriteAudit, "reactive_admin/write_audit"
   autoload :ActionSafety, "reactive_admin/action_safety"
+  autoload :Audit, "reactive_admin/audit"
   autoload :WriteGuards, "reactive_admin/write_guards"
   autoload :MaskedJson, "reactive_admin/masked_json"
   autoload :ValueToken, "reactive_admin/value_token"
@@ -103,6 +104,9 @@ module ReactiveAdmin
     def config = @config ||= Configuration.new
 
     def configure = yield(config)
+
+    # `{ |event| ... }` for every Audit::Event; see Audit.
+    def on_audit(&) = Audit.subscribe(&)
 
     # True for requests the client marked as background; see BackgroundRequests.
     def background_request?(request) = BackgroundRequests.background?(request)

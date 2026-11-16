@@ -75,8 +75,8 @@ module ReactiveAdmin
           return false
         end
 
-        ActiveSupport::Notifications.instrument("export.reactiveadmin", resource: Registry.route_key(active_admin_config),
-          user_id: ReactiveAdmin.current_user(self)&.id, filters: params[:q].try(:keys).to_a.map(&:to_s), scope: AA.current_scope(self)&.id, row_count: rows)
+        Audit.instrument("export", self, {resource: Registry.route_key(active_admin_config),
+          user_id: ReactiveAdmin.current_user(self)&.id, filters: params[:q].try(:keys).to_a.map(&:to_s), scope: AA.current_scope(self)&.id, row_count: rows})
         true
       end
     end

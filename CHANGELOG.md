@@ -11,6 +11,14 @@ These close gaps in the API and change what some clients get. Review them before
 - **Mutating GET actions.** GET and HEAD actions stay reads. Declare a GET action that changes data with `reactive { unsafe_gets :name }`: it then needs the write scope, is write-audited, is refused by `api :read_only`, and needs MCP confirmation in `run_action`.
 - **MCP.** `tools/call` answers a tool the token's scopes hide as an unknown tool. `run_action` runs only the member, collection and batch actions the resource declares, and uses a method the action declares rather than the one the caller asks for.
 
+### Added
+
+- A unified audit envelope: every audit event is also published as `audit.reactiveadmin` with one schema (kind, user, resource, action, record ids, channel, client id, request id, correlation id, outcome, time, details), and `ReactiveAdmin.on_audit { |event| ... }` subscribes to it. The existing events are unchanged.
+- MCP writes carry the tool call's `correlation_id`, `channel: "mcp"` and the token's `client_id` in the envelope.
+- Batch-action write events carry the selected ids as `record_ids`.
+- `config.audit_views` (default `false`) publishes a `view` envelope for API show and edit reads.
+- Switching between the classic and new admin publishes a `ui_switch` envelope.
+
 ## 0.1.0
 
 First public release. The gem and the client are early: interfaces may change before 1.0.

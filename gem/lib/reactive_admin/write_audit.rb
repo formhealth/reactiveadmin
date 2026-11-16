@@ -16,9 +16,9 @@ module ReactiveAdmin
       user_id = ReactiveAdmin.current_user(controller)&.id
       return unless user_id
 
-      payload = {resource: resource_key(controller), action: controller.action_name, id: record_id(controller), user_id:, **extra}
+      payload = {resource: resource_key(controller), action: controller.action_name, id: record_id(controller), user_id:, **batch_ids(controller), **extra}
       # After the write's own transaction, so a rolled-back write isn't reported as done.
-      ActiveRecord.after_all_transactions_commit { ActiveSupport::Notifications.instrument("#{event}.reactiveadmin", payload) }
+      ActiveRecord.after_all_transactions_commit { Audit.instrument(event, controller, payload) }
     rescue => e
       Rails.logger.error("[reactiveadmin] write audit failed: #{e.class}")
     end
@@ -34,6 +34,11 @@ module ReactiveAdmin
       record = AA.resource_ivar(controller)
       id = (record.try(:persisted?) || record.try(:destroyed?)) ? record.to_param : controller.params[:id]
       id.to_s if id.to_s.match?(ID_FORMAT)
+    end
+
+    def self.batch_ids(controller)
+      ids = controller.params[:collection_selection] if controller.action_name == "batch_action"
+      ids.is_a?(Array) ? {record_ids: ids.map(&:to_s).grep(ID_FORMAT)} : {}
     end
 
     private

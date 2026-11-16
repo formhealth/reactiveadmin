@@ -161,6 +161,8 @@ The payload has `user_id`, `client_id` (when the block returned one), `tool`, `r
 
 Because each tool runs through the API, the host's own events fire too, as the token's user: `write.reactiveadmin`, `write_rejected.reactiveadmin`, `export.reactiveadmin`, `value_viewed.reactiveadmin` and `lookup.reactiveadmin`, plus your own controller callbacks. Those requests carry `request.env["reactiveadmin.mcp"] = true` (set by the server, never by a client) for hosts that tell agent traffic apart.
 
+The [audit envelope](security.md#audit-envelope) joins them for you: the `mcp_call` and every event its tool caused share a `correlation_id`, with `channel: "mcp"` and the `client_id`.
+
 ## Limits
 
 Tool calls draw on the `mcp` rate-limit bucket (default 120 a minute per user), and the requests behind them draw on their own buckets, such as `options` and `value`. A call over the budget returns a tool error with the wait. `config.mcp.max_per_page` (default 25) caps `list_records`, below the API's own `max_per_page`.

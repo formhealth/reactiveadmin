@@ -6,6 +6,7 @@ module ReactiveAdmin
     include ApiErrors
     include BackgroundRequests
     include Auth::Request
+    include Ui::Switch
 
     private
 

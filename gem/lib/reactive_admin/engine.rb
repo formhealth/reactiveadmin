@@ -38,9 +38,9 @@ module ReactiveAdmin
       AA.prepend_tag(Provenance::Tags)
       AA.extend_page(dsl: ResourceDSL, config: ResourceOptions)
       AA.prepend_controller_extensions(
-        page: [Auth::Authentication, ApiErrors, Exposure::Guard, ApiGuards::Guard, PageControllerExtension, RateLimit::Guard, BackgroundRequests, ApiFallback, ApiGuards::Backstop, Auth::Request],
+        page: [Auth::Authentication, ApiErrors, Exposure::Guard, ApiGuards::Guard, PageControllerExtension, RateLimit::Guard, BackgroundRequests, ApiFallback, ApiGuards::Backstop, Auth::Request, Ui::Switch],
         # Exposure and ApiGuards sit inside ControllerExtension so they answer before declared-action authorization.
-        resource: [Auth::Authentication, ApiErrors, Exposure::Guard, ApiGuards::Guard, ControllerExtension, RateLimit::Guard, QueryGuard::Guard, RansackGuard, BackgroundRequests, ApiFallback, ApiGuards::Backstop, Auth::Request]
+        resource: [Auth::Authentication, ApiErrors, Exposure::Guard, ApiGuards::Guard, ControllerExtension, RateLimit::Guard, QueryGuard::Guard, RansackGuard, BackgroundRequests, ApiFallback, ApiGuards::Backstop, Auth::Request, Ui::Switch]
       )
     end
   end

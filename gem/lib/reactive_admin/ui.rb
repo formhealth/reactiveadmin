@@ -8,6 +8,7 @@ module ReactiveAdmin
     autoload :ClientBuild, "reactive_admin/ui/client_build"
     autoload :Helper, "reactive_admin/ui/helper"
     autoload :Shell, "reactive_admin/ui/shell"
+    autoload :Switch, "reactive_admin/ui/switch"
 
     MODES = %w[classic new].freeze
     COOKIE = "reactiveadmin_ui".freeze

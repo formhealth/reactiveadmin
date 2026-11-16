@@ -98,7 +98,7 @@ module ReactiveAdmin
 
       # Who called what and how it went, never the arguments or anything the API returned.
       def audit(tool, args, api, error:, started:)
-        ActiveSupport::Notifications.instrument("mcp_call.reactiveadmin", {
+        Audit.instrument("mcp_call", @controller, {
           user_id: @identity.user.id, client_id: @identity.client_id, tool: tool.name, resource: known_key(args), action: action_of(tool, args),
           status: error ? "error" : "ok", http_status: api.last_status, duration_ms: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
         }.compact)
