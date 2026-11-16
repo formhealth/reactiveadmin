@@ -13,18 +13,12 @@
  */
 
 export type ListRecordsParams = {
-/**
- * Ransack predicates, e.g. q[published_on_gteq]=2026-01-01
- */
-q?: {[key: string]: string};
-scope?: string;
-/**
- * <sort_key>_asc|_desc
- */
-order?: string;
-/**
- * @minimum 1
- */
-page?: number;
-per_page?: number;
+  /** Ransack predicates, e.g. q[published_on_gteq]=2026-01-01 */
+  q?: {[key: string]: string};
+  scope?: string;
+  /** <sort_key>_asc|_desc */
+  order?: string;
+  /** @minimum 1 */
+  page?: number;
+  per_page?: number;
 };

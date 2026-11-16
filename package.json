@@ -18,5 +18,10 @@
     "typecheck": "pnpm -r exec tsc --noEmit",
     "crawl": "pnpm --filter standalone crawl",
     "crawl:dummy": "pnpm --filter standalone crawl:dummy"
+  },
+  "pnpm": {
+    "overrides": {
+      "minimatch@>=7 <11.0.1": "^11.0.1"
+    }
   }
 }
