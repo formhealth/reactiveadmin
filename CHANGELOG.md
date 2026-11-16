@@ -34,6 +34,10 @@ These close gaps in the API and change what some clients get. Review them before
 
 - Filter and form option lists that read request params (such as other filters' values) are no longer served from the option cache across different params.
 
+### Changed
+
+- The minimum Rails version is now 8.1.
+
 ## 0.1.0
 
 First public release. The gem and the client are early: interfaces may change before 1.0.

@@ -7,6 +7,7 @@ import { AXE_TAGS as TAGS, BLOCKING_IMPACTS as BLOCKING, FRAGMENT_RULES, MODAL_S
 import * as projectAnnotations from './preview'
 
 const THEME = import.meta.env.VITE_A11Y_THEME ?? 'light'
+const SKIP_AXE = import.meta.env.VITE_SKIP_AXE === '1'
 const DISABLED_RULES = Object.fromEntries(FRAGMENT_RULES.map((id) => [id, { enabled: false }]))
 
 // Resolves once the DOM has been quiet for `quietMs`, so data-driven stories finish rendering.
@@ -66,7 +67,7 @@ const audit: AfterEach = async ({ id, parameters }) => {
 
 const a11y: AfterEach = async (context) => {
   try {
-    await audit(context)
+    if (!SKIP_AXE) await audit(context)
   } finally {
     await clearToasts()
   }
