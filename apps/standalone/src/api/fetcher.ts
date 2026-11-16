@@ -86,6 +86,8 @@ async function request<T>(url: string, options: RequestInit = {}, retried = fals
   if (write) Object.assign(headers, { 'X-CSRF-Token': await csrfToken() })
 
   const res = await fetch(withMount(url), { credentials: 'include', ...options, headers })
+  // Host-generated export hooks declare a `Blob`.
+  if (res.ok && res.headers.get('Content-Type')?.startsWith('text/csv')) return (await res.blob()) as T
   const body = await res.json().catch(() => null)
   if (res.status === 422 && body?.code === 'invalid_csrf' && !retried) {
     resetCsrf()

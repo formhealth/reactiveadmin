@@ -113,3 +113,17 @@ jobs:
           name: crawl-report
           path: apps/standalone/crawl-report
           if-no-files-found: ignore
+
+  # Generates typed hooks from the dummy app's `rake reactiveadmin:openapi` document and typechecks them.
+  host-gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+          working-directory: gem
+      - uses: ./.github/actions/setup-client
+      - run: pnpm --filter standalone check:host-gen

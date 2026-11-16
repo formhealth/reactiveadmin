@@ -36,6 +36,7 @@ RSpec.describe ReactiveAdmin::OpenApi::WriteSchema do
     expect(props["kind"]).to include(type: "string", description: a_string_including("/api/admin/categories/_options?context=form&field=kind"))
     expect(props["doc"]).not_to have_key(:type)
     expect(props["pdf"]).to include(format: "binary")
+    expect(props["doc"]).to include("x-control" => "json")
   end
 
   it "makes a multiple typeahead an array" do

@@ -1,6 +1,7 @@
 import type { Entry } from './params'
 
-const flag = (value: unknown) => (value === true ? '1' : value === false ? '0' : String(value ?? ''))
+// Sent as a browser's GET form sends them: a blank for null, a check box's 1/0 for booleans.
+export const flag = (value: unknown) => (value === true ? '1' : value === false ? '0' : String(value ?? ''))
 
 // A browser's GET submit: every field is sent, blanks included, named as Rails nests them. Brackets stay readable
 // in the address bar; they are legal in a query.

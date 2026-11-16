@@ -123,6 +123,38 @@ bundle exec rake reactiveadmin:openapi && git diff --exit-code openapi/admin.yam
 
 Set `doctor_user` before you run it. Scopes, batch actions and forms whose blocks read the current user need one to evaluate, and without one they're left out (the task warns). The user only feeds those blocks. Permission checks are skipped, so the file lists everything. Never serve it to users: it isn't filtered by permission.
 
+## Typed hooks for your resources
+
+The generic client reads every resource through `openapi/core.yaml`. To get hooks typed for your own resources, such as `useListAuthors`, with your filter predicates, row cells and write bodies, generate them from the file `rake reactiveadmin:openapi` writes.
+
+```sh
+bundle exec rake reactiveadmin:openapi OUT=tmp/admin.yaml
+cd path/to/reactiveadmin/apps/standalone
+pnpm gen:host path/to/admin.yaml src/api/host
+```
+
+`gen:host` runs `scripts/reactiveadmin-gen.mjs` in the client package, which takes the document and an output directory. It writes `hooks.ts` and `model/`, and it empties both first, so give it a directory nothing else lives in. The output directory must be inside the client package (`apps/standalone`), because the generated files import the client's fetcher and serializers by relative path. The generator refuses any other directory. Its options:
+
+- `--split` writes one file per tag (`tags/authors/authors.ts`) instead of `hooks.ts`. The dummy app's full document is about 30,000 generated lines in one file, so split a large admin.
+- `--mutator <path>` names a module that exports `apiFetch`. The default is the client's `src/api/fetcher.ts`, so the hooks send CSRF tokens, map errors to `ApiError` and honor the mount path like the rest of the client.
+
+To run it from your own orval config, import the preset: `hostOrvalConfig({ input, output, mutator, split })` from `scripts/reactiveadmin-gen.mjs` returns one orval config entry.
+
+Write bodies with a file input send JSON, unless the body holds a `File` or `Blob`. Then the hook sends `multipart/form-data` with Rails' bracketed names (`author[avatar]`), as the client's own forms do. In those bodies a JSON field is typed as JSON text: pass `JSON.stringify(value)`. The server parses it back into the structure where your `permit_params` permits one (`metadata: {}`), and keeps the text where it permits a scalar. An emptied list (`tag_ids: []`) goes as a clear.
+
+The hooks are named by the operation ids above (`listAuthors` becomes `useListAuthors`, `createAuthor` becomes `useCreateAuthor`). They use the same TanStack Query client as the app, and a wrong filter predicate is a compile error. Declared row cells are typed; the generic `Row` still allows other cell keys:
+
+```ts
+const { data } = useListAuthors({ q: { name_cont: "a" }, per_page: 10 })
+data?.rows?.map((row) => row.cells?.name)
+```
+
+Generate from the full document, not `_openapi`: it is per user, so a file made from one user's response lacks what another may do. Rerun the generator after you change a registration, and commit its output next to your client code. The document has no `doctor_user` by default, so see [Write the document to a file](#write-the-document-to-a-file) for what that leaves out.
+
+Custom pages (`registerCustomPage`) render inside the app's providers, so a page can import these hooks directly. No type parameter is needed.
+
+`pnpm --filter standalone check:host-gen` shows the whole path against the dummy app: it writes the document, generates both layouts into a temporary directory, typechecks a consumer and runs the generated requests against a stubbed `fetch`. CI runs it.
+
 ## What the host configures
 
 Nothing, to get started: the route comes with `ReactiveAdmin.routes(self)`. You can set:

@@ -60,6 +60,12 @@ RSpec.describe ReactiveAdmin::ParamNormalizer do
       it "keeps the structure" do
         expect(normalize(payload: {a: "1"})).to eq("payload" => {"a" => "1"})
       end
+
+      it "parses json text into the structure, keeping its types" do
+        expect(normalize(payload: '{"count": 2, "active": true}')).to eq("payload" => {"count" => 2, "active" => true})
+        expect(normalize(payload: "{}")).to eq("payload" => {})
+        expect(normalize(payload: "not json")).to eq("payload" => "not json")
+      end
     end
 
     context "when the host permits a scalar" do
@@ -67,6 +73,10 @@ RSpec.describe ReactiveAdmin::ParamNormalizer do
 
       it "turns the structure into json text" do
         expect(normalize(payload: {a: "1"})).to eq("payload" => '{"a":"1"}')
+      end
+
+      it "keeps json text as text" do
+        expect(normalize(payload: '{"a": 1}')).to eq("payload" => '{"a": 1}')
       end
     end
 

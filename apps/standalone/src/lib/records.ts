@@ -1,13 +1,24 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { NavigateFunction } from 'react-router'
 import type { Location } from '@/api/generated/model'
+import { mountPath } from '@/lib/base'
 
 const isData = (key: unknown) => !/\/(_meta|_manifest|_session)$/.test(String(key))
+
+// Keys of hooks generated from a host's document carry the mount (`/api/admin/authors`); the client's own don't.
+// Both forms are tried: with a mount of `/admin`, stripping it from a client key would drop the namespace.
+const resourceKeys = (key: unknown) => {
+  const path = String(key)
+  return path.startsWith(`${mountPath}/`) ? [path, path.slice(mountPath.length)] : [path]
+}
+
+// `/<namespace>/comments...` or, nested under parents, `/<namespace>/posts/7/comments...`, whatever the namespace is.
+const routeOf = (resource: string) => new RegExp(`^/[^/]+(?:/[^/]+/[^/]+)*/${resource.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:[/?]|$)`)
 
 // `refetchType: 'none'` when the caller is about to leave the page: stale data refetches on next mount.
 // Meta is cached server-side per permission set, so a record write never invalidates it.
 export const invalidateResource = (queryClient: QueryClient, resource: string, refetchType: 'active' | 'none' = 'active') =>
-  queryClient.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith(`/admin/${resource}`) && isData(q.queryKey[0]), refetchType })
+  queryClient.invalidateQueries({ predicate: (q) => resourceKeys(q.queryKey[0]).some((key) => routeOf(resource).test(key)) && isData(q.queryKey[0]), refetchType })
 
 // For writes whose reach is unknown (frames, pages): everything on screen refetches.
 export const invalidateData = (queryClient: QueryClient) => queryClient.invalidateQueries({ predicate: (q) => isData(q.queryKey[0]) })

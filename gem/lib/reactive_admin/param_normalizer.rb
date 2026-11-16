@@ -46,16 +46,32 @@ module ReactiveAdmin
     def bracketed(path) = path.first + path.drop(1).map { "[#{it}]" }.join
 
     # A textarea posts JSON text, which a host takes as a scalar `permit_params` attribute and parses.
-    # A host that permits `attr: {}` wants the structure, so it keeps it. A summarized field was never
+    # A host that permits `attr: {}` wants the structure, so it keeps one and parses JSON text into one. A summarized field was never
     # sent its value, so blank means the client didn't load it: the stored value stays.
     def json(node, name, value, path, summarized)
       if summarized && (value.nil? || value == "") then node.delete(name)
       elsif value.nil? then node[name] = ""
-      elsif !value.is_a?(String) && !structure_permitted?(path) then node[name] = JSON.generate(plain(value))
+      elsif value.is_a?(String) then node[name] = parse(value) if dropped?(path)
+      elsif !kept?(path) then node[name] = JSON.generate(plain(value))
       end
     end
 
-    def structure_permitted?(path)
+    # JSON text (a multipart upload's only way to send one) that the host's permit would drop as text, because it
+    # permits the structure; kept as text when it isn't JSON, so the permit drops it as before.
+    def parse(text)
+      parsed = JSON.parse(text)
+      (parsed.is_a?(Hash) || parsed.is_a?(Array)) ? parsed : text
+    rescue JSON::ParserError
+      text
+    end
+
+    # Only when the host's strong parameters are known and drop the text; unknown, the text stays as before.
+    def dropped?(path)
+      @permitted && !kept?(path) && !@allowed.nil?
+    end
+
+    # Whether the host's strong parameters keep the value as submitted.
+    def kept?(path)
       @allowed = @permitted&.call unless defined?(@allowed)
       !@allowed&.dig(*path).nil?
     rescue

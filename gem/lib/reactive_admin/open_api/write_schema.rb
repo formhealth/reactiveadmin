@@ -22,7 +22,7 @@ module ReactiveAdmin
         "date" => {type: "string", format: "date"}, "datetime" => {type: "string", format: "date-time"},
         "time" => {type: "string", format: "time"},
         "file" => {type: "string", format: "binary", description: "Send the request as multipart/form-data to upload a file."},
-        "json" => {description: "Structured JSON (object, array or scalar), sent as JSON."}
+        "json" => {"description" => "Structured JSON (object, array or scalar), sent as JSON.", "x-control" => "json"}
       }.freeze
       CHOICES = %w[select radio typeahead multiselect checkboxes].freeze
       INDEX = "__INDEX__".freeze
