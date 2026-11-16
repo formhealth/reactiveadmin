@@ -72,9 +72,10 @@ module ReactiveAdmin
       :ransack_unguarded_actions, :auth
     attr_reader :mount_path, :authorize_custom_actions, :implicit_defaults, :expose, :openapi, :mcp, :api_guards, :ui
 
-    # Callers join and strip this as a prefix, so "/api/" or "api" must mean "/api".
+    # Callers join and strip this as a prefix, so "/api/" or "api" must mean "/api", and a root mount "".
     def mount_path=(path)
-      @mount_path = "/#{path.to_s.delete_prefix("/").chomp("/")}"
+      bare = path.to_s.delete_prefix("/").chomp("/")
+      @mount_path = bare.empty? ? "" : "/#{bare}"
     end
 
     def initialize

@@ -80,6 +80,15 @@ RSpec.describe "openapi/core.yaml" do
       ReactiveAdmin.config.mount_path = old
     end
 
+    it "matches when the API is mounted at the root" do
+      old = ReactiveAdmin.config.mount_path
+      ReactiveAdmin.config.mount_path = ""
+      expect(ReactiveAdmin::Paths.api("admin/posts")).to eq("/admin/posts")
+      expect(Contract.response_schema("GET", "/admin/posts", 200)).to eq("IndexResponse")
+    ensure
+      ReactiveAdmin.config.mount_path = old
+    end
+
     it "matches a custom namespace to the canonical paths" do
       allow(ReactiveAdmin.config).to receive(:namespace).and_return(:backoffice)
       allow(ReactiveAdmin::Registry).to receive(:find)
