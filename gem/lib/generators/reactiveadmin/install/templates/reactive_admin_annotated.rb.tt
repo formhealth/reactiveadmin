@@ -1,0 +1,110 @@
+# ReactiveAdmin serves your ActiveAdmin namespace as a JSON API, an MCP server and a React client.
+#
+# Every setting is listed with its default. Work through the TODO(setup) notes, yourself or with an agent;
+# the rest are secure as they are. Every option: <%= docs %>/configuration.md
+ReactiveAdmin.configure do |config|
+  # Where the API lives: <mount_path>/<namespace>, here /api/<%= namespace_name %>.
+  config.namespace = :<%= namespace_name %>
+  config.mount_path = "/api"
+
+  ## What the API serves (<%= docs %>/security.md#exposure)
+
+  # :listed serves only what app/admin/menu.rb places, exposed_resources names, or `reactive { expose true }`
+  # marks; anything else answers 404. The default, :all, serves every registration the policy permits.
+  # TODO(setup): prune app/admin/menu.rb to what the API should serve.
+  config.expose = :listed
+  # Nested-only or hidden resources no menu places, by route key.
+  # config.exposed_resources = []
+<% if nested_resources.any? -%>
+  # Nested under a required parent, so the menu can't place them: <%= nested_resources.join(", ") %>
+<% end -%>
+
+  # Sections without a block show a safe subset of columns (no secrets, json and long text summarized).
+  # :all is ActiveAdmin's own behavior.
+  config.implicit_defaults = :secure
+<% if @preset == "strict" -%>
+  # Sections without a block show nothing at all, so every column shown is one you named. Default false.
+  config.strict_defaults = true
+<% else -%>
+  # true: sections without a block show nothing, so every column shown is one you named.
+  # config.strict_defaults = false
+<% end -%>
+
+  ## Masking (<%= docs %>/security.md#masking)
+
+  # Values of these attributes are masked in every index, show, form and export.
+  # TODO(setup): confirm the list; add anything operators shouldn't see.
+  <%= masked_line %>
+  # Also mask what Rails' filter_parameters names (passwords, tokens and the like).
+  config.mask_filter_parameters = true
+  # Mask the same attributes in CSV exports, classic and API alike.
+  config.mask_csv = true
+  # Route keys whose display names identify a person: their lookups are audited.
+  # TODO(setup): list resources whose names identify a person (patients, customers).
+  # config.sensitive_resources = []
+
+  ## Writes and actions
+
+  # Check every custom member, collection and batch action through your authorization adapter.
+  config.authorize_custom_actions = true
+  # Updates must send back the form's lock, so two people can't overwrite each other.
+  config.require_lock = true
+  # JSON values open only through a short-lived signed link, issued per user, record and field.
+  config.value_token = true
+
+  ## Authorization (<%= docs %>/security.md#authorization)
+
+  # ActiveAdmin's config.authorization_adapter decides every read, write and action.
+<% if adapter -%>
+  # <%= authorization_gem %> is bundled: ActiveAdmin uses it with `config.authorization_adapter = <%= adapter %>`.
+<% end -%>
+<% if authorization_gem == "pundit" -%>
+  # If your base controller runs Pundit's verify_authorized:
+  # config.after_authorize = ->(controller) { controller.skip_authorization }
+<% else -%>
+  # For base controllers that verify authorization themselves:
+  # config.after_authorize = ->(controller) { ... }
+<% end -%>
+
+  ## Limits (<%= docs %>/security.md#page-size-sorting-exports-and-rate-limits)
+
+  # config.max_per_page = 100
+  # config.max_export_rows = 10_000
+  # Requests per user in a window, by bucket (options, lookup, export, value, mcp, default).
+  # config.rate_limits = {export: [5, 1.minute]}
+
+  ## Audit (<%= docs %>/security.md#audit-envelope)
+
+  # Publish an audit event for every API show and edit read. Default false.
+  # config.audit_views = true
+
+  ## Coverage (<%= docs %>/doctor.md)
+
+  # TODO(setup): the user `rake reactiveadmin:doctor` samples pages as.
+  # config.doctor_user = -> { User.find_by!(email: "ops@example.com") }
+
+  ## The new admin (<%= docs %>/rollout.md)
+
+  # Who may switch to the new admin at the classic URLs. Default: nobody.
+  <%= ui_line %>
+  # The UI an available user starts in, until they choose: :classic or :new.
+  # config.ui.default = :classic
+
+  ## Agents (<%= docs %>/mcp.md)
+
+<% if @mcp == "off" -%>
+  # The MCP endpoint at /api/<%= namespace_name %>/_mcp. Default false.
+  # config.mcp.enabled = false
+<% else -%>
+  # The MCP endpoint at /api/<%= namespace_name %>/_mcp. Agents act as the signed-in user, through the same policy.
+  config.mcp.enabled = true
+  # What agents get of a resource without `reactive { mcp ... }`: :read_only, :none or :full.
+  config.mcp.default = :<%= @mcp %>
+  # TODO(setup): agents sign in with a bearer token; resolve it to a user in config.auth below.
+<% end -%>
+  # Session sign-in, plus bearer tokens for agents and scripts.
+  # config.auth = ReactiveAdmin::Auth.any(
+  #   ReactiveAdmin::Auth::Session.new,
+  #   ReactiveAdmin::Auth::Bearer.new { |token, request| ... } # nil, a user, or {user:, scopes:, client_id:}
+  # )
+end

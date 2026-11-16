@@ -1,5 +1,5 @@
 module ReactiveAdmin
-  # Re-draws AA's routes under mount_path with the reactiveadmin format so AA's own
+  # Re-draws AA's routes under mount_path with the ReactiveAdmin format so AA's own
   # controllers serve the JSON API.
   def self.routes(router)
     ns = config.namespace

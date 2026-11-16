@@ -1,0 +1,53 @@
+# ReactiveAdmin serves your ActiveAdmin namespace as a JSON API, an MCP server and a React client.
+# Every option: <%= docs %>/configuration.md
+ReactiveAdmin.configure do |config|
+  # The API lives at <mount_path>/<namespace>, here /api/<%= namespace_name %>.
+  config.namespace = :<%= namespace_name %>
+  config.mount_path = "/api"
+
+  # Serves every registration your policy permits. `:listed` serves only what ReactiveAdmin.menu,
+  # exposed_resources or `reactive { expose true }` names; see <%= docs %>/security.md#exposure
+  config.expose = :all
+
+  # Secure defaults; see <%= docs %>/security.md#checklist
+  config.implicit_defaults = :secure
+  config.authorize_custom_actions = true
+  config.require_lock = true
+  config.value_token = true
+  config.mask_filter_parameters = true
+  config.mask_csv = true
+  <%= masked_line %>
+  # config.sensitive_resources = [] # route keys whose display names identify a person
+  # config.html_trusted_hosts = [] # also allow them in your CSP; see <%= docs %>/security.md#content-security-policy
+
+  # Authorization runs through ActiveAdmin's config.authorization_adapter; see <%= docs %>/security.md#authorization
+<% if adapter -%>
+  # <%= authorization_gem %> is bundled: ActiveAdmin uses it with `config.authorization_adapter = <%= adapter %>`.
+<% end -%>
+<% if authorization_gem == "pundit" -%>
+  # If your base controller runs Pundit's verify_authorized:
+  # config.after_authorize = ->(controller) { controller.skip_authorization }
+<% else -%>
+  # config.after_authorize = ->(controller) { ... } # for base controllers that verify authorization
+<% end -%>
+
+  # The user `rake reactiveadmin:doctor` samples pages as; see <%= docs %>/doctor.md
+  # config.doctor_user = -> { User.find_by!(email: "ops@example.com") }
+
+  # Serve the built client at the classic URLs; see <%= docs %>/rollout.md
+  <%= ui_line %>
+  # config.ui.default = :classic
+
+  # Bearer tokens and the MCP endpoint; see <%= docs %>/mcp.md
+<% if @mcp == "off" -%>
+  # config.mcp.enabled = false
+<% else -%>
+  config.mcp.enabled = true
+  config.mcp.default = :<%= @mcp %>
+  # TODO(setup): agents sign in with a bearer token; resolve it to a user.
+<% end -%>
+  # config.auth = ReactiveAdmin::Auth.any(
+  #   ReactiveAdmin::Auth::Session.new,
+  #   ReactiveAdmin::Auth::Bearer.new { |token, request| ... } # nil, a user, or {user:, scopes:, client_id:}
+  # )
+end

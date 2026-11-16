@@ -1,0 +1,24 @@
+<% if @preset == "strict" -%>
+# What the API serves under `config.expose = :listed`, and where the new admin's menu places it.
+# Nothing is served yet: uncomment what should be. Groups, links and hiding: <%= docs %>/dsl.md#menu-overlay
+ReactiveAdmin.menu do
+<% menu_resources.each do |key| -%>
+  # resources :<%= key %>
+<% end -%>
+<% menu_pages.each do |key| -%>
+  # page :<%= key %>
+<% end -%>
+end
+<% else -%>
+# What the API serves under `config.expose = :listed`, and where the new admin's menu places it.
+# Generated with every registration in app/admin: delete what the API shouldn't serve.
+# Groups, links and hiding: <%= docs %>/dsl.md#menu-overlay
+ReactiveAdmin.menu do
+<% menu_resources.each do |key| -%>
+  resources :<%= key %>
+<% end -%>
+<% menu_pages.each do |key| -%>
+  page :<%= key %>
+<% end -%>
+end
+<% end -%>

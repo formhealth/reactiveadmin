@@ -1,5 +1,5 @@
 module ReactiveAdmin
-  # JSON error responses for reactiveadmin requests; falls through to AA's behaviour otherwise.
+  # JSON error responses for ReactiveAdmin requests; falls through to AA's behaviour otherwise.
   # Implemented as method overrides rather than callbacks/rescue_from: those are copied per
   # subclass, so registering them after AA built its controllers would miss them.
   module ApiErrors
