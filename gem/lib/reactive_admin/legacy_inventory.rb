@@ -75,7 +75,7 @@ module ReactiveAdmin
     def self.category_counts(baseline) = baseline.fetch("items", {}).keys.map { it.split("|", 2).first }.tally
 
     def run
-      ReactiveAdmin.load_routes
+      Rails.application.reload_routes_unless_loaded
       @items = []
       @degradation_kinds = Set.new
       @sampled = @sample

@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow [Semantic Versioning](https://semver.org/) from 1.0.
 
+## Unreleased
+
+### Changed
+
+- The minimum Rails version is now 8.1.
+
 ## 0.1.0
 
 First public release. The gem and the client are early: interfaces may change before 1.0.

@@ -4,7 +4,7 @@ RSpec.describe ReactiveAdmin::ValuePayload do
   let(:source) { described_class::Source.new(config:, record: Category.new(id: 7), field: "settings", inline: true, controller:, via: "index") }
   let(:value) { {"theme" => "dark", "list" => [1]} }
 
-  before { ReactiveAdmin.load_routes }
+  before { Rails.application.reload_routes_unless_loaded }
 
   describe ".node" do
     it "inlines a small value for an inline source" do

@@ -108,9 +108,6 @@ module ReactiveAdmin
 
     def api_guards = config.api_guards
 
-    # Rails 8 loads routes lazily; 7.2 has loaded them by boot and lacks the method.
-    def load_routes = Rails.application.try(:reload_routes_unless_loaded)
-
     # Registers the guard `api :name` refers to: `{ |user, request| true }` lets the request through.
     def api_guard(name, &guard)
       raise ArgumentError, "api_guard #{name.inspect} needs a block taking (user, request)" unless guard

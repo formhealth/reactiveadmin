@@ -23,7 +23,7 @@ module ReactiveAdmin
     end
 
     def run
-      ReactiveAdmin.load_routes
+      Rails.application.reload_routes_unless_loaded
       entries = StyleSources.trace { Doctor.run(user: @user, sample: @sample)[:diagnostics] }
       {sampled: sampled(entries), scanned: scanned}
     end

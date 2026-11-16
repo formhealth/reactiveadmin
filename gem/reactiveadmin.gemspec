@@ -19,6 +19,6 @@ Gem::Specification.new do |s|
   s.files = Dir["{app,lib}/**/*"]
   # AA_PROBE lifts the cap for the aa4 probe job (gemfiles/aa4.gemfile); never set it in an app.
   s.add_dependency "activeadmin", ">= 3.5", (ENV["AA_PROBE"] ? "< 5" : "< 4")
-  s.add_dependency "rails", ">= 7.2"
+  s.add_dependency "rails", ">= 8.1"
   s.add_dependency "nokogiri"
 end

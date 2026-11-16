@@ -11,7 +11,7 @@ Version 0.1.0. This is early software: the gem and the client aren't published t
 | Tool | Version |
 | --- | --- |
 | Ruby | 3.4 or later |
-| Rails | 7.2 or later |
+| Rails | 8.1 or later |
 | ActiveAdmin | 3.5 or later in the 3.x line (ActiveAdmin 4 isn't supported yet) |
 | Node.js | 24, to build the client (`.nvmrc`) |
 | pnpm | 8.14.1 (`corepack enable`) |
