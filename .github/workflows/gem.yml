@@ -98,6 +98,18 @@ jobs:
         env:
           STRICT_GAPS: "1"
 
+  bundler-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          working-directory: gem
+      - run: gem install bundler-audit
+      - run: bundle-audit check --update
+
   # Not a gate: boots the dummy app against ActiveAdmin 4 beta and lists what still breaks, so the
   # AA 4 work (ReactiveAdmin::AA::V4) is measured instead of guessed. The gemspec stays `< 4`.
   aa4-probe:
