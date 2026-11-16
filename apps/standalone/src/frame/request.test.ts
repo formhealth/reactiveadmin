@@ -53,6 +53,17 @@ describe('buildFrameRequest', () => {
     expect(request.url).toBe('/admin/authors/9/team_history?q%5Brole%5D=md&commit=Filter')
   })
 
+  it('sends a write, which carries the CSRF token, only to an admin page named without dot segments', () => {
+    const write = (action: string) => buildFrameRequest({ action, method: 'post', data: form({ a: '1' }), base: from })
+    expect(write('/admin/team_members/7')).toBeDefined()
+    for (const action of ['/auth/sign_out', '/api/admin/posts', '/auth/../admin/x', '/admin/..%2fauth', '/admin%2f..%2fauth', '/admin\\x', '/admin/%2\nfsecret', '/admin/.\t./auth', '']) {
+      expect(write(action), action).toBeUndefined()
+    }
+    const nested = 'https://app.test/admin/a%2fb/page'
+    expect(buildFrameRequest({ action: 'save', method: 'post', data: form({}), base: nested })).toBeUndefined()
+    expect(buildFrameRequest({ action: '/auth/search', method: 'get', data: form({ q: 'x' }), base: from })?.url).toBe('/auth/search?q=x')
+  })
+
   it('defaults to the frame URL and refuses other origins', () => {
     expect(buildFrameRequest({ action: '', method: 'get', data: form({}), base: from })?.url).toBe('/authors/9/actions/team_history')
     expect(buildFrameRequest({ action: 'https://evil.test/admin', method: 'post', data: form({}), base: from })).toBeUndefined()
@@ -67,6 +78,15 @@ describe('buildLinkRequest', () => {
     expect(buildLinkRequest('/admin/x/run', 'post', from)!.init.body?.toString()).toBe('')
     expect(buildLinkRequest('/admin/x', 'get', from)!.init.method).toBe('GET')
     expect(buildLinkRequest('https://evil.test/x', 'delete', from)).toBeUndefined()
+  })
+
+  it('sends a non-GET link only to an admin page named without dot segments', () => {
+    expect(buildLinkRequest('/auth/sign_out', 'delete', from)).toBeUndefined()
+    expect(buildLinkRequest('/admin/../auth/sign_out', 'post', from)).toBeUndefined()
+    expect(buildLinkRequest('/api/admin/posts/1', 'delete', from)).toBeUndefined()
+    expect(buildLinkRequest('/admin/%2\nfsecret', 'delete', from)).toBeUndefined()
+    expect(buildLinkRequest('save', 'post', 'https://app.test/admin/a%2fb/page')).toBeUndefined()
+    expect(buildLinkRequest('/auth/profile', 'get', from)?.init.method).toBe('GET')
   })
 })
 

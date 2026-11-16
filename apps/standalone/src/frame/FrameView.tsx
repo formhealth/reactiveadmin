@@ -190,7 +190,9 @@ export function FrameView({ src, html: initial, title, autoFocus, bare, onLeave 
       if (to) return navigate(to)
       if (!isAdminPath(target.pathname)) return void window.open(href, '_blank', 'noopener')
     }
-    send(buildLinkRequest(href, method, base)!)
+    const request = buildLinkRequest(href, method, base)
+    if (!request) return void toast.error("That link can't be followed from here")
+    send(request)
   }
 
   const onClick = (e: React.MouseEvent) => {
