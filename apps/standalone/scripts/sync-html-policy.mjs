@@ -1,12 +1,10 @@
-// Snapshots the gem's sanitizer policy (the host app prints it with `rake reactiveadmin:html_policy`).
+// Snapshots the gem's sanitizer policy (a host app prints it with `rake reactiveadmin:html_policy`). Defaults to the gem's
+// dummy app; HOST_APP_PATH points at another Rails app. The gem's html_policy_spec fails when the snapshot drifts.
 import { execFileSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
-const hostApp = process.env.HOST_APP_PATH
-if (!hostApp) {
-  console.error('Set HOST_APP_PATH to a Rails app that runs the reactiveadmin gem, e.g. HOST_APP_PATH=~/code/my-app pnpm policy:sync')
-  process.exit(1)
-}
+const hostApp = process.env.HOST_APP_PATH ?? fileURLToPath(new URL('../../../gem/spec/dummy', import.meta.url))
 const out = execFileSync('bundle', ['exec', 'rake', 'reactiveadmin:html_policy'], { cwd: hostApp, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] })
 
 const policy = JSON.parse(out)

@@ -10,7 +10,7 @@ require "reactive_admin/test_support"
 Dir[File.join(__dir__, "support/**/*.rb")].each { require it }
 
 # Rails loads routes lazily; ActiveAdmin's registrations are loaded by ReactiveAdmin.routes.
-Rails.application.reload_routes_unless_loaded
+ReactiveAdmin.load_routes
 
 ActiveRecord::Migration.suppress_messages { load File.join(__dir__, "dummy/db/schema.rb") }
 
