@@ -93,4 +93,15 @@ RSpec.describe ReactiveAdmin::Degradation do
 
     expect(seen).to eq([{resource: nil, action: nil, kind: "a", where: "index"}])
   end
+
+  it "marks events published under synthetic, and tells them apart from traffic" do
+    seen = events do
+      record("real")
+      described_class.synthetic { described_class.with_collection(resource: "Post", action: "show") { record("sampled") } }
+      described_class.with_collection(resource: "Post", action: "openapi") { record("spec") }
+    end
+
+    expect(seen.map { it.slice(:kind, :synthetic) }).to eq([{kind: "real"}, {kind: "sampled", synthetic: true}, {kind: "spec"}])
+    expect(seen.map { described_class.synthetic?(it) }).to eq([false, true, true])
+  end
 end

@@ -18,7 +18,7 @@ type Story = StoryObj<typeof meta>
 const manifest = (override: (m: Manifest) => Manifest) => ({ msw: { handlers: [http.get('/api/admin/_manifest', () => HttpResponse.json(override(manifestBody)))] } })
 
 // The server says this user may switch between the classic admin and this client.
-const switchable = { msw: { handlers: [http.get('/api/admin/_session', () => HttpResponse.json({ ...session, ui: { available: true, default: 'classic' } }))] } }
+const switchable = { msw: { handlers: [http.get('/api/admin/_session', () => HttpResponse.json({ ...session, ui: { available: true, default: 'classic', client_errors: true } }))] } }
 
 export const GroupedSidebar: Story = {}
 
@@ -34,7 +34,7 @@ export const HomeWithUiSwitch: Story = {
 export const HomeWithoutUiSwitch: Story = {
   parameters: {
     route: '/',
-    msw: { handlers: [http.get('/api/admin/_session', () => HttpResponse.json({ ...session, ui: { available: false, default: 'classic' } }))] },
+    msw: { handlers: [http.get('/api/admin/_session', () => HttpResponse.json({ ...session, ui: { available: false, default: 'classic', client_errors: true } }))] },
     viewportSize: { width: 1280, height: 520 },
   },
   play: async ({ canvasElement }) => {

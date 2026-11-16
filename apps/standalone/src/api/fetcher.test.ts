@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+const json = (status: number, body: unknown, headers: Record<string, string> = {}) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } })
 
 const load = async () => {
   vi.resetModules()
@@ -35,6 +35,15 @@ describe('apiFetch', () => {
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/admin/_session', '/api/admin/desks', '/api/admin/desks'])
     expect(headersOf(1)['X-CSRF-Token']).toBe('t1')
     expect(headersOf(2)['X-CSRF-Token']).toBe('t1')
+  })
+
+  it('remembers the request id of the last response', async () => {
+    fetchMock.mockResolvedValueOnce(json(200, {}, { 'X-Request-Id': 'abc-123' })).mockResolvedValueOnce(json(200, {}))
+    const { apiFetch, lastRequestId } = await load()
+    expect(lastRequestId()).toBeUndefined()
+    await apiFetch('/admin/posts')
+    await apiFetch('/admin/posts')
+    expect(lastRequestId()).toBe('abc-123')
   })
 
   it('does not double-prefix paths that already include the mount', async () => {

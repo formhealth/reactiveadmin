@@ -38,6 +38,6 @@ module ReactiveAdmin
     # Until the host names who may use the new admin, the shell stays out of the way, even though the gem ships a client.
     def offered? = !settings.available.equal?(Configuration::Ui::NOBODY)
 
-    def payload(user) = {available: available?(user), default: default_mode(user)}
+    def payload(user) = {available: available?(user), default: default_mode(user), client_errors: !!settings.client_errors}
   end
 end

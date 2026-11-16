@@ -108,6 +108,23 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Session" }
         "401": { $ref: "#/components/responses/Error" }
+  /admin/_client_errors:
+    post:
+      operationId: postClientError
+      tags: [core]
+      description: |
+        The client reports a crash its error boundary caught, in production. Names only: the error's class name, the component names it unwound through, the route pattern (`/:resource/:id/edit`, never the URL), the resource key, the client build's version and the id of the last API request the client saw. The server keeps only fields shaped like those, passes them to `config.error_reporter` and publishes `client_error.reactiveadmin`. Session only (a bearer token answers 403), and rate limited per user in the `client_error` bucket. Answers 204.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientErrorReport" }
+      responses:
+        "204": { description: Reported }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
   /admin/_mcp:
     post:
       operationId: postMcp
@@ -551,6 +568,22 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ActionResult" }
   schemas:
+    ClientErrorReport:
+      type: object
+      required: [error_name]
+      description: Names only. Never an error's message, a URL, a query value or a record value; the server drops fields that aren't shaped like the names below.
+      properties:
+        error_name: { type: string, maxLength: 64, description: "The error's class name, e.g. `TypeError`" }
+        boundary: { type: string, description: "Which error boundary caught it: `app`, `route`, `frame`, `iframe` or `node:<type>`" }
+        components:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 64 }
+          description: Component names of the stack, innermost first
+        route: { type: string, maxLength: 128, description: "The matched route pattern, e.g. `/:resource/:id/edit`" }
+        resource: { type: string, description: "Resource or page key; dropped unless it is one the user may see" }
+        client_version: { type: string, maxLength: 32 }
+        request_id: { type: string, maxLength: 64, description: The `X-Request-Id` of the last API response the client saw }
     McpRequest:
       type: object
       required: [jsonrpc, method]
@@ -724,11 +757,12 @@ components:
           $ref: "#/components/schemas/UiState"
     UiState:
       type: object
-      required: [available, default]
+      required: [available, default, client_errors]
       description: Whether this user may switch between the classic admin and this client, and which one the host would start them in. The browser's `reactiveadmin_ui` cookie, not the server, holds the choice.
       properties:
         available: { type: boolean }
         default: { type: string, enum: [classic, new] }
+        client_errors: { type: boolean, description: "Whether the client reports crashes to `_client_errors` (`config.ui.client_errors`)." }
     OptionsResponse:
       type: object
       required: [options, truncated]

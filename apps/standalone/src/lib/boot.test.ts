@@ -17,7 +17,7 @@ describe('leaveIfUnavailable', () => {
   it('seeds the session cache so the switch components do not request it again', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch')
     const client = new QueryClient()
-    const available = { ui: { available: true, default: 'classic' } } as Session
+    const available = { ui: { available: true, default: 'classic', client_errors: true } } as Session
 
     await leaveIfUnavailable(() => Promise.resolve(available), true, vi.fn(), vi.fn(), client)
     const seen = await client.fetchQuery(getGetSessionQueryOptions({ query: { staleTime: Infinity } }))
@@ -28,13 +28,13 @@ describe('leaveIfUnavailable', () => {
   })
 
   it('lets an available user stay', async () => {
-    const { leaving, go, store } = await run(session({ available: true, default: 'classic' }))
+    const { leaving, go, store } = await run(session({ available: true, default: 'classic', client_errors: true }))
 
     expect([leaving, go.mock.calls.length, store.mock.calls.length]).toEqual([false, 0, 0])
   })
 
   it('sends a user who may not use the new admin back to classic, and forgets the choice', async () => {
-    const { leaving, go, store } = await run(session({ available: false, default: 'new' }))
+    const { leaving, go, store } = await run(session({ available: false, default: 'new', client_errors: true }))
 
     expect(leaving).toBe(true)
     expect(store).toHaveBeenCalledWith(undefined)
@@ -98,7 +98,7 @@ describe('boundedSession', () => {
   })
 
   it('passes through the answer and the failure of a session that responds', async () => {
-    const answer = { ui: { available: true, default: 'classic' } } as Session
+    const answer = { ui: { available: true, default: 'classic', client_errors: true } } as Session
 
     await expect(boundedSession(() => Promise.resolve(answer), 10)()).resolves.toBe(answer)
     await expect(boundedSession(() => Promise.reject(new ApiError(401, 'unauthorized')), 10)()).rejects.toMatchObject({ status: 401 })

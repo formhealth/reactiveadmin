@@ -4,7 +4,7 @@ import { expect, within } from 'storybook/test'
 import { session } from '@/mocks/forms'
 import { UiSwitchPanel } from './UiSwitch'
 
-const ui = (available: boolean) => ({ msw: { handlers: [http.get('/api/admin/_session', () => HttpResponse.json({ ...session, ui: { available, default: 'classic' } }))] } })
+const ui = (available: boolean) => ({ msw: { handlers: [http.get('/api/admin/_session', () => HttpResponse.json({ ...session, ui: { available, default: 'classic', client_errors: true } }))] } })
 
 const meta = {
   title: 'Components/UiSwitch',

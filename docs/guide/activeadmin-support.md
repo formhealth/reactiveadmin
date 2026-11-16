@@ -11,7 +11,7 @@ This page lists which ActiveAdmin constructs the API and client handle. Use it t
 
 Entries marked **(check)** rest on code reading or on the 2026-10-16 review. Verify them against your app before you rely on them.
 
-Index, show, form and page responses list what they fell back to in a `degraded` array of `{kind, where, reason}`. `where` is a structural path such as `index/column[title]` or `form/section[1]`, and `reason` names the exception class, never its message or any record data. Each entry also publishes an `ActiveSupport::Notifications` event, `degraded.reactiveadmin`, with `resource`, `action`, `kind` and `where`, and the response carries `X-Reactiveadmin-Degraded: <count>`. A cell that fails renders as an `error` node, not `empty`. For fixes in your admin code, run [`rake reactiveadmin:doctor`](doctor.md).
+Index, show, form and page responses list what they fell back to in a `degraded` array of `{kind, where, reason}`. `where` is a structural path such as `index/column[title]` or `form/section[1]`, and `reason` names the exception class, never its message or any record data. Each entry also publishes an `ActiveSupport::Notifications` event, `degraded.reactiveadmin`, with `resource`, `action`, `kind` and `where` (plus `synthetic: true` for the doctor's own samples), and the response carries `X-Reactiveadmin-Degraded: <count>`. A cell that fails renders as an `error` node, not `empty`. For fixes in your admin code, run [`rake reactiveadmin:doctor`](doctor.md).
 
 ## Index
 

@@ -14,18 +14,18 @@ RSpec.describe "session and CSRF", type: :request do
       sign_in editor
       api_get("/api/admin/_session", schema: "Session")
 
-      expect(json["ui"]).to eq("available" => false, "default" => "classic")
+      expect(json["ui"]).to eq("available" => false, "default" => "classic", "client_errors" => true)
     end
 
     it "reports who may switch UIs, and which one the host starts them in" do
       with_ui(available: ->(user) { user.role == "admin" }, default: :new) do
         sign_in admin
         api_get("/api/admin/_session", schema: "Session")
-        expect(json["ui"]).to eq("available" => true, "default" => "new")
+        expect(json["ui"]).to eq("available" => true, "default" => "new", "client_errors" => true)
 
         sign_in editor
         api_get("/api/admin/_session", schema: "Session")
-        expect(json["ui"]).to eq("available" => false, "default" => "new")
+        expect(json["ui"]).to eq("available" => false, "default" => "new", "client_errors" => true)
       end
     end
 

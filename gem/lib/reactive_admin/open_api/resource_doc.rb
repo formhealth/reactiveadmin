@@ -33,7 +33,7 @@ module ReactiveAdmin
       end
 
       def call
-        Degradation.with_collection(resource: @key, action: "openapi") do
+        Degradation.with_collection(resource: @config.resource_name, action: "openapi") do
           probe
           list
           show

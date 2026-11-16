@@ -19,4 +19,6 @@ import type { UiStateDefault } from './uiStateDefault';
 export interface UiState {
   available: boolean;
   default: UiStateDefault;
+  /** Whether the client reports crashes to `_client_errors` (`config.ui.client_errors`). */
+  client_errors: boolean;
 }

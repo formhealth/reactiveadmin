@@ -7,6 +7,7 @@ module ReactiveAdmin
     EVENT = "degraded.reactiveadmin".freeze
     HEADER = "X-Reactiveadmin-Degraded".freeze
     KEY = :reactiveadmin_degradation
+    SYNTHETIC_KEY = :reactiveadmin_synthetic
     STATE = ActiveSupport::IsolatedExecutionState
 
     Collector = Struct.new(:resource, :route_key, :action, :entries, :tallies, :controller)
@@ -45,13 +46,26 @@ module ReactiveAdmin
       STATE[KEY] = previous
     end
 
+    # The doctor's own sample requests aren't traffic; events they publish carry `synthetic: true`.
+    def synthetic
+      previous = STATE[SYNTHETIC_KEY]
+      STATE[SYNTHETIC_KEY] = true
+      yield
+    ensure
+      STATE[SYNTHETIC_KEY] = previous
+    end
+
+    # Not a user's screen: the doctor's samples, or an OpenAPI build. Readiness counts should skip these.
+    def synthetic?(payload) = payload[:synthetic] == true || payload[:action] == "openapi"
+
     def attach(payload)
       list = entries
       list.empty? ? payload : payload.merge(degraded: list)
     end
 
     def instrument(entry, collector)
-      payload = {resource: collector&.resource, action: collector&.action, **entry.slice(:kind, :where)}
+      synthetic = STATE[SYNTHETIC_KEY] ? {synthetic: true} : {}
+      payload = {resource: collector&.resource, action: collector&.action, **entry.slice(:kind, :where), **synthetic}
       Audit.instrument("degraded", collector&.controller, payload, payload.merge(resource: collector&.route_key, user_id: nil))
     end
   end

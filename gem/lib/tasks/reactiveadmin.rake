@@ -5,6 +5,11 @@ namespace :reactiveadmin do
     exit(1) if ReactiveAdmin::Doctor::CLI.run.positive?
   end
 
+  desc "Per resource: doctor mode, recent degraded and client error counts (config.event_counts), and a checklist for leaving classic. FORMAT=json, SAMPLE=0"
+  task readiness: :environment do
+    ReactiveAdmin::Readiness::CLI.run
+  end
+
   desc "Print the HTML sanitizer policy as JSON, for the client to configure DOMPurify from"
   task html_policy: :environment do
     puts JSON.pretty_generate(ReactiveAdmin::HtmlPolicy.export)

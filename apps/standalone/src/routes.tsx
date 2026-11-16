@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from 'react'
 import type { RouteObject } from 'react-router'
+import { registerRoutes } from '@/boundaries/reportClientError'
 import { RouteBoundary } from '@/boundaries/RouteBoundary'
 import { Layout } from '@/components/Layout'
 import { RouteSkeleton } from '@/components/RouteSkeleton'
@@ -31,3 +32,5 @@ export const routes: RouteObject[] = [
     ],
   },
 ]
+
+registerRoutes(routes)
