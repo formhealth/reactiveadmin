@@ -12,7 +12,7 @@ namespace :reactiveadmin do
 
   desc "Write the OpenAPI document of the full exposed admin API as YAML, for CI diffs. OUT=path overrides config.openapi.output"
   task openapi: :environment do
-    ReactiveAdmin.load_routes
+    Rails.application.reload_routes_unless_loaded
     warn "config.doctor_user is not set: scopes, batch actions and forms that read the current user are left out" unless ReactiveAdmin.config.doctor_user
     path = Rails.root.join(ENV["OUT"].presence || ReactiveAdmin.config.openapi.output)
     document = ReactiveAdmin::OpenApi.build(full: true)

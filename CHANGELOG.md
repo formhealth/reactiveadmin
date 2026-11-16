@@ -19,6 +19,7 @@ These close gaps in the API and change what some clients get. Review them before
 ### Changed
 
 - **Custom actions in the contract.** `core.yaml` declares GET member actions (`runMemberActionGet`, answering `ActionGetResponse`: a form, page content, options or a redirect's result), lets action writes answer `ActionWriteResponse` (a result or a re-rendered form), and declares their `501 unsupported`. The OpenAPI document gives member, collection and page actions the same responses.
+- The minimum Rails version is now 8.1.
 
 ## 0.1.0
 
