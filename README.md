@@ -20,6 +20,8 @@ Version 0.1.0. This is early software: the gem and the client aren't published t
 
 The host app doesn't need Node.js at runtime. Build the client once at deploy time.
 
+The client bundles its own React 19.2 or later, so a host that runs React 18 elsewhere is unaffected. React 18 isn't supported: see [Custom components](docs/guide/custom-views.md#register-a-custom-component).
+
 ## Install
 
 The gem installs from GitHub. Point Bundler at the gemspec in the `gem/` directory:
