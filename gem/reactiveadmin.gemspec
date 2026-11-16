@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
     "rubygems_mfa_required" => "true"
   }
   s.required_ruby_version = ">= 3.4"
-  s.files = Dir["{app,lib}/**/*"]
+  s.files = Dir["{app,lib,openapi}/**/*"]
   # AA_PROBE lifts the cap for the aa4 probe job (gemfiles/aa4.gemfile); never set it in an app.
   s.add_dependency "activeadmin", ">= 3.5", (ENV["AA_PROBE"] ? "< 5" : "< 4")
   s.add_dependency "rails", ">= 7.2"
