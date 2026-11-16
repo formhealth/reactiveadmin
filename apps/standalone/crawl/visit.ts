@@ -4,6 +4,7 @@ import { AXE_TAGS, BLOCKING_IMPACTS, MODAL_SIBLINGS } from '../.storybook/a11yCo
 import { a11yAllowed, apiAllowed, consoleAllowed, type Allowlist } from './allowlist.ts'
 import { compareBaseline, DEFAULT_MASKS } from './baselines.ts'
 import type { Options } from './options.ts'
+import { reactRowIds } from './parity.ts'
 import type { Screen } from './plan.ts'
 import { scrub, stripQuery, truncate } from './sanitize.ts'
 
@@ -20,6 +21,8 @@ export type ScreenResult = {
   failures: Failure[]
   a11yMinor: number
   screenshot?: string
+  // Record ids of the first page, read for --parity and dropped before the report.
+  rowIds?: string[]
 }
 
 const AXE_SOURCE = createRequire(import.meta.url).resolve('axe-core/axe.min.js')
@@ -139,6 +142,7 @@ export async function visit(screen: Screen, { browser, storageState, options, al
     }
     await page.evaluate(settle, [QUIET_MS, SETTLE_CAP_MS] as [number, number])
     await seen.settled()
+    if (options.parity && screen.kind === 'index' && result.readyMs !== undefined) result.rowIds = await page.evaluate(reactRowIds)
 
     const shown = await page.evaluate(visibleErrors)
     failures.push(

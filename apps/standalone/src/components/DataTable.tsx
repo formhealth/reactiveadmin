@@ -117,6 +117,7 @@ export function DataTable({ resource, columns, rows, order, onOrder, stale, sele
             return (
               <TableRow
                 key={row.id}
+                data-row-id={row.id}
                 data-state={selection?.ids.has(row.id) ? 'selected' : undefined}
                 className={cn('bg-card transition-none hover:bg-muted focus-within:bg-muted data-[state=selected]:bg-info-soft', row.original.tone && rowTone[row.original.tone], canShow && 'cursor-pointer')}
                 onClick={(e) => canShow && e.currentTarget.contains(e.target as Node) && !(e.target as HTMLElement).closest('a,button') && navigate(path, { state: { search } })}

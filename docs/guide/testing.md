@@ -34,7 +34,7 @@ pnpm crawl --help
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--base-url` | `$CRAWL_BASE_URL`, or `http://localhost:5174` | The client to crawl. Its dev server or build must proxy `/api` to the host. |
+| `--base-url` | `$CRAWL_BASE_URL`, or `http://localhost:5174` | The client to crawl. Its dev server or build must proxy `/api` to the host. A host that serves the client at its admin URLs takes that path: `https://host.example/admin`. |
 | `--resources=a,b` | all | Only these resources' screens. Home, groups and pages are left out. |
 | `--screens=index,show` | all | Only these kinds: `home`, `group`, `page`, `index`, `show`, `new`, `edit`. |
 | `--limit` | 2 | Records whose show page is visited per resource. |
@@ -44,10 +44,15 @@ pnpm crawl --help
 | `--no-axe` | off | Skip accessibility checks. |
 | `--headed` | off | Show the browser. |
 | `--out` | `crawl-report` | Where the reports go. |
+| `--auth=file` | see [Sign in](#sign-in) | Login hook. `--login` is the same option. |
+| `--budget=[kind.]metric=ms` | none | A [performance budget](#performance-budgets). Repeatable. |
+| `--budget-file=file` | none | Budgets as JSON. |
+| `--parity` | off | [Compare each index](#classic-parity) with classic ActiveAdmin. |
+| `--classic-path` | the base URL's path, or `/admin` | Where the classic admin lives, for `--parity`. |
 
-The exit code is 0 when every screen passes, 1 when any fails, and 2 when the crawl couldn't start (not signed in, no manifest, bad option).
+The exit code is 0 when every screen passes and no budget or parity check fails, 1 when any does, and 2 when the crawl couldn't start (not signed in, no manifest, bad option).
 
-The crawl reads records through the same API as a person would, so the host sees ordinary admin reads from the signed-in user. Use a development user.
+> **Crawling real data creates audit reads.** The crawl reads records through the same API as a person would, so the host sees ordinary admin reads, and audits them, for the signed-in user. On any host with real data, sign in as a dedicated crawl user, not a person, and give it only the permissions and records you want crawled. The crawl prints a reminder when the base URL isn't local. Its own metadata requests (the manifest) are marked as background reads, but the screens and the record lookups are not.
 
 ### Report
 
@@ -74,16 +79,54 @@ export default login
 
 See `crawl/hooks/example.login.ts`. A hook can also call a test-only sign-in endpoint with `context.request.post(...)`, as `crawl/hooks/dummy.login.ts` does. The cookie must reach the API through the client's origin: the Vite proxy forwards cookies, and cookies ignore ports, so a session minted at `localhost:3003` works at `localhost:5174`.
 
-#### Against your own app
+### Against your own app
 
-Sign in once in a browser, or mint a session cookie with a development-only task in your app, and pass it as `CRAWL_COOKIE` (`name=value`) with the app on :3003 and the client on :5174:
+The crawl works against any host that runs the gem. Two setups:
+
+- **A dev server** at `http://localhost:5174` (`pnpm dev` in `apps/standalone`, proxying `/api` and `/admin` to your app, with `RA_API_TARGET` set to your app's URL). This is the default.
+- **A host serving the client at its admin URLs**, as in [Roll out the new admin](rollout.md): give the admin URL as the base URL. The crawl sets the `reactiveadmin_ui=new` cookie, so the host answers with the client. The user must be allowed to use it (`config.ui.available`), or the client sends every page back to classic and the crawl reports failures.
 
 ```sh
-export CRAWL_COOKIE="_my_app_session=..."
-pnpm crawl
+export CRAWL_COOKIE="_my_app_session=..."          # or --auth=./crawl.login.ts
+pnpm crawl --base-url=https://staging.example.com/admin --resources=posts,authors --concurrency=2
 ```
 
-The cookie expires with your session, so mint a new one when it does. The user needs the permissions to see what you want crawled: a resource they can't index isn't in their manifest, so it isn't crawled.
+The `bin` entry `reactiveadmin-crawl` in `apps/standalone` runs the same CLI (`node apps/standalone/bin/reactiveadmin-crawl.mjs --help`, or `pnpm exec reactiveadmin-crawl` after `pnpm link`). The client package isn't published, and Node doesn't run TypeScript from `node_modules`, so `npx` and `pnpm dlx` don't work yet: run it from a checkout of this repository (Node.js 24 and `pnpm exec playwright install chromium`).
+
+Use a login hook that fits your sign-in, SSO included. The crawl never types into a sign-in page; the hook mints or loads a session for a dedicated crawl user, from a cookie, an API token exchange or a test-only endpoint. See `crawl/hooks/example.login.ts`. The hook's `baseUrl` is the origin, without the admin path.
+
+The cookie or session expires on the host's schedule, so mint a new one when it does. The user needs the permissions to see what you want crawled: a resource they can't index isn't in their manifest, so it isn't crawled.
+
+### Performance budgets
+
+`--budget` fails the run when a render-time metric (`p50`, `p95` or `max`, in milliseconds) goes over its limit, either for every screen or for one kind. Repeat it for several:
+
+```sh
+pnpm crawl --budget=p95=1500 --budget=index.p95=1000 --budget=show.max=4000
+```
+
+Or keep them in a file and pass `--budget-file=crawl.budgets.json`. Flags override the file:
+
+```json
+{ "all": { "p95": 1500 }, "index": { "p95": 1000, "max": 3000 }, "show": { "p50": 600 } }
+```
+
+Kinds are `all`, `home`, `group`, `page`, `index`, `show`, `new` and `edit`. A budget fails its scope as a whole, and the report lists the screens in that scope that are over the limit, slowest first (at most ten), so a p95 violation points at the tail. A kind the run didn't crawl isn't judged. Screens that never rendered have no time and are left out of the statistics (they already fail as timeouts).
+
+Times depend on the machine, the host's load and its data volume. Set budgets from a few runs against the same environment, with some headroom, and keep `--concurrency` the same between runs.
+
+### Classic parity
+
+`--parity` checks that the new index shows what the classic one shows. For each resource's index, after the React screen is checked, the crawl loads the classic page (`{classic path}/{resource}?classic=1`, signed in as the same user) and compares the first page: the number of rows and the set of record ids. A resource passes when both match. Differences, with the ids that only one side shows (at most ten each), go in the report and fail the run.
+
+The comparison reads ids only. It never reads, compares or logs cell values.
+
+It compares what both sides can show, so some indexes are marked `unsupported` and left out of the verdict:
+
+- The classic page isn't a table of records the crawl can read, for example a custom index component, or a redirect to sign-in or another resource. The crawl reads each row's id from its own links, because those carry the same identifier as the React rows (a slug, say, where checkbox values are primary keys). When a row's links don't single out its own record, such as an association link beside the row's actions, the resource is reported as unsupported rather than compared on a guess.
+- The React page has no `data-row-id` records. Build the client from this repository's current sources.
+
+Both pages use the resource's default sort, filters and page size. Run it against data that is not changing: a record created between the two loads shows up as a difference. Order is ignored because rows that tie on the sort column can come back in either order.
 
 ### Allowlist
 
@@ -112,6 +155,8 @@ Baselines live in `~/.cache/reactiveadmin-crawl/baselines/<host>` (change it wit
 `pnpm crawl:dummy` needs no running server. It seeds the gem's dummy app into a scratch sqlite database (`gem/spec/dummy/db/seeds.rb`, through `gem/spec/dummy/bin/crawl_prepare`), starts it with `rackup` on port 3098, starts Vite on port 5198 pointed at it (`RA_API_TARGET`), runs the crawl signed in through the dummy's test-only `/test/sign_in`, and stops both. It takes extra options (`pnpm crawl:dummy --resources=posts`), and `CRAWL_RAILS_PORT` and `CRAWL_VITE_PORT` move the ports. It needs `bundle install` in `gem/` and Playwright's Chromium (`pnpm exec playwright install chromium`).
 
 The dummy's allowlist (`crawl/allowlists/dummy.json`) holds one known finding: the classic form partial for `sketches` renders a bare `<li>` outside a list.
+
+CI runs it with `--parity`, so every dummy index is compared with its classic page. The `taggings` index has a custom presenter and is reported as unsupported.
 
 ## Contract examples
 

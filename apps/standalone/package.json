@@ -9,6 +9,9 @@
   },
   "version": "0.0.0",
   "type": "module",
+  "bin": {
+    "reactiveadmin-crawl": "./bin/reactiveadmin-crawl.mjs"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

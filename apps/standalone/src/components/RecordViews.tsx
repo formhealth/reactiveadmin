@@ -33,7 +33,7 @@ export function RecordViews({ resource, view, rows, gridColumns = 3, stale, defa
   return (
     <ul className={cn(layout, stale && 'opacity-60')} style={{ '--columns': grid(gridColumns) } as CSSProperties}>
       {rows.map((row) => (
-        <li key={row.id} className="flex min-w-0">
+        <li key={row.id} data-row-id={row.id} className="flex min-w-0">
           <Card className={cn('h-full w-full', row.tone && rowTone[row.tone])}>
             <CardContent className={cn('flex flex-1 flex-col gap-3', view === 'blog' && 'gap-4')}>
               <NodeContext value={{ resource, id: row.id, name: row.display_name }}>

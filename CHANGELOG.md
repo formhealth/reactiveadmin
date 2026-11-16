@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - **MCP agent workflow tools.** `count_records` returns the total and per-scope counts for filters and a scope, through the index's own guards, with no rows. `update_record` takes `dry_run: true` and returns each field's `from` and `to` without saving; it is the API's `PATCH ... dry_run`, validated inside a rolled-back transaction, with masked values hidden and no `write` audit event. It previews only plain attributes the form offers a control for, and in-memory nested rows, and `dry_run` is refused anywhere but update. `prompts/list` and `prompts/get` serve three runbooks (`find_record`, `review_recent_changes`, `bulk_update`), offered only when the token can use the tools they name, and `initialize` advertises the `prompts` capability.
 - A project website on GitHub Pages (`apps/site`, VitePress): a landing page, the guides and the changelog, plus a demo of the React admin that runs on mock data (`pnpm --filter standalone build:demo`).
+- The crawl runs against a host app: `--base-url` takes a host's admin URL, `--auth` names a login hook, and the `reactiveadmin-crawl` bin runs it from a checkout. Docs warn that crawling real data creates audit reads and recommend a dedicated user.
+- Performance budgets for the crawl (`--budget=p95=1500`, `--budget=index.max=4000`, `--budget-file`): the run exits non-zero and the report lists the screens over the limit.
+- `--parity` compares each index's first page (row count and record ids, never values) with classic ActiveAdmin. Table rows, cards and grid items carry `data-row-id`.
 
 ### Security
 
