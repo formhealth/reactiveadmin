@@ -33,7 +33,7 @@ export function createOptionLookup({ cache = true } = {}) {
   const send = async (group: string, wanted: Record<string, string[]>) => {
     const query = new URLSearchParams(group.split('?')[1])
     for (const [field, values] of Object.entries(wanted)) query.set(`fields[${field}]`, values.join(','))
-    const { lookups } = await apiFetch<LookupResponse>(`${group.split('?')[0]}?${query}`)
+    const { lookups } = await apiFetch<LookupResponse>(`${group.split('?')[0]}?${query}`, { contract: 'LookupOptionsResponse' })
     return lookups
   }
 
@@ -85,7 +85,7 @@ export function createOptionLookup({ cache = true } = {}) {
 
   // Paths this can't batch (a template form's own action) are asked directly, within the server's value cap.
   const loadEach = async (path: string, values: string[]) => {
-    const pages = await Promise.all(chunk(values, MAX_PER_FIELD).map((vals) => apiFetch<OptionsResponse>(`${path}${path.includes('?') ? '&' : '?'}${new URLSearchParams({ value: vals.join(',') })}`)))
+    const pages = await Promise.all(chunk(values, MAX_PER_FIELD).map((vals) => apiFetch<OptionsResponse>(`${path}${path.includes('?') ? '&' : '?'}${new URLSearchParams({ value: vals.join(',') })}`, { contract: 'GetOptionsResponse' })))
     return pages.flatMap((page) => page.options)
   }
 

@@ -1,3 +1,4 @@
+import type { ContractKey } from '@/api/contract'
 import type { Session, ValidationErrorRowErrors } from '@/api/generated/model'
 import { mountPath as BASE_URL } from '@/lib/base'
 import { toastRateLimited } from '@/lib/rateLimit'
@@ -72,7 +73,10 @@ export const resetCsrf = () => {
 // Paths from the API (`FormResponse.action.path`, `Action.api_path`) already include the mount.
 const withMount = (url: string) => (url.startsWith(`${BASE_URL}/`) ? url : `${BASE_URL}${url}`)
 
-async function request<T>(url: string, options: RequestInit = {}, retried = false): Promise<T> {
+// `contract`: the core.yaml response a server-supplied path answers, where the path alone can't tell (custom actions).
+export type ApiOptions = RequestInit & { contract?: ContractKey }
+
+async function request<T>(url: string, { contract, ...options }: ApiOptions = {}, retried = false): Promise<T> {
   const write = !['GET', 'HEAD'].includes((options.method ?? 'GET').toUpperCase())
   const bucket = backgroundBucket(url, options.method)
   const background = bucket !== undefined
@@ -89,7 +93,7 @@ async function request<T>(url: string, options: RequestInit = {}, retried = fals
   const body = await res.json().catch(() => null)
   if (res.status === 422 && body?.code === 'invalid_csrf' && !retried) {
     resetCsrf()
-    return request(url, options, true)
+    return request(url, { contract, ...options }, true)
   }
   if (res.status === 401) clearClientStorage()
   if (res.status === 429) {
@@ -99,7 +103,12 @@ async function request<T>(url: string, options: RequestInit = {}, retried = fals
     throw new ApiError(429, body?.code ?? 'rate_limited', body?.message, body ?? undefined, retryAfter)
   }
   if (!res.ok) throw new ApiError(res.status, body?.code, body?.message, body ?? undefined, parseRetryAfter(res.headers.get('Retry-After')))
+  // Dev and tests only: production builds drop this branch and the schemas with it.
+  if (import.meta.env.DEV && body !== null) {
+    const { checkResponse } = await import('./contract')
+    checkResponse((options.method ?? 'GET').toUpperCase(), withMount(url).slice(BASE_URL.length).split('?')[0], body, contract)
+  }
   return body as T
 }
 
-export const apiFetch = <T>(url: string, options: RequestInit = {}) => request<T>(url, options)
+export const apiFetch = <T>(url: string, options: ApiOptions = {}) => request<T>(url, options)

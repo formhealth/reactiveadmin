@@ -3,6 +3,7 @@ import axe from 'axe-core'
 import { toast } from 'sonner'
 import type { AfterEach, BeforeEach } from 'storybook/internal/types'
 import { commands, page } from 'vitest/browser'
+import { violations } from '@/api/contract'
 import { AXE_TAGS as TAGS, BLOCKING_IMPACTS as BLOCKING, FRAGMENT_RULES, MODAL_SIBLINGS } from './a11yConfig'
 import * as projectAnnotations from './preview'
 
@@ -65,9 +66,16 @@ const audit: AfterEach = async ({ id, parameters }) => {
   if (failures.length) throw new Error(`a11y violations (${THEME} theme):\n${failures.join('\n')}`)
 }
 
+// A mock that drifted from core.yaml fails its story, as the drift would fail the client against a real server.
+const contract = () => {
+  const found = violations.splice(0)
+  if (found.length) throw new Error(`Responses that don't match the contract:\n${found.join('\n')}`)
+}
+
 const a11y: AfterEach = async (context) => {
   try {
     if (!SKIP_AXE) await audit(context)
+    contract()
   } finally {
     await clearToasts()
   }

@@ -29,7 +29,7 @@ export function useOptionSource({ path, inline = [], selected, open }: SourceArg
 
   const search = useInfiniteQuery({
     queryKey: ['options', path, debounced],
-    queryFn: ({ pageParam, signal }) => apiFetch<OptionsResponse>(optionsUrl(path!, { term: debounced, limit: String(PAGE), cursor: pageParam }), { signal }),
+    queryFn: ({ pageParam, signal }) => apiFetch<OptionsResponse>(optionsUrl(path!, { term: debounced, limit: String(PAGE), cursor: pageParam }), { signal, contract: 'GetOptionsResponse' }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     enabled: !!path && open,

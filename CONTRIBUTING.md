@@ -43,7 +43,7 @@ CI runs the same commands; see `.github/workflows/`. To run the client against a
 ## Conventions
 
 - **The contract.** `openapi/core.yaml` is the contract between the gem and the client. Keep it snake_case. Change the gem, the contract and the client together, and don't break the contract without updating both sides.
-- **The generated client.** Never edit `apps/standalone/src/api/generated` by hand. After you change `openapi/core.yaml`, run `pnpm gen` and commit the result. CI fails when the generated client drifts from the contract.
+- **The generated client.** Never edit `apps/standalone/src/api/generated` by hand. After you change `openapi/core.yaml`, run `pnpm gen` and commit the result. CI fails when the generated client drifts from the contract. Call the generated functions; lint allows `apiFetch` only in the files `.oxlintrc.json` lists, for paths the server hands out. In dev, tests, Storybook and the crawl, responses are checked against the generated zod schemas (`src/api/contract.ts`), and a mismatch fails the story or the crawl.
 - **ActiveAdmin internals.** Keep every access to ActiveAdmin internals inside the gem's adapter classes (`gem/lib/reactive_admin/aa`), so supporting another ActiveAdmin version touches one place.
 - **Ruby.** The gem follows [Standard Ruby](https://github.com/standardrb/standard). Run `bundle exec standardrb` before you push.
 - **TypeScript.** The client is TypeScript in strict mode. Build UI from the shadcn/ui primitives in `src/components/ui`, and use React Query for server state.

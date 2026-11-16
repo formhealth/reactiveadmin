@@ -63,7 +63,7 @@ export function useRecordAction(ctx: ActionContext = {}) {
 
   const openForm = async (action: Action, path: string) => {
     try {
-      const response = await apiFetch<ActionGetResponse>(path)
+      const response = await apiFetch<ActionGetResponse>(path, { contract: 'RunMemberActionGetResponse' })
       if ('form' in response && 'action' in response) setForm({ action, response })
       else toast.error(`"${action.label}" can't be opened here`)
     } catch (error) {
@@ -85,7 +85,7 @@ export function useRecordAction(ctx: ActionContext = {}) {
     if (plan === 'form') return openForm(action, action.form_path!)
     if (plan === 'classic') return classic(action)
     try {
-      done(action, await apiFetch<ActionResult>(action.api_path!, { method: (action.method ?? 'get').toUpperCase() }))
+      done(action, await apiFetch<ActionResult>(action.api_path!, { method: (action.method ?? 'get').toUpperCase(), contract: 'RunMemberActionPostResponse' }))
     } catch (error) {
       toastError(error)
     }

@@ -93,7 +93,7 @@ function NativeView({ action, path, container, resource, id, onResult, onClose }
   const { data, error, dataUpdatedAt: updatedAt, isFetching, isPlaceholderData } = useQuery({
     // Under the resource's prefix, so the writes of this page's actions refetch it.
     queryKey: [`/admin/${resource ?? '_'}/action-form`, path, query.search],
-    queryFn: () => apiFetch<ActionGetResponse>(withSearch(path, query.search)),
+    queryFn: () => apiFetch<ActionGetResponse>(withSearch(path, query.search), { contract: 'RunMemberActionGetResponse' }),
     // The page stays up while a new query loads, but another action's page never stands in for this one.
     placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === path ? previous : undefined),
     gcTime: 0,

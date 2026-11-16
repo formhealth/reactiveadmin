@@ -50,7 +50,7 @@ export function StaleDialog({ form, onRebase }: Props) {
   const load = async (mode: 'review' | 'discard') => {
     setBusy(mode)
     try {
-      const latest = await apiFetch<FormResponse>(`${form.response.action.path}/edit`)
+      const latest = await apiFetch<FormResponse>(`${form.response.action.path}/edit`, { contract: 'GetEditFormResponse' })
       if (mode === 'discard') return onRebase(latest)
       setFresh(latest)
       setPhase('review')
