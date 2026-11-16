@@ -2,15 +2,13 @@ module ReactiveAdmin
   # Stands in for AA's ActiveAdminForm while a `form do |f| ... end` block runs: inputs are
   # recorded instead of rendered, and any other Arbre content (panels, paragraphs) is captured
   # as typed `content` fields between them (see FormContent). An Element for the same reason as IndexRecorder.
-  class FormRecorder < AA.arbre_element
-    Holder = Class.new(AA.arbre_element)
-
+  class FormRecorder < AA.form_recorder_base
     NOOPS = %i[semantic_errors commit_action_with_cancel_link cancel_link].freeze
 
     attr_reader :builder, :sections
 
     def self.build(builder, schema, prefix: nil)
-      AA.arbre_context(schema.assigns, schema.view).insert_tag(self, builder, schema, prefix)
+      build_in(schema.assigns, schema.view, builder, schema, prefix)
     end
 
     def build(builder, schema, prefix)
@@ -22,7 +20,7 @@ module ReactiveAdmin
     end
 
     def record(&block)
-      within(self) do
+      render_within do
         instance_exec(self, &block)
         flush_html
       end
@@ -40,11 +38,11 @@ module ReactiveAdmin
     def actions(*, &block)
       return unless block
 
-      holder = insert_tag(Holder) do
+      holder = add_holder do
         block.arity.zero? ? block.call : block.call(self)
         nil
       end
-      holder.parent&.remove_child(holder)
+      detach(holder)
     rescue => e
       Rails.logger.warn("[reactiveadmin] #{@schema.config.resource_name} actions block skipped: #{e.class} at #{e.backtrace&.first}")
     end
@@ -102,7 +100,7 @@ module ReactiveAdmin
 
     # Content so far belongs in this spot: a marker says where, and `settle` fills the field once the
     # whole block has run (an element open around an input can't be walked before then).
-    def flush_html(element = current_arbre_element)
+    def flush_html(element = open_element)
       return discard(element) unless @schema.content?
 
       id = (@cuts.size + 1).to_s
@@ -171,7 +169,7 @@ module ReactiveAdmin
 
     # Arbre content built by the block lands in a throwaway holder so it can be flushed in order.
     def collect
-      insert_tag(Holder) do
+      add_holder do
         yield
         flush_html
         nil

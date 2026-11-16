@@ -21,14 +21,7 @@ module AaBoundary
 
   # path (relative to gem/) => why code outside the adapter may name AA internals. Add an entry only for a
   # documented integration surface, with the reason, and shrink it as code moves behind the adapter.
-  ALLOWLIST = {
-    "lib/reactive_admin/form_recorder.rb" => "An Arbre element a form block runs in, recording its inputs as it builds tags",
-    "lib/reactive_admin/index_recorder.rb" => "An Arbre element the index block runs in, recording columns through AA's renderers",
-    "lib/reactive_admin/show_payload.rb" => "Its Page is the Arbre element a show block renders into",
-    "lib/reactive_admin/page_payload.rb" => "Its Content is the Arbre element a register_page's content block renders into",
-    "lib/reactive_admin/page_forms.rb" => "Overrides the form helpers AA and Formtastic define, to record a page's forms",
-    "lib/reactive_admin/template_form.rb" => "Overrides the form helpers AA and Formtastic define, to record a template's form"
-  }.freeze
+  ALLOWLIST = {}.freeze
 
   module_function
 
