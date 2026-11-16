@@ -1,0 +1,41 @@
+/* The site wears the product's own type and blue, so the page and the screenshots read as one thing. */
+:root {
+  --ra-paper: #f6f7f9;
+  --ra-ink: #17202b;
+  --ra-slate: #566273;
+  --ra-blue: #2b5c8e;
+  --ra-rule: #dde1e7;
+  --ra-code: #0f1824;
+  --ra-marker: #e0a526;
+
+  --vp-font-family-base: "IBM Plex Sans Variable", system-ui, sans-serif;
+  --vp-font-family-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --vp-c-bg: var(--ra-paper);
+  --vp-c-text-1: var(--ra-ink);
+  --vp-c-text-2: var(--ra-slate);
+  --vp-c-divider: var(--ra-rule);
+  --vp-c-brand-1: var(--ra-blue);
+  --vp-c-brand-2: #244e7a;
+  --vp-c-brand-3: var(--ra-blue);
+  --vp-nav-bg-color: var(--ra-paper);
+  --vp-sidebar-bg-color: #eef0f3;
+}
+
+.dark {
+  --ra-paper: #0e141c;
+  --ra-ink: #e6ebf2;
+  --ra-slate: #9aa6b5;
+  --ra-blue: #8dbbec;
+  --ra-rule: #263140;
+  --ra-code: #0a1119;
+
+  --vp-c-bg: var(--ra-paper);
+  --vp-c-text-1: var(--ra-ink);
+  --vp-c-text-2: var(--ra-slate);
+  --vp-c-divider: var(--ra-rule);
+  --vp-c-brand-1: var(--ra-blue);
+  --vp-c-brand-2: #a9cdf3;
+  --vp-c-brand-3: #2b5c8e;
+  --vp-nav-bg-color: var(--ra-paper);
+  --vp-sidebar-bg-color: #121a24;
+}

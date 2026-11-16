@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { defineConfig } from "vitepress";
 
 // Pages sit outside this package, so Vite can't find vue from them.
@@ -35,6 +35,8 @@ export default defineConfig({
     "ROADMAP.md": "roadmap.md",
   },
   vite: {
+    // The repo root is srcDir, so its public/ would be the repo's; the site's assets live here.
+    publicDir: resolve(import.meta.dirname, "../public"),
     resolve: { alias: [{ find: /^vue(\/|$)/, replacement: `${vueDir}$1` }] },
   },
   // Pages serves only the root 404.html, so a deep link into the demo lands here; send it to the demo, which restores the path.
