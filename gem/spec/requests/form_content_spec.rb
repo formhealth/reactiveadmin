@@ -74,9 +74,9 @@ RSpec.describe "typed content in a form block", type: :request do
   end
 
   it "takes no part in a write" do
-    api(:post, "/api/admin/accounts", {account: {author_id: bob.id, plan_id: plan.id}}, schema: "WriteResult")
+    api(:post, "/api/admin/accounts", {account: {author_id: alice.id, plan_id: plan.id}}, schema: "WriteResult")
 
     expect(response).to have_http_status(:created)
-    expect(Account.last).to have_attributes(author_id: bob.id, plan_id: plan.id)
+    expect(Account.last).to have_attributes(author_id: alice.id, plan_id: plan.id)
   end
 end

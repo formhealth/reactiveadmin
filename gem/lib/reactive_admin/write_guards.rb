@@ -3,6 +3,7 @@ module ReactiveAdmin
   # can submit completely, and the record must be unchanged since the client loaded it.
   module WriteGuards
     GUARDED = %w[create update].freeze
+    MAX_UNKNOWN_LISTED = 20
 
     private
 
@@ -37,7 +38,9 @@ module ReactiveAdmin
       schema = FormSchema.new(self, record, controls_only: true)
       return render_api_error(:unsupported, schema.unsupported_reason, 422) unless writable?(schema)
 
-      drop_disabled_params(schema)
+      unknown = FormKeys.new(schema.sections, active_admin_config.param_key).filter!(params)
+      return reject_unknown_params(unknown) if unknown.any? && reject_unknown_params?(schema)
+
       keep_masked_values(record)
       ParamNormalizer.call(params, schema.sections, permitted: -> { permitted_params })
       MaskedJson.restore(params, schema.sections.flat_map { it[:fields] || [] }, (record if action_name == "update"), active_admin_config)
@@ -64,14 +67,13 @@ module ReactiveAdmin
       (schema.unsupported_kinds - [:partial_failed, :block_failed, :section_failed, :input_degraded]).empty?
     end
 
-    # Browsers don't post disabled inputs, so a client that does is submitting what the form withheld.
-    def drop_disabled_params(schema)
-      schema.sections.flat_map { it[:fields] || [] }.each do |field|
-        next unless field[:disabled] && field[:param]
+    # A form that didn't record completely doesn't know all its fields, so what it misses isn't refused.
+    def reject_unknown_params?(schema) = ReactiveAdmin.config.reject_unknown_params && schema.submittable?
 
-        *path, leaf = field[:param].delete_suffix("[]").scan(/[^\[\]]+/)
-        path.inject(params) { |memo, key| memo.try(:[], key) }.try(:delete, leaf)
-      end
+    # Names only, never values, and a bounded list of them: both are the client's input.
+    def reject_unknown_params(paths)
+      listed = paths.first(MAX_UNKNOWN_LISTED).map { it.truncate(100) }
+      render_api_error(:invalid, "Not fields of this form: #{listed.join(", ")}", 422, errors: {}, base: ["These aren't fields of this form: #{listed.join(", ")}"])
     end
 
     # A custom create may build a different class than the resource's (AdhocPlan for AppointmentPlan),

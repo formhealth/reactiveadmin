@@ -11,9 +11,19 @@ module ReactiveAdmin
     # `permitted` returns the host's strong parameters for the request.
     def self.call(params, sections, permitted: nil) = new(sections, permitted).call(params)
 
+    # Every field of a section, a has_many's saved rows and new-row template included.
+    def self.fields_in(section)
+      return section[:fields] || [] unless section[:kind] == "has_many"
+
+      [*section[:records].to_a.flat_map { it[:fields] }, *section[:template_fields]]
+    end
+
+    # `a[b][3][c]` and `a[b][__INDEX__][c]` are the same field in different rows.
+    def self.shape(param) = param.gsub(ROW, "[#]")
+
     def initialize(sections, permitted)
       @permitted = permitted
-      fields = sections.flat_map { fields_in(it) }.select { it[:param] }
+      fields = sections.flat_map { self.class.fields_in(it) }.select { it[:param] }
       @controls = fields.to_h { [shape(it[:param].delete_suffix("[]")), it[:control]] }
       @summarized = fields.select { it[:summary] }.to_set { shape(it[:param]) }
     end
@@ -34,14 +44,7 @@ module ReactiveAdmin
 
     private
 
-    def fields_in(section)
-      return section[:fields] || [] unless section[:kind] == "has_many"
-
-      [*section[:records].to_a.flat_map { it[:fields] }, *section[:template_fields]]
-    end
-
-    # `a[b][3][c]` and `a[b][__INDEX__][c]` are the same field in different rows.
-    def shape(param) = param.gsub(ROW, "[#]")
+    def shape(param) = self.class.shape(param)
 
     def bracketed(path) = path.first + path.drop(1).map { "[#{it}]" }.join
 

@@ -187,7 +187,8 @@ ActiveAdmin.register Post do
     end
     f.has_many :comments, allow_destroy: true, new_record: "Add comment" do |comment|
       comment.input :body
-      comment.input :approved
+      # Approval sticks: a saved, approved row can't be unapproved from the form.
+      comment.input :approved, input_html: {disabled: comment.object.persisted? && comment.object.approved?}
     end
     f.actions
   end

@@ -190,6 +190,49 @@ RSpec.describe "write safety", type: :request do
 
       expect(note.reload).to have_attributes(title: "Renamed", weight: 0)
     end
+
+    it "ignores a disabled field of a saved nested row, whatever index the client gives it" do
+      approved = Comment.create!(post: first_post, body: "Kept", approved: true)
+      rows = {"7" => {id: approved.id, body: "Edited", approved: false}, "8" => {body: "New", approved: true}}
+      api(:patch, "/api/admin/posts/#{first_post.id}", {post: {comments_attributes: rows}, lock: lock_of(first_post)})
+
+      expect(response).to have_http_status(:ok)
+      expect(approved.reload).to have_attributes(body: "Edited", approved: true)
+      expect(first_post.comments.find_by!(body: "New").approved).to be(true)
+    end
+  end
+
+  describe "params outside the form" do
+    let(:article) { Article.create!(title: "Row", author: alice) }
+
+    def update_article(attrs) = api(:patch, "/api/admin/articles/#{article.id}", {article: attrs, lock: lock_of(article)})
+
+    it "refuses a field the form shows only to someone else" do
+      update_article(title: "T", featured: true)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to match_contract("ValidationError")
+      expect(json["base"].first).to include("article[featured]")
+      expect(article.reload).to have_attributes(title: "Row", featured: false)
+    end
+
+    it "refuses _destroy where the section doesn't let rows go, and takes row ids where it has rows" do
+      comment = Comment.create!(post_id: article.id, body: "one")
+      update_article(comments_attributes: {"0" => {id: comment.id, _destroy: "1"}})
+      expect(json["base"].first).to include("article[comments_attributes][0][_destroy]")
+      expect(Comment.exists?(comment.id)).to be(true)
+
+      update_article(comments_attributes: {"0" => {id: comment.id, body: "two"}})
+      expect(response).to have_http_status(:ok)
+      expect(comment.reload.body).to eq("two")
+    end
+
+    it "accepts nested rows sent as an array" do
+      update_article(comments_attributes: [{body: "listed"}])
+
+      expect(response).to have_http_status(:ok)
+      expect(Comment.where(post_id: article.id).pluck(:body)).to eq(["listed"])
+    end
   end
 
   describe "retryable errors" do

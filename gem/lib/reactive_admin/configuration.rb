@@ -66,7 +66,7 @@ module ReactiveAdmin
 
     attr_accessor :namespace, :mount_path, :inline_options_limit, :current_user,
       :meta_cache_key, :meta_cache_version, :meta_cache_ttl, :options_cache_ttl, :scope_options_by_policy,
-      :after_authorize, :on_background_request, :doctor_user, :doctor_page_params, :masked_attributes, :mask_filter_parameters, :mask_csv, :html_trusted_hosts,
+      :after_authorize, :on_background_request, :doctor_user, :doctor_page_params, :masked_attributes, :mask_filter_parameters, :mask_csv, :reject_unknown_params, :html_trusted_hosts,
       :require_lock, :retryable_errors, :error_reporter,
       :inline_json_limit, :inline_text_limit, :value_token, :value_token_ttl, :strict_defaults, :exposed_resources, :max_per_page, :max_export_rows, :rate_limits, :sensitive_resources,
       :ransack_unguarded_actions, :auth
@@ -112,6 +112,9 @@ module ReactiveAdmin
       @mask_filter_parameters = true
       # Mask the same attributes in CSV exports, classic and API alike.
       @mask_csv = true
+      # A create or update carrying params that no field of the form accounts for is refused (422), so a client
+      # can't write attributes `permit_params` allows but the form doesn't offer. Disabled fields are always dropped.
+      @reject_unknown_params = true
       # Updates must carry the `lock` token the edit form handed out; false accepts those without one
       # (clients that predate locking), still rejecting a stale token.
       @require_lock = true

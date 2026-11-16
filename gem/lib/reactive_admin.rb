@@ -62,6 +62,7 @@ module ReactiveAdmin
   autoload :MaskedJson, "reactive_admin/masked_json"
   autoload :ValueToken, "reactive_admin/value_token"
   autoload :ParamNormalizer, "reactive_admin/param_normalizer"
+  autoload :FormKeys, "reactive_admin/form_keys"
   autoload :ErrorKeys, "reactive_admin/error_keys"
   autoload :RowErrors, "reactive_admin/row_errors"
   autoload :LookupAudit, "reactive_admin/lookup_audit"

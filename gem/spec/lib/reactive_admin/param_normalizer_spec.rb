@@ -5,8 +5,8 @@ RSpec.describe ReactiveAdmin::ParamNormalizer do
     [
       {kind: "inputs", fields: [field("title", "text"), field("summary", "textarea"), field("payload", "json"), field("pinned", "boolean"),
         field("kind", "radio"), field("tag_ids", "multiselect", "memo[tag_ids][]"), field("priority", "select"), field("weight", "number")]},
-      {kind: "has_many", name: "notes", fields: [],
-       records: [{fields: [field("body", "textarea", "memo[notes_attributes][0][body]"), field("meta", "json", "memo[notes_attributes][0][meta]")]}],
+      {kind: "has_many", name: "notes", param: "memo[notes_attributes]", fields: [],
+       records: [{id: "4", param: "memo[notes_attributes][0]", fields: [field("body", "textarea", "memo[notes_attributes][0][body]"), field("meta", "json", "memo[notes_attributes][0][meta]")]}],
        template_fields: [field("body", "textarea", "memo[notes_attributes][__INDEX__][body]")]}
     ]
   end
@@ -16,6 +16,36 @@ RSpec.describe ReactiveAdmin::ParamNormalizer do
     params = ActionController::Parameters.new(memo: attrs)
     described_class.call(params, sections, permitted: permit && -> { params.permit(*permit) })
     params[:memo].to_unsafe_h
+  end
+
+  it "matches a field in any row by its shape, and lists every field of a has_many" do
+    expect(described_class.shape("memo[notes_attributes][12][body]")).to eq(described_class.shape("memo[notes_attributes][__INDEX__][body]"))
+    expect(described_class.fields_in(sections.last).pluck(:param)).to eq(%w[memo[notes_attributes][0][body] memo[notes_attributes][0][meta] memo[notes_attributes][__INDEX__][body]])
+  end
+
+  describe ReactiveAdmin::FormKeys do
+    def unknown(attrs, list = sections)
+      params = ActionController::Parameters.new(memo: attrs)
+      [described_class.new(list, "memo").filter!(params), params[:memo].to_unsafe_h]
+    end
+
+    it "lists params no field accounts for, at any depth, keeping the rest" do
+      found, kept = unknown(title: "T", secret: "x", notes_attributes: {"3" => {body: "b", author_id: "1"}})
+
+      expect(found).to eq(%w[memo[secret] memo[notes_attributes][3][author_id]])
+      expect(kept).to include("title" => "T")
+    end
+
+    it "takes a json field's structure, a multiselect's list and a nested row's id as one value" do
+      expect(unknown(payload: {a: {b: 1}}, tag_ids: %w[1 2], notes_attributes: [{id: "4", body: "b"}]).first).to be_empty
+    end
+
+    it "drops disabled fields, of nested rows too" do
+      disabled = [{kind: "has_many", name: "notes", param: "memo[notes_attributes]", fields: [], records: [],
+                   template_fields: [field("body", "textarea", "memo[notes_attributes][__INDEX__][body]").merge(disabled: true)]}]
+
+      expect(unknown({notes_attributes: {"0" => {body: "b"}}}, disabled)).to eq([[], {"notes_attributes" => {"0" => {}}}])
+    end
   end
 
   it "posts null text-like fields as empty strings" do

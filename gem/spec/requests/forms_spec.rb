@@ -200,10 +200,21 @@ RSpec.describe "forms", type: :request do
         expect(Post.find_by!(title: "With comments").comments.order(:id).pluck(:body, :approved)).to eq([["one", false], ["two", true]])
       end
 
-      it "ignores attributes outside permit_params" do
+      it "refuses params the form doesn't offer, naming them and never their values" do
+        expect { api(:post, "/api/admin/posts", body(title: "Sneaky", author_id: alice.id, views_count: 9999, comments_attributes: {"0" => {body: "x", post_id: 1}})) }.not_to change(Post, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to include("code" => "invalid", "errors" => {}, "base" => [a_string_including("post[views_count]", "post[comments_attributes][0][post_id]")])
+        expect(response.body).not_to include("9999")
+      end
+
+      it "leaves params outside the form to permit_params when reject_unknown_params is off" do
+        ReactiveAdmin.config.reject_unknown_params = false
         api(:post, "/api/admin/posts", body(title: "Sneaky", author_id: alice.id, views_count: 9999))
 
         expect(Post.find_by!(title: "Sneaky").views_count).to eq(0)
+      ensure
+        ReactiveAdmin.config.reject_unknown_params = true
       end
 
       it "answers 422 with errors keyed by attribute when invalid" do
