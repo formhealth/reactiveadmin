@@ -202,6 +202,123 @@ RSpec.describe "secure implicit defaults", type: :request do
     end
   end
 
+  describe "csv export" do
+    def export = api_get("/api/admin/memos.csv")
+
+    def table = CSV.parse(response.body.delete_prefix("\uFEFF"), headers: true)
+
+    it "takes the secure default columns, leaving out encrypted ones" do
+      export
+
+      expect(response).to have_http_status(:ok)
+      expect(table.headers).to include("Id", "Title", "Summary")
+      expect(table.headers).not_to include("Secret")
+      expect(response.body).not_to include("sensitive-secret")
+    end
+
+    it "exports an association as the record's id, never its name or an inspect string" do
+      export
+
+      expect(table.first["Author"]).to eq alice.id.to_s
+      expect(response.body).not_to include("#<", alice.name)
+    end
+
+    it "exports an id the audit log wouldn't record, such as one with a slash or a dot" do
+      allow_any_instance_of(Author).to receive(:to_param).and_return("east_A/1.x")
+      export
+
+      expect(table.first["Author"]).to eq "east_A/1.x"
+    end
+
+    it "does the same for a sensitive resource" do
+      ReactiveAdmin.config.sensitive_resources = %w[authors]
+      export
+
+      expect(table.first["Author"]).to eq alice.id.to_s
+      expect(response.body).not_to include("#<", alice.name)
+    ensure
+      ReactiveAdmin.config.sensitive_resources = []
+    end
+
+    it "leaves out a masked primary key even when csv masking is off" do
+      ReactiveAdmin.config.masked_attributes = [:id]
+      ReactiveAdmin.config.mask_csv = false
+      export
+
+      expect(table.headers).not_to include("Id")
+      expect(table.headers).to include("Title")
+    ensure
+      ReactiveAdmin.config.masked_attributes = []
+      ReactiveAdmin.config.mask_csv = true
+    end
+
+    it "is refused under strict_defaults" do
+      ReactiveAdmin.config.strict_defaults = true
+      export
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to include("code" => "invalid")
+      expect(response.body).not_to include("sensitive-secret")
+    ensure
+      ReactiveAdmin.config.strict_defaults = false
+    end
+
+    it "masks nested secrets in json columns" do
+      ReactiveAdmin.config.masked_attributes = [:api_token]
+      memo.update!(payload: {"api_token" => "nested-secret", "list" => [{"api_token" => "deep-secret"}], "note" => "visible"})
+      export
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("nested-secret", "deep-secret")
+      expect(response.body).to include("visible")
+
+      get "/admin/memos.csv"
+      expect(response.body).not_to include("nested-secret", "deep-secret")
+    ensure
+      ReactiveAdmin.config.masked_attributes = []
+    end
+
+    it "keeps the index's columns whatever view is requested" do
+      Note.create!(title: "Alpha", body: "sensitive-body")
+      api_get("/api/admin/notes.csv", as: "block")
+
+      expect(table.headers).not_to include("Body")
+      expect(response.body).not_to include("sensitive-body")
+    end
+
+    it "records the index's columns once the collection is loaded" do
+      config = ActiveAdmin.application.namespace(:admin).resource_for(Memo)
+      config.set_page_presenter(:index, ActiveAdmin::PagePresenter.new(as: :table) {
+        column :title
+        column :priority if assigns[:memos]
+      })
+      export
+
+      expect(table.headers).to include("Title", "Priority")
+    ensure
+      config.page_presenters.delete(:index)
+    end
+
+    it "is refused under strict_defaults when the index block fails" do
+      ReactiveAdmin.config.strict_defaults = true
+      allow_any_instance_of(ReactiveAdmin::IndexRecorder).to receive(:column).and_raise("boom")
+      api_get("/api/admin/notes.csv")
+
+      expect(response).to have_http_status(:unprocessable_content)
+    ensure
+      ReactiveAdmin.config.strict_defaults = false
+    end
+
+    it "keeps a declared csv block under strict_defaults" do
+      ReactiveAdmin.config.strict_defaults = true
+      api_get("/api/admin/posts.csv")
+
+      expect(response).to have_http_status(:ok)
+    ensure
+      ReactiveAdmin.config.strict_defaults = false
+    end
+  end
+
   describe "binary columns" do
     let!(:scan) { Scan.create!(title: "Receipt", image: "sensitive-image") }
     def scan_hidden = hidden.map { it["reason"] }
@@ -276,14 +393,25 @@ RSpec.describe "secure implicit defaults", type: :request do
   describe ReactiveAdmin::ImplicitDefaults do
     it "audits sections that fall back to defaults, by hidden column name" do
       expect(described_class.audit(ActiveAdmin.application.namespace(:admin).resource_for(Memo)))
-        .to eq(index: %w[secret], show: %w[secret])
+        .to eq(index: %w[secret], show: %w[secret], csv: %w[secret])
+    end
+
+    it "does not audit csv when a secondary table index supplies the export columns" do
+      config = ActiveAdmin.application.namespace(:admin).resource_for(Memo)
+      config.set_page_presenter(:index, ActiveAdmin::PagePresenter.new(as: :grid) { |memo| memo.title })
+      config.set_page_presenter(:index, ActiveAdmin::PagePresenter.new(as: :table) { column :title })
+
+      expect(described_class.audit(config)).to eq(show: %w[secret])
+    ensure
+      config.page_presenters.delete(:index)
     end
 
     it "reports hidden columns per resource in the doctor, without sampling" do
       report = ReactiveAdmin::Doctor.run(sample: false)
 
-      expect(report[:resources].find { it[:key] == "memos" }[:implicit_view]).to eq(index: %w[secret], show: %w[secret])
-      expect(report[:diagnostics]).to include(a_hash_including(kind: "implicit_view", resource: "memos", view: "index", hidden: "secret"))
+      expect(report[:resources].find { it[:key] == "memos" }[:implicit_view]).to eq(index: %w[secret], show: %w[secret], csv: %w[secret])
+      expect(report[:diagnostics]).to include(a_hash_including(kind: "implicit_view", resource: "memos", view: "index", hidden: "secret"),
+        a_hash_including(kind: "implicit_view", resource: "memos", view: "csv", hidden: "secret"))
     end
 
     it "leaves out sections with a block" do

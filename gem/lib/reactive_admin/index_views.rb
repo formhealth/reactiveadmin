@@ -12,6 +12,13 @@ module ReactiveAdmin
 
     def self.custom?(renderer) = renderer.is_a?(Class) && !built_in.value?(renderer)
 
+    # The table index with a block that an API export without a `csv` block takes its columns from:
+    # the requested view, then the default, then any other.
+    def self.table_with_block(config, as: nil)
+      names = [as.presence, nil, *AA.index_presenters(config).try(:keys)]
+      names.lazy.map { new(config, as: it) }.find { it.table? && it.presenter&.block }
+    end
+
     def initialize(config, as: nil)
       @config = config
       @presenter = AA.page_presenter(config, :index, as.presence) || AA.page_presenter(config, :index)

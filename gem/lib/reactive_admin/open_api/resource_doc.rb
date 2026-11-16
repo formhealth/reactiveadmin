@@ -166,9 +166,9 @@ module ReactiveAdmin
 
         add("#{base}.csv", "get", operation(
           id: id("export#{@plural}Csv"), summary: "Export #{@summary[:plural_label]} as CSV", tags:,
-          description: "AA's streamed CSV export of every page of the current filters, scope and order. Masked attributes are replaced by a placeholder.",
+          description: "AA's streamed CSV export of every page of the current filters, scope and order. Masked attributes are replaced by a placeholder. Without a `csv` block it takes the index's attribute columns, or the secure default columns; 422 when that is refused (too many rows, or strict defaults).",
           parameters: [*parent_params, *query_params],
-          responses: {200 => success("text/csv attachment", {type: "string", format: "binary"}, type: "text/csv")}, errors: [400, 403]
+          responses: {200 => success("text/csv attachment", {type: "string", format: "binary"}, type: "text/csv")}, errors: [400, 403, 422]
         ), names: %w[index])
       end
 

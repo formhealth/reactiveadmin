@@ -34,7 +34,7 @@ module ReactiveAdmin
     config.to_prepare do
       Typeahead.install
       AA.prepend_display_helper(CompositeKeys::DisplayName)
-      AA.prepend_csv_builder(Masking::Csv, CsvInjection)
+      AA.prepend_csv_builder(Masking::Csv, CsvInjection, QueryGuard::ExportBuilder)
       AA.prepend_tag(Provenance::Tags)
       AA.extend_page(dsl: ResourceDSL, config: ResourceOptions)
       AA.prepend_controller_extensions(

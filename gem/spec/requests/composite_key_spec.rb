@@ -1,3 +1,5 @@
+require "csv"
+
 RSpec.describe "composite primary keys", type: :request do
   let!(:level) { StockLevel.create!(warehouse: "east", sku: "A/1", quantity: 4, details: {"bin" => "x"}) }
   let(:id) { level.to_param }
@@ -26,6 +28,16 @@ RSpec.describe "composite primary keys", type: :request do
 
     it "points json values at the escaped member path" do
       expect(row["cells"]["details"]["expand_path"]).to start_with("/api/admin/stock_levels/east_A%2F1/_value?")
+    end
+  end
+
+  describe "csv export" do
+    it "keeps the index's id column, which has no attribute behind it" do
+      api_get("/api/admin/stock_levels.csv")
+      table = CSV.parse(response.body.delete_prefix("\uFEFF"), headers: true)
+
+      expect(table.headers).to eq(%w[Id Quantity Details])
+      expect(table.first["Id"]).to eq id
     end
   end
 

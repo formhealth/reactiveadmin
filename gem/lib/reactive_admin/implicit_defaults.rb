@@ -48,6 +48,8 @@ module ReactiveAdmin
         columns
       end
 
+      def hidden?(config, key) = secure? && !!kind(config, key)
+
       # Names of the visible text columns that secure defaults show truncated.
       def text_columns(config)
         return [] unless secure?
@@ -70,9 +72,11 @@ module ReactiveAdmin
 
       def blocked(where) = record(where, "no #{where} block declared and strict_defaults is on", kind: "implicit_view_blocked")
 
-      # Hidden column names per section that falls back to defaults, for `doctor`.
+      # Hidden column names per section that falls back to defaults, for `doctor`. An API export without a `csv`
+      # block takes a table index's columns, so it falls back only when the index does too.
       def audit(config)
-        {index: !IndexViews.new(config).presenter&.block, show: !AA.page_presenter(config, :show)&.block}
+        index = IndexViews.new(config)
+        {index: !index.presenter&.block, show: !AA.page_presenter(config, :show)&.block, csv: AA.default_csv?(config) && !IndexViews.table_with_block(config)}
           .select { |_, implicit| implicit }
           .transform_values { split(config).last.map(&:first) }
       end
