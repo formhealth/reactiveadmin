@@ -47,6 +47,7 @@ import type {
   GetOptionsParams,
   GetPageParams,
   GetRecordValueParams,
+  GetResourceMetaParams,
   IndexResponse,
   InvalidResponse,
   LabelsResponse,
@@ -282,20 +283,30 @@ export function useGetOpenApi<TData = Awaited<ReturnType<typeof getOpenApi>>, TE
 
 
 
-export const getGetResourceMetaUrl = (resource: string,) => {
+export const getGetResourceMetaUrl = (resource: string,
+    params?: GetResourceMetaParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/admin/${resource}/_meta`
+  return stringifiedParams.length > 0 ? `/admin/${resource}/_meta?${stringifiedParams}` : `/admin/${resource}/_meta`
 }
 
 /**
  * Full metadata for one resource (filters, scopes, batch actions, action items). Cached server-side per resource and permission set; clients fetch on first visit and prefetch on menu hover.
+ * For a resource listed under a parent, send the parent id as the query param `ResourceMeta.belongs_to.param` names (`post_id=7`).
  */
-export const getResourceMeta = async (resource: string, options?: Parameters<typeof apiFetch>[1]): Promise<ResourceMeta> => {
+export const getResourceMeta = async (resource: string,
+    params?: GetResourceMetaParams, options?: Parameters<typeof apiFetch>[1]): Promise<ResourceMeta> => {
 
-  return apiFetch<ResourceMeta>(getGetResourceMetaUrl(resource),
+  return apiFetch<ResourceMeta>(getGetResourceMetaUrl(resource,params),
   {
     ...options,
     method: 'GET'
@@ -308,23 +319,25 @@ export const getResourceMeta = async (resource: string, options?: Parameters<typ
 
 
 
-export const getGetResourceMetaQueryKey = (resource: string,) => {
+export const getGetResourceMetaQueryKey = (resource: string,
+    params?: GetResourceMetaParams,) => {
     return [
-    `/admin/${resource}/_meta`
+    `/admin/${resource}/_meta`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetResourceMetaQueryOptions = <TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(resource: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetResourceMetaQueryOptions = <TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(resource: string,
+    params?: GetResourceMetaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetResourceMetaQueryKey(resource);
+  const queryKey =  queryOptions?.queryKey ?? getGetResourceMetaQueryKey(resource,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResourceMeta>>> = ({ signal }) => getResourceMeta(resource, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResourceMeta>>> = ({ signal }) => getResourceMeta(resource,params, { signal, ...requestOptions });
 
 
 
@@ -338,7 +351,8 @@ export type GetResourceMetaQueryError = ErrorResponse
 
 
 export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(
- resource: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>> & Pick<
+ resource: string,
+    params: undefined |  GetResourceMetaParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getResourceMeta>>,
           TError,
@@ -348,7 +362,8 @@ export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResource
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(
- resource: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>> & Pick<
+ resource: string,
+    params?: GetResourceMetaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getResourceMeta>>,
           TError,
@@ -358,16 +373,18 @@ export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResource
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(
- resource: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ resource: string,
+    params?: GetResourceMetaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResourceMeta>>, TError = ErrorResponse>(
- resource: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ resource: string,
+    params?: GetResourceMetaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getResourceMeta>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetResourceMetaQueryOptions(resource,options)
+  const queryOptions = getGetResourceMetaQueryOptions(resource,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

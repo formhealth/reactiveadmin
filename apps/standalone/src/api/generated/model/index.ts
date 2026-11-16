@@ -71,6 +71,7 @@ export * from './getOptionsParams';
 export * from './getPageContext';
 export * from './getPageParams';
 export * from './getRecordValueParams';
+export * from './getResourceMetaParams';
 export * from './indexMeta';
 export * from './indexMetaBlankSlate';
 export * from './indexMetaView';

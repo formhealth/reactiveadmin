@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { apiFetch } from '@/api/fetcher'
-import { getGetManifestQueryOptions, getGetResourceMetaQueryKey, useGetManifest } from '@/api/generated/core'
-import type { MenuItem, ResourceMeta } from '@/api/generated/model'
+import { getGetManifestQueryOptions, getGetResourceMetaQueryKey, getResourceMeta, useGetManifest } from '@/api/generated/core'
+import type { MenuItem } from '@/api/generated/model'
 import { mapClassicUrl } from '@/lib/classic'
 import type { Formats } from '@/lib/datetime'
 import { loadManifest } from '@/lib/manifestCache'
@@ -51,7 +50,7 @@ export const useResourceMeta = (key = '', context?: MetaContext) => {
   const query = new URLSearchParams(params).toString()
   const { data: meta, error, isPending, refetch } = useQuery({
     queryKey: query ? [...getGetResourceMetaQueryKey(key), params] : getGetResourceMetaQueryKey(key),
-    queryFn: ({ signal }) => apiFetch<ResourceMeta>(`/admin/${key}/_meta${query && `?${query}`}`, { signal }),
+    queryFn: ({ signal }) => getResourceMeta(key, params, { signal }),
     enabled: !!key,
     staleTime: META_STALE,
     // Keeps the previous scope's meta on screen, never another resource's.

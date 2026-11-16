@@ -41,9 +41,12 @@ paths:
     get:
       operationId: getResourceMeta
       tags: [core]
-      description: Full metadata for one resource (filters, scopes, batch actions, action items). Cached server-side per resource and permission set; clients fetch on first visit and prefetch on menu hover.
+      description: |
+        Full metadata for one resource (filters, scopes, batch actions, action items). Cached server-side per resource and permission set; clients fetch on first visit and prefetch on menu hover.
+        For a resource listed under a parent, send the parent id as the query param `ResourceMeta.belongs_to.param` names (`post_id=7`).
       parameters:
         - { name: resource, in: path, required: true, schema: { type: string } }
+        - { name: scope, in: query, description: "The index's current scope, as the index request sends it", schema: { type: string } }
       responses:
         "200":
           description: Resource metadata

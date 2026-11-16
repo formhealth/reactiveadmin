@@ -65,7 +65,7 @@ export function MenuTree({ items, term = '', onNavigate }: MenuTreeProps) {
   const ids = found ? [...found.groups, ...found.leaves].map((e) => e.id) : visibleIds(tree, isOpen)
   const tabbable = [focusId, activeId].find((id) => id && ids.includes(id)) ?? ids[0]
   const toggle = (id: string) => setOpen((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-  const warm = (resource?: string | null) => resource && queryClient.prefetchQuery(getGetResourceMetaQueryOptions(resource, { query: { staleTime: META_STALE } }))
+  const warm = (resource?: string | null) => resource && queryClient.prefetchQuery(getGetResourceMetaQueryOptions(resource, undefined, { query: { staleTime: META_STALE } }))
 
   const onKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
     const nodes = [...e.currentTarget.querySelectorAll<HTMLElement>('[data-tree-item]')]
