@@ -187,9 +187,10 @@ ActiveAdmin.register Post do
     f.inputs "Tags" do
       f.input :tags, as: :check_boxes
     end
-    f.has_many :comments, allow_destroy: true, new_record: "Add comment" do |comment|
+    f.has_many :comments, allow_destroy: ->(comment) { !comment.approved? }, new_record: "Add comment" do |comment|
       comment.input :body
-      comment.input :approved
+      # Approval sticks: a saved, approved row can't be unapproved or removed from the form.
+      comment.input :approved, input_html: {disabled: comment.object.persisted? && comment.object.approved?}
     end
     f.actions
   end

@@ -190,6 +190,30 @@ RSpec.describe "write safety", type: :request do
 
       expect(note.reload).to have_attributes(title: "Renamed", weight: 0)
     end
+
+    it "ignores a disabled field of a saved nested row, whatever index the client gives it" do
+      approved = Comment.create!(post: first_post, body: "Kept", approved: true)
+      rows = {"7" => {id: approved.id, body: "Edited", approved: false}, "8" => {body: "New", approved: true}}
+      api(:patch, "/api/admin/posts/#{first_post.id}", {post: {comments_attributes: rows}, lock: lock_of(first_post)})
+
+      expect(response).to have_http_status(:ok)
+      expect(approved.reload).to have_attributes(body: "Edited", approved: true)
+      expect(first_post.comments.find_by!(body: "New").approved).to be(true)
+    end
+
+    it "ignores a disabled field of a row sent as a single nested-attributes hash" do
+      approved = Comment.create!(post: first_post, body: "Kept", approved: true)
+      api(:patch, "/api/admin/posts/#{first_post.id}", {post: {comments_attributes: {id: approved.id, body: "Edited", approved: false}}, lock: lock_of(first_post)})
+
+      expect(approved.reload).to have_attributes(body: "Edited", approved: true)
+    end
+
+    it "ignores a disabled field of rows sent as an array" do
+      approved = Comment.create!(post: first_post, body: "Kept", approved: true)
+      api(:patch, "/api/admin/posts/#{first_post.id}", {post: {comments_attributes: [{id: approved.id, approved: false}]}, lock: lock_of(first_post)})
+
+      expect(approved.reload.approved).to be(true)
+    end
   end
 
   describe "retryable errors" do

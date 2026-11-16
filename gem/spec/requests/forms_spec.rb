@@ -100,7 +100,7 @@ RSpec.describe "forms", type: :request do
         comment = first_post.comments.first
 
         row = sections.last["records"].first
-        expect(row).to include("id" => comment.id.to_s, "destroy" => true, "param" => "post[comments_attributes][0]")
+        expect(row).to include("id" => comment.id.to_s, "destroy" => false, "param" => "post[comments_attributes][0]")
         expect(row["fields"].pluck("name", "value")).to include(["body", "First!"], ["approved", true], ["id", comment.id.to_s])
         expect(row["fields"].find { it["name"] == "id" }).to include("control" => "hidden", "param" => "post[comments_attributes][0][id]")
       end
