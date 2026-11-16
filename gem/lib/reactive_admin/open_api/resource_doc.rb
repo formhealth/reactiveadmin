@@ -224,12 +224,12 @@ module ReactiveAdmin
       end
 
       def update_endpoint(body, keys, note)
-        @schemas["#{@singular}UpdateParams"] = params_schema(body, keys).deep_merge(properties: {lock: schema_ref("FormLock")})
+        @schemas["#{@singular}UpdateParams"] = params_schema(body, keys).deep_merge(properties: {lock: schema_ref("FormLock"), dry_run: {type: "boolean", description: "Validate and return the changes (`changes`: attribute to `{from, to}`) without saving. Masked values show as `[masked]`; no write is audited."}})
         add(record_path, "patch", operation(
           id: id("update#{@singular}"), summary: "Update a #{@summary[:label]}", tags:, write: true, parameters: [*parent_params, id_param],
           description: ["Same body as create, plus the `lock` token the edit form handed out (a mismatch is 409 `stale`).", note].compact.join(" "),
           request_body: {required: true, content: json(schema_ref("#{@singular}UpdateParams"))},
-          responses: {200 => shared("Written")}, errors: [403, 404, 409, 422]
+          responses: {200 => success("The write was applied, or with `dry_run` the preview of it", {oneOf: [schema_ref("WriteResult"), schema_ref("DryRunResult")]})}, errors: [403, 404, 409, 422]
         ), names: %w[update])
       end
 

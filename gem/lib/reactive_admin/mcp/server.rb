@@ -8,7 +8,8 @@ module ReactiveAdmin
         Operate the admin through these tools. Start with list_resources, then describe_resource to learn a resource's
         filters and fields. Results are what this user may see and do; a refusal is final, so report it rather than
         working around it. Writes and actions change real records: use get_form for current values and the lock,
-        and confirm with the user before delete_record or run_action. Avoid reading more records than the task needs.
+        and confirm with the user before delete_record or run_action. Use count_records to size a query, and update_record
+        with dry_run: true to preview a change. Avoid reading more records than the task needs.
       TEXT
 
       class Rpc < StandardError
@@ -56,6 +57,8 @@ module ReactiveAdmin
         when "ping" then {}
         when "tools/list" then {tools: Tools.visible(@identity).map(&:definition)}
         when "tools/call" then call_tool(params)
+        when "prompts/list" then {prompts: Prompts.visible(@identity).map(&:definition)}
+        when "prompts/get" then get_prompt(params)
         when %r{\Anotifications/} then nil
         else raise Rpc.new(-32601, "Method not found")
         end
@@ -65,10 +68,16 @@ module ReactiveAdmin
         asked = params["protocolVersion"].to_s
         {
           protocolVersion: PROTOCOL_VERSIONS.include?(asked) ? asked : PROTOCOL_VERSIONS.first,
-          capabilities: {tools: {listChanged: false}},
+          capabilities: {tools: {listChanged: false}, prompts: {listChanged: false}},
           serverInfo: {name: NAME, version: VERSION},
           instructions: ReactiveAdmin.config.mcp.instructions || INSTRUCTIONS
         }
+      end
+
+      def get_prompt(params)
+        Prompts.render(params["name"], params.fetch("arguments", {}), @identity)
+      rescue ToolError => e
+        raise Rpc.new(-32602, e.message)
       end
 
       def call_tool(params)
@@ -99,7 +108,7 @@ module ReactiveAdmin
       # Who called what and how it went, never the arguments or anything the API returned.
       def audit(tool, args, api, error:, started:)
         Audit.instrument("mcp_call", @controller, {
-          user_id: @identity.user.id, client_id: @identity.client_id, tool: tool.name, resource: known_key(args), action: action_of(tool, args),
+          user_id: @identity.user.id, client_id: @identity.client_id, tool: tool.name, resource: known_key(args), action: action_of(tool, args), dry_run: (true if tool.name == "update_record" && args["dry_run"] == true),
           status: error ? "error" : "ok", http_status: api.last_status, duration_ms: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
         }.compact)
       rescue => e

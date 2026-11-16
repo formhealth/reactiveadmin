@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## Unreleased
 
+### Added
+
+- **MCP agent workflow tools.** `count_records` returns the total and per-scope counts for filters and a scope, through the index's own guards, with no rows. `update_record` takes `dry_run: true` and returns each field's `from` and `to` without saving; it is the API's `PATCH ... dry_run`, validated inside a rolled-back transaction, with masked values hidden and no `write` audit event. It previews only plain attributes the form offers a control for, and in-memory nested rows, and `dry_run` is refused anywhere but update. `prompts/list` and `prompts/get` serve three runbooks (`find_record`, `review_recent_changes`, `bulk_update`), offered only when the token can use the tools they name, and `initialize` advertises the `prompts` capability.
+
 ### Security
 
 These close gaps in the API and change what some clients get. Review them before you upgrade.

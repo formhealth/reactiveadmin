@@ -15,4 +15,4 @@
 /**
  * `{ <param_key>: { <attribute>: value } }` where param_key is the prefix of FormField.param (e.g. post).
  */
-export interface RecordParams {[key: string]: { [key: string]: unknown }}
+export interface RecordParams {[key: string]: { [key: string]: unknown } | boolean}

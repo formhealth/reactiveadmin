@@ -12,6 +12,9 @@ module ReactiveAdmin
 
         def build_resource(controller) = controller.send(:build_resource)
 
+        # The permitted attributes AA assigns on create and update, as the list `assign_attributes` takes.
+        def resource_params(controller) = controller.send(:resource_params)
+
         # The record inherited_resources memoized, which a custom action may have set itself.
         def resource_ivar(controller) = (controller.send(:get_resource_ivar) if controller.respond_to?(:get_resource_ivar, true))
 

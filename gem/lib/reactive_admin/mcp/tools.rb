@@ -72,6 +72,7 @@ module ReactiveAdmin
       LOCK = {type: "object", description: "The `lock` object from get_form, passed back unchanged. The update is refused if the record changed since."}.freeze
 
       READABLE = -> { Access.any_visible?(Registry.resources) }
+      DRY_RUN = {type: "boolean", description: "Validate only: returns what would change (attribute to {from, to}) and saves nothing."}.freeze
 
       @tools = {}
 
@@ -179,12 +180,13 @@ module ReactiveAdmin
       end
 
       define :update_record, title: "Update a record", write: true, idempotent: true, offered: -> { Access.anywhere?("update") },
-        description: "Changes fields of one record. Send only the fields to change, keyed as in get_form, plus the `lock` from the same get_form call. A stale lock is refused: reload with get_form and review before retrying.",
+        description: "Changes fields of one record. Send only the fields to change, keyed as in get_form, plus the `lock` from the same get_form call. A stale lock is refused: reload with get_form and review before retrying. Pass dry_run: true to validate and see each field's from and to without saving anything.",
         properties: {resource: RESOURCE, id: ID, parent_id: PARENT, values: {type: "object", description: "Field key to new value."}, lock: LOCK,
-                     lock_version: {type: "string", description: "Shorthand for the lock of a model with lock_version."}}, required: %i[resource id values] do |ctx, args|
+                     lock_version: {type: "string", description: "Shorthand for the lock of a model with lock_version."}, dry_run: DRY_RUN}, required: %i[resource id values] do |ctx, args|
         ctx.permit!(args, "update")
         lock = args["lock"] || ({field: "lock_version", value: args["lock_version"]} if args["lock_version"])
-        written ctx.api.call!("PATCH", ctx.member_path(args), body: {ctx.param_key(args) => args["values"], :lock => lock}.compact), args
+        body = {ctx.param_key(args) => args["values"], :lock => lock, :dry_run => (true if args["dry_run"])}.compact
+        args["dry_run"] ? dry_run_result(ctx, args, body) : written(ctx.api.call!("PATCH", ctx.member_path(args), body:), args)
       end
 
       define :delete_record, title: "Delete a record", write: true, destructive: true, idempotent: true, offered: -> { Access.anywhere?("destroy") },
@@ -233,6 +235,17 @@ module ReactiveAdmin
 
         def written(body, args)
           {ok: true, record: ("#{args["resource"]}/#{body["id"] || args["id"]}" if body["id"] || args["id"]), message: body["message"]}.compact
+        end
+
+        # A failed validation is the answer a dry run exists to give, not a failure of the tool.
+        def dry_run_result(ctx, args, body)
+          result = ctx.api.call!("PATCH", ctx.member_path(args), body:)
+          {ok: true, dry_run: true, saved: false, record: "#{args["resource"]}/#{args["id"]}", changes: result["changes"], nested: result["nested"],
+           note: "Nothing was saved. Call again without dry_run to apply."}.compact
+        rescue ToolError => e
+          raise unless e.status == 422 && e.code == "invalid"
+
+          {ok: false, dry_run: true, saved: false, problems: e.message.delete_prefix("Validation failed: "), note: "Nothing was saved."}
         end
 
         def unconfirmed!(args, what)
@@ -366,6 +379,8 @@ module ReactiveAdmin
           raise ToolError, "expand_path is not a valid path."
         end
       end
+
+      require "reactive_admin/mcp/count_tool"
     end
   end
 end

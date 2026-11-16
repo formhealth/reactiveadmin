@@ -37,4 +37,14 @@ end
 RSpec.configure do |config|
   config.include McpHelpers, type: :request
   config.before { DummyTokens::STORE.clear }
+
+  # Declares an MCP mode on one resource or page for the block, then restores what it had.
+  def with_mode(key, mode = nil, **options)
+    config = ReactiveAdmin::Registry.find(key) || ReactiveAdmin::Registry.find_page(key)
+    saved = config.reactive_options[:mcp]
+    ReactiveAdmin::Mcp::Access.declare(config, mode, **options)
+    yield
+  ensure
+    saved ? config.reactive_options[:mcp] = saved : config.reactive_options.delete(:mcp)
+  end
 end
