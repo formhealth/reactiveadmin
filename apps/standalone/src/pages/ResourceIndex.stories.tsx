@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { delay, http, HttpResponse } from 'msw'
-import { expect, screen, userEvent, within } from 'storybook/test'
+import { Link } from 'react-router'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { IndexResponse } from '@/api/generated/model'
 import { apiError } from '@/mocks/handlers'
 import { columns, scopeDefs } from '@/mocks/fixtures'
@@ -168,5 +169,31 @@ export const AuthorRowActionsMenu: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole('button', { name: /Actions for Alex Nguyen/ }))
     await expect(await screen.findByRole('menuitem', { name: 'Team history' })).toBeVisible()
+  },
+}
+
+// Rows from one resource never stand in for another's while it loads.
+export const NavigateToAnotherResource: Story = {
+  decorators: [
+    (Story) => (
+      <>
+        <Link to="/desks">Desks</Link>
+        <Story />
+      </>
+    ),
+  ],
+  parameters: {
+    ...respondWith(
+      http.get('/api/admin/desks', async () => {
+        await delay('infinite')
+        return HttpResponse.json(emptyList)
+      }),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect((await canvas.findAllByRole('button', { name: /^Actions for/ })).length).toBeGreaterThan(0)
+    await userEvent.click(canvas.getByRole('link', { name: 'Desks' }))
+    await waitFor(() => expect(canvas.queryAllByRole('button', { name: /^Actions for/ })).toHaveLength(0))
   },
 }
