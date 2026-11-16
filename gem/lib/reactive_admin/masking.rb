@@ -67,19 +67,31 @@ module ReactiveAdmin
 
     # Behind `config.mask_csv` (on by default): AA's own export, classic and API alike.
     module Csv
+      # A json column is exported whole, so a secret inside it is masked by its key, as the `_value` endpoint does.
+      def self.mask_nested(value, config) = ValuePayload.masked_key?(value, config) ? ValuePayload.mask(value, config) : value
+
       def build(controller, csv)
         @reactiveadmin_config = AA.config_of(controller)
         super
       end
 
+      # An associated record exports as its id: its display name can identify a person.
       def build_row(resource, columns, options)
-        return super unless ReactiveAdmin.config.mask_csv
-
+        mask = ReactiveAdmin.config.mask_csv
+        config = @reactiveadmin_config
         columns = columns.map do |column|
-          next column unless column.data.is_a?(Symbol) && Masking.attribute?(column.data, @reactiveadmin_config)
+          next column unless column.data.is_a?(Symbol)
 
           data = column.data
-          AA.column_with_data(column, ->(record) { CSV_PLACEHOLDER if record.public_send(data).present? })
+          masked = mask && Masking.attribute?(data, config)
+          AA.column_with_data(column, lambda { |record|
+            value = record.public_send(data)
+            next (CSV_PLACEHOLDER if value.present?) if masked
+
+            next value.to_param if value.is_a?(ActiveRecord::Base)
+
+            mask ? Csv.mask_nested(value, config) : value
+          })
         end
         super
       end

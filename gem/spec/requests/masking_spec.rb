@@ -87,16 +87,25 @@ RSpec.describe "sensitive attribute masking", type: :request do
 
   describe "CSV" do
     it "masks the same attributes by default" do
-      api_get("/api/admin/categories.csv")
+      get "/admin/categories.csv"
 
       expect(response.body).not_to include("tok-secret-123")
       expect(CSV.parse(response.body.delete_prefix("﻿"), headers: true)["Api token"]).to include("[MASKED]")
     end
 
+    it "leaves them out of an API export that falls back to the default columns" do
+      api_get("/api/admin/categories.csv")
+
+      expect(response.body).not_to include("tok-secret-123")
+      headers = CSV.parse(response.body.delete_prefix("﻿"), headers: true).headers
+      expect(headers).to include("Name")
+      expect(headers).not_to include("Api token")
+    end
+
     it "exports the raw values when mask_csv is turned off" do
       old = ReactiveAdmin.config.mask_csv
       ReactiveAdmin.config.mask_csv = false
-      api_get("/api/admin/categories.csv")
+      get "/admin/categories.csv"
 
       expect(response.body).to include("tok-secret-123")
     ensure

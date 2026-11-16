@@ -38,6 +38,12 @@ RSpec.describe "CSV export", type: :request do
       expect(table["Title"]).to include("Hello world")
     end
 
+    it "keeps the API's escaping to the export it was set for" do
+      export
+
+      expect(ActiveSupport::IsolatedExecutionState[ReactiveAdmin::CsvInjection::KEY]).to be_nil
+    end
+
     it "exports every page, not just the first" do
       12.times { |i| create_post(author: alice, title: "Filler #{i}") }
       export
@@ -45,10 +51,17 @@ RSpec.describe "CSV export", type: :request do
       expect(table.size).to eq(15)
     end
 
-    it "falls back to the columns of a resource without a csv block" do
+    it "exports the index's attribute columns for a resource without a csv block" do
       export("/api/admin/authors.csv")
 
-      expect(table.headers).to include("Id", "Name", "Email")
+      expect(table.headers).to eq(%w[Id Name Rating])
+    end
+
+    it "leaves AA's shared builder alone, so the classic export still takes every column" do
+      export("/api/admin/authors.csv")
+      get "/admin/authors.csv"
+
+      expect(CSV.parse(response.body.delete_prefix("\uFEFF"), headers: true).headers).to include("Email", "Born on")
     end
 
     it "refuses a resource that turned downloads off" do

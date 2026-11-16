@@ -41,6 +41,22 @@ module ReactiveAdmin
     # Attributes shown as symbol columns: the allowlist for `_value`.
     def symbol_columns = columns_recorder.columns.filter_map { it.data if it.data.is_a?(Symbol) }
 
+    # What an API export without a `csv` block shows, chosen as the table index chooses whatever view was requested:
+    # its block's columns, else secure defaults. Nil when strict defaults block it.
+    def export_columns
+      if (views = table_with_block)
+        @index_failed = false
+        recorder = record_columns(views)
+        columns = recorder.columns.filter_map { it.data.is_a?(Symbol) ? it.data : (it.title.to_s if recorder.id_column?(it)) }
+        return (@index_failed && ImplicitDefaults.strict?) ? ImplicitDefaults.blocked("csv") : columns
+      end
+      return ImplicitDefaults.blocked("csv") if ImplicitDefaults.strict?
+
+      key = @config.resource_class.primary_key
+      id = key.to_sym if key.is_a?(String) && !ImplicitDefaults.hidden?(@config, key)
+      [*id, *ImplicitDefaults.columns(@config, where: "csv")]
+    end
+
     # The requested `order`'s sort key when the index doesn't offer it. Ordering by a column the
     # page hides would leak how its values compare.
     def unsupported_sort(recorder = columns_recorder)
@@ -51,12 +67,15 @@ module ReactiveAdmin
 
     def columns_recorder = @views.table? ? record_columns : new_recorder
 
-    def record_columns
-      block = @views.presenter&.block
+    def table_with_block = IndexViews.table_with_block(@config, as: @controller.params[:as])
+
+    def record_columns(views = @views)
+      block = views.presenter&.block
       return new_recorder.tap { default_columns(it) } unless block
 
       new_recorder.tap { it.instance_exec(it, &block) }
     rescue => e
+      @index_failed = true
       Rails.logger.warn("[reactiveadmin] #{@config.resource_name} index block fell back to defaults: #{e.class} at #{e.backtrace&.first}")
       Degradation.record(kind: :index_block_failed, where: "index", reason: "Index block raised #{e.class}; showing default columns")
       new_recorder.tap { default_columns(it) }

@@ -2067,7 +2067,7 @@ export const getExportRecordsCsvUrl = (resource: string,
 }
 
 /**
- * AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Only when `ResourceMeta.download_formats` includes csv; otherwise 403. Errors are JSON as elsewhere.
+ * AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or, under strict defaults, no `csv` block and no table index block to take columns from. Errors are JSON as elsewhere.
  */
 export const exportRecordsCsv = async (resource: string,
     params?: ExportRecordsCsvParams, options?: Parameters<typeof apiFetch>[1]): Promise<Blob> => {
@@ -2116,7 +2116,7 @@ export type ExportRecordsCsvQueryResult = NonNullable<Awaited<ReturnType<typeof 
 export type ExportRecordsCsvQueryError = BadRequestResponse | ErrorResponse | RateLimitedResponse
 
 
-/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Only when `ResourceMeta.download_formats` includes csv; otherwise 403. Errors are JSON as elsewhere. */
+/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or, under strict defaults, no `csv` block and no table index block to take columns from. Errors are JSON as elsewhere. */
 export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportRecordsCsv>>, TError = BadRequestResponse | ErrorResponse | RateLimitedResponse>(
  resource: string,
     params: undefined |  ExportRecordsCsvParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportRecordsCsv>>, TError, TData>> & Pick<
@@ -2128,7 +2128,7 @@ export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportReco
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Only when `ResourceMeta.download_formats` includes csv; otherwise 403. Errors are JSON as elsewhere. */
+/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or, under strict defaults, no `csv` block and no table index block to take columns from. Errors are JSON as elsewhere. */
 export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportRecordsCsv>>, TError = BadRequestResponse | ErrorResponse | RateLimitedResponse>(
  resource: string,
     params?: ExportRecordsCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportRecordsCsv>>, TError, TData>> & Pick<
@@ -2140,13 +2140,13 @@ export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportReco
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Only when `ResourceMeta.download_formats` includes csv; otherwise 403. Errors are JSON as elsewhere. */
+/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or, under strict defaults, no `csv` block and no table index block to take columns from. Errors are JSON as elsewhere. */
 export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportRecordsCsv>>, TError = BadRequestResponse | ErrorResponse | RateLimitedResponse>(
  resource: string,
     params?: ExportRecordsCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportRecordsCsv>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Only when `ResourceMeta.download_formats` includes csv; otherwise 403. Errors are JSON as elsewhere. */
+/** AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or, under strict defaults, no `csv` block and no table index block to take columns from. Errors are JSON as elsewhere. */
 export function useExportRecordsCsv<TData = Awaited<ReturnType<typeof exportRecordsCsv>>, TError = BadRequestResponse | ErrorResponse | RateLimitedResponse>(
  resource: string,
     params?: ExportRecordsCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportRecordsCsv>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}

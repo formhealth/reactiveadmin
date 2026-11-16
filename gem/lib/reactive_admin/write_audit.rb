@@ -37,13 +37,15 @@ module ReactiveAdmin
     def self.record_id(controller)
       record = AA.resource_ivar(controller)
       id = (record.try(:persisted?) || record.try(:destroyed?)) ? record.to_param : controller.params[:id]
-      id.to_s if id.to_s.match?(ID_FORMAT)
+      plain_id(id)
     end
 
     def self.batch_ids(controller)
       ids = controller.params[:collection_selection] if controller.action_name == "batch_action"
       ids.is_a?(Array) ? {record_ids: ids.map(&:to_s).grep(ID_FORMAT)} : {}
     end
+
+    def self.plain_id(id) = (id.to_s if id.to_s.match?(ID_FORMAT))
 
     private
 
