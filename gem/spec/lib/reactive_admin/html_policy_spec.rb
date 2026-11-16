@@ -385,5 +385,12 @@ RSpec.describe ReactiveAdmin::HtmlPolicy do
       expect(policy.dig("display", "attributes")).not_to include("class", "name")
       expect(policy.dig("display", "embed")).to eq("types" => ["application/pdf"], "extensions" => [".pdf"])
     end
+
+    it "matches the client's snapshot (run `pnpm --filter standalone policy:sync` after changing it)" do
+      snapshot = JSON.parse(File.read(File.expand_path("../../../../apps/standalone/src/sanitize/htmlPolicy.json", __dir__)))
+      %w[display frame].each { policy[it]["trusted_hosts"] = [] }
+
+      expect(policy).to eq(snapshot)
+    end
   end
 end
