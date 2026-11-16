@@ -1,5 +1,5 @@
 import type { AttributeRow, Node as NodeData } from '@/api/generated/model'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { FieldLabelContext } from '@/json/context'
 import { IdModeContext } from './context'
@@ -18,11 +18,17 @@ export function Panel({ node }: NodeProps) {
   const children = node.children ?? []
   const footer = children.filter((child) => child.type === 'toolbar')
   const body = children.filter((child) => child.type !== 'toolbar')
+  const headerActions = node.header_actions ?? []
   return (
     <Card>
-      {node.title && (
+      {(node.title || headerActions.length > 0) && (
         <CardHeader>
           <CardTitle>{node.title}</CardTitle>
+          {headerActions.length > 0 && (
+            <CardAction className="flex items-center gap-2">
+              <NodeList nodes={headerActions} />
+            </CardAction>
+          )}
         </CardHeader>
       )}
       <CardContent className="flex flex-col gap-4">

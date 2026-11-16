@@ -119,7 +119,7 @@ module ReactiveAdmin
           next [] unless node.is_a?(Hash)
 
           found = (node["type"] == "action" && node["action"]) ? [node["action"]] : []
-          found + actions(node["children"])
+          found + actions(node["header_actions"]) + actions(node["children"])
         end
       end
 
@@ -128,7 +128,8 @@ module ReactiveAdmin
 
         children = -> { render(node["children"], rows:).presence }
         case node["type"]
-        when "panel", "tab" then titled(node["title"], children.call)
+        when "panel" then titled(node["title"], [children.call, *Array(node["header_actions"]).filter_map { inline(it).presence }].compact.join("\n").presence)
+        when "tab" then titled(node["title"], children.call)
         when "tabs", *BLOCKS then children.call
         when "attributes_table", "definition_list" then rows ? table_rows(node) : nil
         when "table" then table(node)

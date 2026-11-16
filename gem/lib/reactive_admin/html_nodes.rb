@@ -263,10 +263,25 @@ module ReactiveAdmin
 
     def panel(el)
       contents = child(el, "panel_contents")
-      {type: "panel", title: panel_title(el), children: nodes((contents || el).inner_html)}
+      node = {type: "panel", title: panel_title(el), children: nodes((contents || el).inner_html)}
+      (actions = header_actions(el)).present? ? node.merge(header_actions: actions) : node
     end
 
-    def panel_title(panel) = panel&.element_children&.find { it.name == "h3" }&.text&.strip
+    def panel_title(panel)
+      heading = panel&.element_children&.find { it.name == "h3" } or return
+      heading.children.reject { it.element? && it.classes.include?("header_action") }.sum("") { it.text }.strip
+    end
+
+    # `header_action` renders a div inside the h3 per call. Anything but actions and links is dropped, with a note.
+    def header_actions(panel)
+      slots = panel.element_children.find { it.name == "h3" }&.element_children.to_a.select { it.classes.include?("header_action") }
+      slots.to_a.flat_map do |slot|
+        toolbar_items(slot, [slot]) || begin
+          HtmlPolicy.degrade(:panel_header_action, "Panel header action holds more than actions and links; not shown", where: @path.join("/"))
+          []
+        end
+      end
+    end
 
     def child(el, class_name) = el.element_children.find { it.classes.include?(class_name) }
 
@@ -323,8 +338,9 @@ module ReactiveAdmin
       elsif action?(el)
         [action_node(el)].compact
       elsif el.name == "a"
+        # An icon-only link with an unsafe href has no label to fall back on, so `link` gives nothing.
         node = link(el)
-        [node] if node[:type] == "link"
+        [node] if node&.dig(:type) == "link"
       elsif PASSTHROUGH_TAGS.include?(el.name) && (STRUCTURAL_CLASSES & el.classes).empty?
         wrappers << el
         toolbar_items(el, wrappers)
