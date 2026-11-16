@@ -6,7 +6,7 @@ RSpec.describe ReactiveAdmin::Configuration do
   end
 
   it "normalizes the mount path to one leading slash and no trailing slash" do
-    {"/api/" => "/api", "api" => "/api", "/backoffice/api/" => "/backoffice/api"}.each do |given, expected|
+    {"/api/" => "/api", "api" => "/api", "/backoffice/api/" => "/backoffice/api", "" => "", "/" => ""}.each do |given, expected|
       config.mount_path = given
       expect(config.mount_path).to eq(expected)
     end
