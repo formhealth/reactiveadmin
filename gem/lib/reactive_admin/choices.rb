@@ -117,11 +117,13 @@ module ReactiveAdmin
       "#{Paths.api(Paths.options(config, parent_id:))}?#{{field:, context:, id:}.compact.to_query}"
     end
 
-    # Varies by everything an options list can depend on, including who is asking.
+    # Varies by everything an options list can depend on, including who is asking and the page's
+    # other params (a collection proc may read the other filters' values).
     def cache_key(config, context, field, view, id: nil, parent_id: nil)
       controller = view.controller
       who = [ReactiveAdmin.current_user(controller)&.id, ReactiveAdmin.user_fingerprint(controller)].compact.join(":")
-      ["reactiveadmin/options", Registry.route_key(config), context, field, parent_id, id, who.presence].compact.join("/")
+      query = OptionsPayload.page_query(view.request).to_query.presence&.then { Digest::SHA256.hexdigest(it) }
+      ["reactiveadmin/options", Registry.route_key(config), context, field, parent_id, id, who.presence, query].compact.join("/")
     end
 
     def option(label, value, hint: nil) = {label: CGI.unescapeHTML(label.to_s), value: value.to_s, hint: hint&.to_s}.compact

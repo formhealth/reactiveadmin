@@ -30,6 +30,10 @@ These close gaps in the API and change what some clients get. Review them before
 - `config.audit_views` (default `false`) publishes a `view` envelope for API show and edit reads.
 - Switching between the classic and new admin publishes a `ui_switch` envelope.
 
+### Fixed
+
+- Filter and form option lists that read request params (such as other filters' values) are no longer served from the option cache across different params.
+
 ## 0.1.0
 
 First public release. The gem and the client are early: interfaces may change before 1.0.
