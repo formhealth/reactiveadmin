@@ -110,6 +110,28 @@ RSpec.describe "json controls in forms", type: :request do
       expect(first_post.reload.metadata).to eq({})
     end
 
+    it "takes JSON text where the host permits the structure, keeping its types, as an upload sends it" do
+      update(metadata: {"count" => 2, "active" => true}.to_json)
+      expect(first_post.reload.metadata).to eq("count" => 2, "active" => true)
+
+      update(metadata: "{}")
+      expect(first_post.reload.metadata).to eq({})
+    end
+
+    it "parses JSON text sent as a form field, the way a multipart write carries it" do
+      patch "/api/admin/posts/#{first_post.id}", params: {post: {metadata: {"count" => 2}.to_json}, lock: lock_of(first_post)}, headers: {"ACCEPT" => "application/json"}
+
+      expect(response).to have_http_status(:ok)
+      expect(first_post.reload.metadata).to eq("count" => 2)
+    end
+
+    it "leaves text that isn't JSON for the host's permit to drop" do
+      first_post.update!(metadata: {"keep" => 1})
+      update(metadata: "not json")
+
+      expect(first_post.reload.metadata).to eq("keep" => 1)
+    end
+
     it "restores masked placeholders and applies the edit, as a structure" do
       api_get(edit_path)
       api_get(fields_of(json["form"])["metadata"]["expand_path"])

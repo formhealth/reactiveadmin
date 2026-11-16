@@ -44,6 +44,14 @@ describe('apiFetch', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('/api/admin/desks/1/edit')
   })
 
+  it('returns a CSV export as a Blob', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('id,name\n1,a\n', { headers: { 'Content-Type': 'text/csv; charset=utf-8' } }))
+    const { apiFetch } = await load()
+    const file = await apiFetch<Blob>('/api/admin/authors.csv')
+    expect(file).toBeInstanceOf(Blob)
+    expect(await file.text()).toBe('id,name\n1,a\n')
+  })
+
   it('refetches the session and retries once on invalid_csrf', async () => {
     fetchMock
       .mockResolvedValueOnce(json(200, { csrf_token: 'stale' }))
