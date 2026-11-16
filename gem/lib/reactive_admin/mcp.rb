@@ -13,6 +13,7 @@ module ReactiveAdmin
     autoload :Server, "reactive_admin/mcp/server"
     autoload :Api, "reactive_admin/mcp/api"
     autoload :Tools, "reactive_admin/mcp/tools"
+    autoload :Prompts, "reactive_admin/mcp/prompts"
     autoload :Output, "reactive_admin/mcp/output"
     autoload :Layout, "reactive_admin/mcp/layout"
     autoload :Shapes, "reactive_admin/mcp/shapes"

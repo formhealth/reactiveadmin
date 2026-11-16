@@ -5,6 +5,7 @@ module ReactiveAdmin
     include Frame
     include Embed
     include TemplateActions
+    include DryRunFlag
 
     def index(*)
       return super unless reactiveadmin_request?
@@ -67,12 +68,14 @@ module ReactiveAdmin
 
     # Writes run as html so the page action and its flashes behave as in the classic admin.
     def process_action(*)
+      take_dry_run_param if reactiveadmin_request?
       request.format = :html if reactiveadmin_request? && !request.get?
       super
     end
 
     # Runs after the before_actions, so the content renders for a user who passed them.
     def send_action(*)
+      refuse_unsupported_dry_run
       normalize_form_params if reactiveadmin_request? && !request.get?
       super
     end

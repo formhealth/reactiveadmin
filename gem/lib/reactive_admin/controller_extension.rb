@@ -130,6 +130,7 @@ module ReactiveAdmin
     # Writes run as html so AA's responders, flashes and `controller do` overrides behave as in
     # the classic admin; the outcome is translated back to JSON by redirect_to and render.
     def process_action(*)
+      take_dry_run_param if reactiveadmin_request?
       if reactiveadmin_request? && !request.get?
         request.format = :html
         inputs = params[:batch_action_inputs]

@@ -62,6 +62,13 @@ RSpec.describe "GET /api/admin/_openapi", type: :request do
       expect(scopes).not_to include("featured")
     end
 
+    it "documents an update's success as the write or the dry-run preview" do
+      response200 = doc.dig("paths", "/api/admin/posts/{id}", "patch", "responses", "200", "content", "application/json", "schema")
+
+      expect(response200["oneOf"].pluck("$ref")).to eq(%w[#/components/schemas/WriteResult #/components/schemas/DryRunResult])
+      expect(doc.dig("components", "schemas", "DryRunResult", "required")).to include("changes")
+    end
+
     it "counts against the default rate bucket", :frozen_time do
       old = ReactiveAdmin.config.rate_limits
       ReactiveAdmin.config.rate_limits = {default: [1, 1.minute]}

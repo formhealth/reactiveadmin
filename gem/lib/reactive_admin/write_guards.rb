@@ -2,12 +2,15 @@ module ReactiveAdmin
   # What create and update must pass before AA's own write runs: the form has to be one the API
   # can submit completely, and the record must be unchanged since the client loaded it.
   module WriteGuards
+    include DryRunFlag
+
     GUARDED = %w[create update].freeze
 
     private
 
     # Runs after every before_action, immediately before the action itself.
     def send_action(*)
+      refuse_unsupported_dry_run
       return super unless reactiveadmin_request? && GUARDED.include?(action_name)
 
       record, schema = guard_write
@@ -15,8 +18,19 @@ module ReactiveAdmin
 
       within_lock_transaction(record) do
         guard_lock(record, schema) if action_name == "update"
-        super unless performed?
+        next if performed?
+
+        reactiveadmin_dry_run? ? render_dry_run(record, schema) : super
       end
+    end
+
+    def dry_run_supported? = action_name == "update"
+
+    def render_dry_run(record, schema)
+      result = DryRun.new(self, record, schema.sections).call
+      return render_invalid unless result.valid
+
+      render json: {ok: true, dry_run: true, changes: result.changes, nested: result.nested.presence}.compact, content_type: "application/json"
     end
 
     # Timestamp-locked updates hold a row lock from the check until the write commits, so a

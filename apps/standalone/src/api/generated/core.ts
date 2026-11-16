@@ -36,6 +36,7 @@ import type {
   BadRequestResponse,
   BatchActionRequest,
   ConflictResponse,
+  DryRunResult,
   Error,
   ErrorResponse,
   ExportRecordsCsvParams,
@@ -2281,9 +2282,9 @@ export const getUpdateRecordUrl = (resource: string,
  */
 export const updateRecord = async (resource: string,
     id: string,
-    recordParams: RecordParams, options?: Parameters<typeof apiFetch>[1]): Promise<WriteResult> => {
+    recordParams: RecordParams, options?: Parameters<typeof apiFetch>[1]): Promise<WriteResult | DryRunResult> => {
 
-  return apiFetch<WriteResult>(getUpdateRecordUrl(resource,id),
+  return apiFetch<WriteResult | DryRunResult>(getUpdateRecordUrl(resource,id),
   {
     ...options,
     method: 'PATCH',

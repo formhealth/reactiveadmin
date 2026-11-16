@@ -461,10 +461,13 @@ paths:
             schema: { $ref: "#/components/schemas/RecordParams" }
       responses:
         "200":
-          description: Updated
+          description: Updated, or with `dry_run` the preview of the update
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/WriteResult" }
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/WriteResult" }
+                  - { $ref: "#/components/schemas/DryRunResult" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
@@ -639,6 +642,32 @@ components:
         id: { type: string }
         message: { type: string, description: "Flash notice, e.g. Post was successfully updated." }
         location: { $ref: "#/components/schemas/Location" }
+    DryRunResult:
+      type: object
+      description: What an update with `dry_run` would change. Nothing was saved.
+      required: [ok, dry_run, changes]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        dry_run: { type: boolean, enum: [true] }
+        changes:
+          type: object
+          description: Attribute to its value before and after. Masked attributes show as `[masked]`.
+          additionalProperties:
+            type: object
+            required: [from, to]
+            properties:
+              from: {}
+              to: {}
+        nested:
+          type: object
+          description: Rows of each has_many section that would be added, removed or changed.
+          additionalProperties:
+            type: object
+            required: [added, removed, changed]
+            properties:
+              added: { type: integer }
+              removed: { type: integer }
+              changed: { type: integer }
     ActionResult:
       type: object
       required: [ok]
@@ -649,7 +678,10 @@ components:
     RecordParams:
       type: object
       description: "`{ <param_key>: { <attribute>: value } }` where param_key is the prefix of FormField.param (e.g. post)."
-      additionalProperties: { type: object, additionalProperties: true }
+      additionalProperties:
+        oneOf:
+          - { type: object, additionalProperties: true }
+          - { type: boolean, description: "A top-level flag, e.g. `dry_run` on update." }
     BatchActionRequest:
       type: object
       required: [batch_action, collection_selection]

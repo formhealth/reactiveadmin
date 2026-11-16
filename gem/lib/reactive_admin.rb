@@ -55,6 +55,8 @@ module ReactiveAdmin
   autoload :FormSchema, "reactive_admin/form_schema"
   autoload :FormPayload, "reactive_admin/form_payload"
   autoload :FormLock, "reactive_admin/form_lock"
+  autoload :DryRun, "reactive_admin/dry_run"
+  autoload :DryRunFlag, "reactive_admin/dry_run_flag"
   autoload :ScrubbedError, "reactive_admin/scrubbed_error"
   autoload :WriteAudit, "reactive_admin/write_audit"
   autoload :ActionSafety, "reactive_admin/action_safety"
