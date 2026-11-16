@@ -75,6 +75,7 @@ bin/rails reactiveadmin:client:build
 - [Security](docs/guide/security.md)
 - [Rolling out the new admin](docs/guide/rollout.md)
 - [Testing](docs/guide/testing.md): the end-to-end crawl, and contract examples for your request specs
+- [Roadmap](ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)
 
 ## Security notes
