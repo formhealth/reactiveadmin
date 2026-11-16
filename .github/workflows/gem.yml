@@ -110,7 +110,6 @@ jobs:
       BUNDLE_FROZEN: "false"
     steps:
       - uses: actions/checkout@v7
-      - run: echo "SCRATCH=$RUNNER_TEMP/scratch" >> "$GITHUB_ENV"
       - uses: ./.github/actions/setup-client
       - uses: ruby/setup-ruby@v1
         with:
@@ -118,34 +117,8 @@ jobs:
           bundler-cache: true
           working-directory: gem
       - run: bundle exec rake package
-      - name: Install the gem into a scratch Gemfile
-        run: |
-          mkdir -p "$SCRATCH/index/gems"
-          cp pkg/reactiveadmin-*.gem "$SCRATCH/index/gems/"
-          gem generate_index -d "$SCRATCH/index"
-          cat > "$SCRATCH/Gemfile" <<EOF
-          source "https://rubygems.org"
-          source "file://$SCRATCH/index" do
-            gem "reactiveadmin"
-          end
-          gem "rails", "~> 8.1.4"
-          gem "activeadmin", "~> 3.5"
-          gem "pundit"
-          gem "sprockets-rails"
-          gem "sqlite3"
-          EOF
-          BUNDLE_GEMFILE="$SCRATCH/Gemfile" BUNDLE_PATH="$SCRATCH/bundle" bundle install
-      - name: Smoke test the manifest and the client page
-        run: bundle exec ruby script/smoke_packaged_gem.rb
-        env:
-          BUNDLE_GEMFILE: ${{ env.SCRATCH }}/Gemfile
-          BUNDLE_PATH: ${{ env.SCRATCH }}/bundle
-      - name: Smoke test it under another asset prefix (the build refers to its files relatively)
-        run: bundle exec ruby script/smoke_packaged_gem.rb
-        env:
-          BUNDLE_GEMFILE: ${{ env.SCRATCH }}/Gemfile
-          BUNDLE_PATH: ${{ env.SCRATCH }}/bundle
-          REACTIVEADMIN_ASSET_PREFIX: /admin-ui
+      - name: Install the gem into a scratch Gemfile and smoke test the manifest and the client page
+        run: script/smoke_packaged_gem.sh
 
   # Not a gate: boots the dummy app against ActiveAdmin 4 beta and lists what still breaks, so the
   # AA 4 work (ReactiveAdmin::AA::V4) is measured instead of guessed. The gemspec stays `< 4`.

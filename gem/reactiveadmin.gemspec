@@ -5,7 +5,7 @@ Gem::Specification.new do |s|
   s.version = ReactiveAdmin::VERSION
   s.summary = "Serve ActiveAdmin registrations as a JSON API"
   s.description = "Reuses your ActiveAdmin registrations and controllers to serve a JSON API, an OpenAPI document and an MCP server, and to host a React admin client."
-  s.authors = ["reactiveadmin contributors"]
+  s.authors = ["Form Health"]
   s.license = "MIT"
   s.homepage = "https://github.com/formhealth/reactiveadmin"
   s.metadata = {
@@ -17,7 +17,8 @@ Gem::Specification.new do |s|
   }
   s.required_ruby_version = ">= 3.4"
   # vendor/client is the prebuilt React client (`rake package`); it is gitignored and absent from a plain checkout.
-  s.files = Dir["{app,lib,openapi,vendor/client}/**/*"]
+  # README.md, LICENSE and CHANGELOG.md live at the repository root; `rake package` copies them in (gitignored).
+  s.files = Dir["{app,lib,openapi,vendor/client}/**/*", *%w[README.md LICENSE CHANGELOG.md]]
   # AA_PROBE lifts the cap for the aa4 probe job (gemfiles/aa4.gemfile); never set it in an app.
   s.add_dependency "activeadmin", ">= 3.5", (ENV["AA_PROBE"] ? "< 5" : "< 4")
   s.add_dependency "rails", ">= 8.1"

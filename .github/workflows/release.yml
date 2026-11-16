@@ -1,0 +1,101 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and smoke test the gem without publishing it.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Actions are pinned to commits: the publish job holds the RubyGems OIDC token, and the build job makes the gem it publishes.
+jobs:
+  # Builds with no credentials, so the OIDC token is only ever available to the publish job below.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BUNDLE_DEPLOYMENT: "false"
+      BUNDLE_FROZEN: "false"
+    defaults:
+      run:
+        working-directory: gem
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup-client
+      - uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+          working-directory: gem
+      - name: Verify the tag matches the gem version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          version=$(ruby -r ./lib/reactive_admin/version -e 'print ReactiveAdmin::VERSION')
+          if [ "$REF_TYPE" != tag ]; then
+            [ "$DRY_RUN" = true ] || { echo "::error::Publishing needs a v* tag, not $REF_TYPE $REF_NAME."; exit 1; }
+            echo "Dry run on $REF_NAME: not checking the tag."
+          elif [ "$REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $REF_NAME does not match ReactiveAdmin::VERSION (v$version)."
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - run: bundle exec rake package
+      - name: Smoke test the packaged gem
+        run: script/smoke_packaged_gem.sh
+      - name: Extract the release notes from the CHANGELOG
+        run: |
+          # The heading's version is compared as a string: in a regex, the dots in 1.0.0.rc1 would also match 1.0.0-rc1.
+          awk -v v="$VERSION" '/^## /{h = $2; gsub(/^\[|\]$/, "", h); found = (h == v); next} found' ../CHANGELOG.md > pkg/notes.md
+          grep -q "[^[:space:]]" pkg/notes.md || { echo "::error::CHANGELOG.md has no section for $VERSION."; exit 1; }
+          cat pkg/notes.md
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release
+          path: gem/pkg
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Maintainers approve the publish here. rubygems.org's trusted publisher is bound to this environment name.
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release
+          path: release
+      - uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
+      # A rerun after a later step failed must not fail here: RubyGems refuses a version it already has.
+      - name: Push the gem
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          if curl -fsS -o /dev/null "https://rubygems.org/api/v2/rubygems/reactiveadmin/versions/$version.json"; then
+            echo "::notice::reactiveadmin $version is already on RubyGems; not pushing it again."
+          else
+            gem push release/*.gem
+          fi
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          flags=()
+          ruby -e 'exit Gem::Version.new(ARGV[0]).prerelease?' "${TAG#v}" && flags+=(--prerelease)
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && { echo "::notice::Release $TAG exists."; exit 0; }
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file release/notes.md "${flags[@]}"

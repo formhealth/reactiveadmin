@@ -60,13 +60,22 @@ CI runs the same commands; see `.github/workflows/`. To run the client against a
 
 The published gem carries the prebuilt React client in `gem/vendor/client`, so a host needs no checkout and no Node.js. The directory is gitignored: it only exists in a gem you built. The client is stamped (`reactiveadmin-client.json`) with the gem version and the manifest `schema_version`, and the gem serves it only while both match. A host's `config.ui.client_assets`, then a build of its own in `public/reactiveadmin`, win over it. The build refers to its own files relatively, so it works under any `ui.asset_prefix` or CDN without a rebuild.
 
-1. Bump `ReactiveAdmin::VERSION` in `gem/lib/reactive_admin/version.rb`, and move the `CHANGELOG.md` entries from Unreleased to the new version.
+1. Bump `ReactiveAdmin::VERSION` in `gem/lib/reactive_admin/version.rb`, and rename the `## Unreleased` heading in `CHANGELOG.md` to `## <version>` (add a fresh `## Unreleased` above it when more work is queued). The release notes come from that section.
 2. Make sure the checks above pass. Packaging fails when the client's `SCHEMA_VERSION` (`apps/standalone/src/lib/manifestCache.ts`) differs from `ReactiveAdmin::Manifest::SCHEMA_VERSION`.
-3. Build the client and the gem, from `gem/`: `bundle exec rake package`. It writes `gem/pkg/reactiveadmin-<version>.gem` and fails if the client is missing from it. `rake package:client` rebuilds only the client.
-4. Inspect it: `gem spec pkg/reactiveadmin-<version>.gem files | grep vendor/client`. The `packaged gem` CI job does the same build, installs it into a Gemfile that has no path to the repository, and checks `GET /api/admin/_manifest` and the client's page.
-5. Tag the release, then push the gem by hand: `gem push pkg/reactiveadmin-<version>.gem` (the gem requires MFA).
+3. Merge to `main`, then tag the merge commit `v<version>` and push the tag: `git tag v0.2.0 && git push origin v0.2.0`.
+4. The `release` workflow does the rest. It fails unless the tag equals `v` plus `ReactiveAdmin::VERSION`, builds the client into the gem (`bundle exec rake package`, from `gem/`), installs the gem into a Gemfile that has no path to the repository and smoke-tests it (`gem/script/smoke_packaged_gem.sh`, the same check the `packaged gem` CI job runs). A maintainer then approves the `release` environment, and the workflow pushes the gem to RubyGems with trusted publishing and creates a GitHub release whose notes are the CHANGELOG section.
 
-Never build a release with a plain `gem build`: it would ship without the client.
+To rehearse without publishing, run the `release` workflow by hand (Actions, Run workflow) and leave `dry_run` on. It builds and smoke-tests the gem and stops before the publish job. To build locally, run `bundle exec rake package` in `gem/`: it writes `gem/pkg/reactiveadmin-<version>.gem`, and `rake package:client` rebuilds only the client. Check what shipped with `gem spec pkg/reactiveadmin-<version>.gem files`.
+
+Never build a release with a plain `gem build`: it would ship without the client. Never push a gem by hand: the workflow is the only publisher.
+
+### One-time setup
+
+Publishing uses [RubyGems trusted publishing](https://guides.rubygems.org/trusted-publishing/), so the repository holds no API key.
+
+1. On the GitHub repository, create an environment named `release` (Settings, Environments). Add the maintainers who may approve a publish as required reviewers, turn on **Prevent self-review**, and limit deployment to tags matching `v*`. Do this before step 2: until the environment exists, GitHub creates it unprotected on the first run, and any `v*` tag would publish with no approval.
+2. On rubygems.org, open the gem's page, then Settings, Trusted publishers, and add a GitHub Actions publisher: repository owner `formhealth`, repository `reactiveadmin`, workflow `release.yml`, environment `release`. Before the first release, create it as a pending publisher (Account, Trusted publishers) for the gem name `reactiveadmin`.
+3. Keep `rubygems_mfa_required` in the gemspec. Trusted publishing satisfies it.
 
 ## Report a problem
 

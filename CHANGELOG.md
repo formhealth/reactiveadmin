@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The gem ships a prebuilt React client (`gem/vendor/client`, built by `rake package`), so installing it from RubyGems needs no repository checkout and no Node.js. It is stamped with the gem version and manifest `schema_version`, and served only while they match. Builds refer to their own files relatively, so the packaged client works under any `ui.asset_prefix` or CDN, and `RA_ASSET_PREFIX` is gone. `config.ui.client_assets` and a host's own build (`rake reactiveadmin:client:build`) both win over it.
 - **Behavior change:** the middleware serves the client's page only once `config.ui.available` names who may use it. Until then, upgrading changes nothing, even though a client is now installed.
 - A `packaged gem` CI job that builds the gem, installs it from a local index and smoke-tests the manifest and the client page.
+- A `release` workflow: pushing a `v<version>` tag builds the gem with the client, smoke-tests it, publishes it to RubyGems with trusted publishing after maintainer approval, and creates a GitHub release from the CHANGELOG. The gem now includes the README, LICENSE and CHANGELOG, and lists Form Health as its author.
 
 ### Security
 
