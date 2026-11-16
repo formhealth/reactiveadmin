@@ -1,6 +1,5 @@
-RSpec.describe "rate limits", type: :request do
+RSpec.describe "rate limits", :frozen_time, type: :request do
   include_context "with a blog"
-  include ActiveSupport::Testing::TimeHelpers
 
   let(:limits) { {options: [2, 10.seconds], lookup: [5, 1.minute], export: [1, 1.minute], value: [1, 1.minute], default: nil} }
   let!(:comment) { Comment.create!(post: first_post, body: "Nice post", context: {"a" => 1}) }
@@ -87,7 +86,7 @@ RSpec.describe "rate limits", type: :request do
     expect(response).to have_http_status(:ok)
   end
 
-  it "resets when the window passes" do
+  it "resets when the window passes", frozen_time: false do
     window_start = Time.at(Time.now.to_i / 10 * 10)
     travel_to(window_start) { 3.times { options } }
     expect(response).to have_http_status(:too_many_requests)

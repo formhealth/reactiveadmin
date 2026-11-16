@@ -62,7 +62,7 @@ RSpec.describe "GET /api/admin/_openapi", type: :request do
       expect(scopes).not_to include("featured")
     end
 
-    it "counts against the default rate bucket" do
+    it "counts against the default rate bucket", :frozen_time do
       old = ReactiveAdmin.config.rate_limits
       ReactiveAdmin.config.rate_limits = {default: [1, 1.minute]}
 
