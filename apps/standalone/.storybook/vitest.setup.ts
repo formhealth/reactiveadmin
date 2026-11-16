@@ -1,6 +1,7 @@
 import { setProjectAnnotations } from '@storybook/react-vite'
 import axe from 'axe-core'
 import { toast } from 'sonner'
+import { configure, prettyDOM } from 'storybook/test'
 import type { AfterEach, BeforeEach } from 'storybook/internal/types'
 import { commands, page } from 'vitest/browser'
 import { violations } from '@/api/contract'
@@ -28,6 +29,18 @@ const settle = (quietMs = 200, maxMs = 4000) =>
       resolve()
     }
   })
+
+// A failed query prints the story and its portals (dialogs, popovers, toasts), not Storybook's own docs markup, which
+// otherwise fills the print limit before the story starts.
+configure({
+  getElementError: (message, container) => {
+    const own = [...document.body.children].filter((el) => !el.matches('.sb-wrapper, #storybook-docs, #storybook-highlights-root, script'))
+    const focused = document.activeElement?.outerHTML.slice(0, 200)
+    const error = new Error([message, `Focused: ${focused}`, ...own.map((el) => prettyDOM(el, 20000) || '')].join('\n\n'))
+    error.name = 'TestingLibraryElementError'
+    return error
+  },
+})
 
 // Responsive stories declare their size in `parameters.viewportSize`; match it so layout-dependent plays find their controls.
 const viewport: BeforeEach = async ({ parameters }) => {
