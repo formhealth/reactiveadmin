@@ -543,7 +543,7 @@ RSpec.describe "MCP endpoint", type: :request do
       expect(seen).to include(true, nil)
     end
 
-    it "applies the API's own rate limits to the calls a tool makes" do
+    it "applies the API's own rate limits to the calls a tool makes", :frozen_time do
       with_rate_limits(options: [1, 1.minute], mcp: nil) do
         call_tool("field_options", {resource: "posts", field: "author_id_eq"}, token:)
         message = call_tool("field_options", {resource: "posts", field: "author_id_eq"}, token:)
@@ -574,7 +574,7 @@ RSpec.describe "MCP endpoint", type: :request do
   end
 
   describe "rate limit" do
-    it "has its own bucket, answering as a tool error with the wait" do
+    it "has its own bucket, answering as a tool error with the wait", :frozen_time do
       original = ReactiveAdmin.config.rate_limits
       ReactiveAdmin.config.rate_limits = original.merge(mcp: [2, 1.minute])
       2.times { expect(call_tool("list_resources", token:)).to be_a(Hash) }
@@ -586,7 +586,7 @@ RSpec.describe "MCP endpoint", type: :request do
       ReactiveAdmin.config.rate_limits = original
     end
 
-    it "counts per user" do
+    it "counts per user", :frozen_time do
       original = ReactiveAdmin.config.rate_limits
       ReactiveAdmin.config.rate_limits = original.merge(mcp: [1, 1.minute])
       call_tool("list_resources", token:)

@@ -19,6 +19,9 @@ RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
   config.include ApiHelpers, type: :request
   config.include Builders
+  config.include ActiveSupport::Testing::TimeHelpers
+  # Rate limits count in fixed windows; a spec that spends one budget over several requests must not cross a boundary.
+  config.around(:each, :frozen_time) { |example| freeze_time { example.run } }
   config.include AdapterMatrix
 
   config.before(:each, :postgres) { skip "needs Postgres (set DATABASE_URL)" unless postgres? }
