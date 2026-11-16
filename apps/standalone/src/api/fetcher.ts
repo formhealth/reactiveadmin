@@ -73,6 +73,9 @@ export const resetCsrf = () => {
 // Paths from the API (`FormResponse.action.path`, `Action.api_path`) already include the mount.
 const withMount = (url: string) => (url.startsWith(`${BASE_URL}/`) ? url : `${BASE_URL}${url}`)
 
+// Dev and tests only: production builds drop the import and the schemas with it.
+const contracts = import.meta.env.DEV ? import('./contract') : undefined
+
 // `contract`: the core.yaml response a server-supplied path answers, where the path alone can't tell (custom actions).
 export type ApiOptions = RequestInit & { contract?: ContractKey }
 
@@ -103,10 +106,10 @@ async function request<T>(url: string, { contract, ...options }: ApiOptions = {}
     throw new ApiError(429, body?.code ?? 'rate_limited', body?.message, body ?? undefined, retryAfter)
   }
   if (!res.ok) throw new ApiError(res.status, body?.code, body?.message, body ?? undefined, parseRetryAfter(res.headers.get('Retry-After')))
-  // Dev and tests only: production builds drop this branch and the schemas with it.
-  if (import.meta.env.DEV && body !== null) {
-    const { checkResponse } = await import('./contract')
-    checkResponse((options.method ?? 'GET').toUpperCase(), withMount(url).slice(BASE_URL.length).split('?')[0], body, contract)
+  // Off the response's path, so loading the schemas never delays a render.
+  if (contracts && body !== null) {
+    const path = withMount(url).slice(BASE_URL.length).split('?')[0]
+    void contracts.then(({ checkResponse }) => checkResponse((options.method ?? 'GET').toUpperCase(), path, body, contract))
   }
   return body as T
 }
