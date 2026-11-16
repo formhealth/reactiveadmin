@@ -14,20 +14,12 @@
 import type { GetPageContext } from './getPageContext';
 
 export type GetPageParams = {
-/**
- * page_form asks for a page form field's options (its `options_path` carries context, form and field)
- */
-context?: GetPageContext;
-/**
- * With context=page_form: the form's position on the page
- */
-form?: string;
-/**
- * With context=page_form
- */
-field?: string;
-/**
- * With context=page_form
- */
-term?: string;
+  /** page_form asks for a page form field's options (its `options_path` carries context, form and field) */
+  context?: GetPageContext;
+  /** With context=page_form: the form's position on the page */
+  form?: string;
+  /** With context=page_form */
+  field?: string;
+  /** With context=page_form */
+  term?: string;
 };
