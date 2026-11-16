@@ -51,7 +51,7 @@ module ReactiveAdmin
       where = origin if strings.any?
       return unless where
 
-      resource = tag.arbre_context.helpers.try(:active_admin_config)&.resource_name.to_s
+      resource = AA.arbre_helpers(tag).try(:active_admin_config)&.resource_name.to_s
       strings.each { (STATE[KEY][[resource, it]] ||= Set.new) << where }
     end
 

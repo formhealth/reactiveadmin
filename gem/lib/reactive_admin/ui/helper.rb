@@ -11,9 +11,9 @@ module ReactiveAdmin
         return "".html_safe unless script && params[:embed] != "1" && Ui.available?(user)
 
         returning = params[:classic] == "1"
-        tag.div(class: "panel reactiveadmin-ui-toggle", data: {reactiveadmin_ui: Ui.default_mode(user)}) do
+        tag.div(class: [AA.markup[:panel], "reactiveadmin-ui-toggle"], data: {reactiveadmin_ui: Ui.default_mode(user)}) do
           tag.h3(returning ? "The new admin" : "Try the new admin") +
-            tag.div(class: "panel_contents") do
+            tag.div(class: AA.markup[:panel_contents]) do
               tag.p(returning ? "You're viewing a classic page on request." : "The same pages in a faster, redesigned admin. You can switch back at any time.") +
                 tag.button(returning ? "Return to the new admin" : "Try the new admin", type: "button", data: {reactiveadmin_ui_mode: "new"})
             end

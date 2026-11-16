@@ -28,10 +28,7 @@ module AaBoundary
     "lib/reactive_admin/page_payload.rb" => "Its Content is the Arbre element a register_page's content block renders into",
     "lib/reactive_admin/page_forms.rb" => "Overrides the form helpers AA and Formtastic define, to record a page's forms",
     "lib/reactive_admin/template_form.rb" => "Overrides the form helpers AA and Formtastic define, to record a template's form",
-    "lib/reactive_admin/html_nodes.rb" => "Matches AA's component class names while walking classic html",
-    "lib/reactive_admin/form_field.rb" => "Reads Formtastic's input API",
-    "lib/reactive_admin/style_sources.rb" => "Reads a traced Arbre tag's context",
-    "lib/reactive_admin/ui/helper.rb" => "Renders the classic switch as an AA panel"
+    "lib/reactive_admin/form_field.rb" => "Reads Formtastic's input API"
   }.freeze
 
   module_function

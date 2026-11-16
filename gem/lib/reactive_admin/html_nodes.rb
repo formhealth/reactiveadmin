@@ -13,7 +13,6 @@ module ReactiveAdmin
     SAFE_SCHEMES = %w[http https mailto tel].freeze
     TOOLBAR_TAGS = %w[div section].freeze
     PASSTHROUGH_TAGS = %w[div span section].freeze
-    STRUCTURAL_CLASSES = %w[panel attributes_table tabs columns status_tag empty].freeze
 
     # `frame_src` is the classic URL the html came from: forms that PageForms did not record
     # (see its marker nodes) are kept as interactive frame nodes that submit relative to it.
@@ -62,15 +61,17 @@ module ReactiveAdmin
 
     private
 
+    def css = AA.markup
+
     def node(el)
       return text(el.text) if el.text? || el.cdata?
       return unless el.element?
 
       if el.name == "br"
         nil
-      elsif el.name == "span" && el["class"].to_s.split.include?("status_tag")
+      elsif el.name == "span" && el["class"].to_s.split.include?(css[:status_tag])
         status(el)
-      elsif el.name == "span" && el.classes.include?("empty")
+      elsif el.name == "span" && el.classes.include?(css[:empty])
         {type: "empty"}
       elsif el.name == "span" && el.classes.include?(Masking::CLASS_NAME)
         Masking::NODE
@@ -88,13 +89,13 @@ module ReactiveAdmin
         frame(el)
       elsif el.name == "a"
         link(el)
-      elsif el.name == "div" && el.classes.include?("attributes_table")
+      elsif el.name == "div" && el.classes.include?(css[:attributes_table])
         attributes_table(el)
-      elsif el.name == "div" && el.classes.include?("panel")
+      elsif el.name == "div" && el.classes.include?(css[:panel])
         panel(el)
-      elsif el.name == "div" && el.classes.include?("tabs")
+      elsif el.name == "div" && el.classes.include?(css[:tabs])
         tabs(el)
-      elsif el.name == "div" && el.classes.include?("columns")
+      elsif el.name == "div" && el.classes.include?(css[:columns])
         columns(el)
       elsif el.name == "table"
         table(el)
@@ -249,7 +250,7 @@ module ReactiveAdmin
     end
 
     def attributes_table(el)
-      title = el.parent&.classes&.include?("panel_contents") ? panel_title(el.parent.parent) : nil
+      title = el.parent&.classes&.include?(css[:panel_contents]) ? panel_title(el.parent.parent) : nil
       rows = el.css("tr").map do |tr|
         {label: tr.at_css("th")&.text.to_s.strip, value: cell_nodes(tr.at_css("td"))}
       end
@@ -262,7 +263,7 @@ module ReactiveAdmin
     end
 
     def panel(el)
-      contents = child(el, "panel_contents")
+      contents = child(el, css[:panel_contents])
       {type: "panel", title: panel_title(el), children: nodes((contents || el).inner_html)}
     end
 
@@ -271,14 +272,14 @@ module ReactiveAdmin
     def child(el, class_name) = el.element_children.find { it.classes.include?(class_name) }
 
     def tabs(el)
-      titles = child(el, "nav-tabs")&.element_children.to_a.map { it.text.strip }
-      contents = child(el, "tab-content")&.element_children.to_a
+      titles = child(el, css[:nav_tabs])&.element_children.to_a.map { it.text.strip }
+      contents = child(el, css[:tab_content])&.element_children.to_a
       tabs = titles.zip(contents).map { |title, content| {type: "tab", title:, children: nodes(content&.inner_html)} }
       {type: "tabs", children: tabs}
     end
 
     def columns(el)
-      columns = el.element_children.select { it.classes.include?("column") }
+      columns = el.element_children.select { it.classes.include?(css[:column]) }
       {type: "columns", children: columns.map { {type: "column", children: nodes(it.inner_html)} }}
     end
 
@@ -297,7 +298,7 @@ module ReactiveAdmin
     # A container holding only actions and links, however deeply wrapped. A width or a column
     # direction means it is laying out other content, so it stays a box.
     def toolbar(el)
-      return unless TOOLBAR_TAGS.include?(el.name) && (STRUCTURAL_CLASSES & el.classes).empty?
+      return unless TOOLBAR_TAGS.include?(el.name) && (AA.structural_classes & el.classes).empty?
 
       wrappers = [el]
       items = toolbar_items(el, wrappers)
@@ -325,7 +326,7 @@ module ReactiveAdmin
       elsif el.name == "a"
         node = link(el)
         [node] if node[:type] == "link"
-      elsif PASSTHROUGH_TAGS.include?(el.name) && (STRUCTURAL_CLASSES & el.classes).empty?
+      elsif PASSTHROUGH_TAGS.include?(el.name) && (AA.structural_classes & el.classes).empty?
         wrappers << el
         toolbar_items(el, wrappers)
       end
