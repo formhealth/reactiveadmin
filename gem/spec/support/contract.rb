@@ -3,7 +3,7 @@ require "yaml"
 
 # Validates payloads against the OpenAPI components in openapi/core.yaml.
 module Contract
-  PATH = File.expand_path("../../../openapi/core.yaml", __dir__)
+  PATH = File.expand_path("../../openapi/core.yaml", __dir__)
 
   module_function
 

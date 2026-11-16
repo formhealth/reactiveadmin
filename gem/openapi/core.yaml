@@ -1,0 +1,1567 @@
+openapi: 3.0.1
+info:
+  title: reactiveadmin core contract
+  version: 0.1.0
+  description: |
+    Generic contract served by the reactiveadmin gem. Paths are relative to the mount (default /api). Keys are snake_case.
+
+    Resources whose `ResourceMeta.belongs_to.optional` is false exist only under their parent: every
+    `/admin/{resource}...` path below is then served at `/admin/{parent}/{parent_id}/{resource}...`.
+    Do not build those URLs; use `ResourceMeta.api_index_path_template`, `RecordPaths`, `Ref.api_path`
+    and `FormResponse.action.path`. Unexpected server errors are always JSON (`Error` with code `error`). Every API response carries a `Server-Timing` header (`db` and `app` durations in ms).
+servers:
+  - url: /api
+paths:
+  /admin/_manifest:
+    get:
+      operationId: getManifest
+      tags: [core]
+      responses:
+        "200":
+          description: Manifest of all registered resources
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Manifest" }
+        "401": { $ref: "#/components/responses/Error" }
+  /admin/_openapi:
+    get:
+      operationId: getOpenApi
+      tags: [core]
+      description: "An OpenAPI 3.1 document of this host's admin API, limited to the resources, pages and actions the signed-in user may use. Answers plain application/json (the vnd format is accepted too) so docs viewers can fetch it. It is typed from declarations only: never record data, option values, or anything masked or not exposed. Cached per code version and permission fingerprint."
+      responses:
+        "200":
+          description: The OpenAPI document
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /admin/{resource}/_meta:
+    get:
+      operationId: getResourceMeta
+      tags: [core]
+      description: Full metadata for one resource (filters, scopes, batch actions, action items). Cached server-side per resource and permission set; clients fetch on first visit and prefetch on menu hover.
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Resource metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResourceMeta" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/_pages/{page}:
+    get:
+      operationId: getPage
+      tags: [core]
+      description: "An AA register_page rendered through the fallback ladder (content walked into nodes; forms native when Formtastic, otherwise frame/iframe nodes). A page whose content has a GET form (a `form` node with `action.method` get) reads that form's fields from the query string, named as the form's field `params`; the response is the page with those results."
+      parameters:
+        - { name: page, in: path, required: true, schema: { type: string, description: "Page key, e.g. batch_operations" } }
+      responses:
+        "200":
+          headers: { X-Reactiveadmin-Degraded: { $ref: "#/components/headers/Degraded" } }
+          description: Page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PageResponse" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/{resource}/{id}/_value:
+    get:
+      operationId: getRecordValue
+      tags: [core]
+      description: "Full value of a summarized json node or truncated text node (Node.expand_path). Audited server-side as a sensitive-data view; never cached. Call the expand_path exactly as given: it carries the signed token. A missing, forged, expired or other-user token answers 403 forbidden."
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: field, in: query, required: true, schema: { type: string } }
+        - { name: path, in: query, required: false, schema: { type: string, description: "Dot path inside the value, e.g. insurance.member_id" } }
+        - { name: token, in: query, required: false, schema: { type: string, description: "Short-lived signed proof from the expand_path that the page rendered this field for this user. Opaque: pass it back unchanged. Required unless the server runs with value_token disabled." } }
+      responses:
+        "200":
+          description: Value
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValueResponse" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /admin/_session:
+    get:
+      operationId: getSession
+      tags: [core]
+      description: Current user plus the CSRF token to send as `X-CSRF-Token` on every write (CSRF stays enforced; a missing/stale token yields 422 `invalid_csrf`).
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Error" }
+  /admin/_mcp:
+    post:
+      operationId: postMcp
+      tags: [mcp]
+      security: [{ bearerAuth: [] }]
+      description: |
+        Model Context Protocol endpoint (Streamable HTTP transport, revision 2025-06-18, JSON responses only, no sessions or SSE).
+        One JSON-RPC 2.0 message per POST: `initialize`, `ping`, `tools/list` and `tools/call`. Notifications answer 202 with no body.
+        Bearer tokens only: a session cookie is refused with 401. A 401 carries `WWW-Authenticate: Bearer resource_metadata="..."` when
+        `config.mcp.resource_metadata_url` is set. Answers 404 when MCP is disabled (for the user), and 403 for a foreign `Origin`.
+        Every tool dispatches to the API routes in this document as the caller, so their authorization, audit and limits apply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/McpRequest" }
+      responses:
+        "200":
+          description: "A JSON-RPC response; a tool failure is a result with `isError: true`, a protocol failure an `error` member."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/McpResponse" }
+        "202": { description: Notification or client response accepted }
+        "400":
+          description: Malformed JSON-RPC (parse error, batch) or unsupported `MCP-Protocol-Version`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/McpResponse" }
+        "401":
+          description: Missing or invalid bearer token.
+          headers:
+            WWW-Authenticate: { description: "Bearer challenge, with resource_metadata (RFC 9728) when configured", schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Token lacks a scope, or Origin is not allowed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/{resource}/batch_action:
+    post:
+      operationId: runBatchAction
+      tags: [core]
+      description: AA batch action over the selected ids. Outcome is the action's redirect + flash converted to an ActionResult.
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BatchActionRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ActionResult" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Invalid" }
+  /admin/{resource}/_options:
+    get:
+      operationId: getOptions
+      tags: [core]
+      description: |
+        Typeahead source for a filter or form control whose collection is too large to inline
+        (`Filter.options_path` / `FormField.options_path` already carry field, context and id).
+        Every whitespace-separated token of `term` must start a word of the option (label, name or email
+        columns, as the source declares); exact matches rank first, then prefix matches. A pasted id also
+        finds its record. Page through large result sets with `next_cursor`. Requires READ on the resource.
+        Form options of a nested resource are served at `/admin/{parent}/{parent_id}/{resource}/_options`
+        (carried by `FormField.options_path`); a has_many field is addressed as `<assoc>.<name>`, and
+        collections that depend on the parent record are evaluated for the record in `id`.
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+        - { name: field, in: query, required: true, description: "Filter name, or FormField name (`<assoc>.<name>` inside has_many)", schema: { type: string } }
+        - { name: context, in: query, required: true, schema: { type: string, enum: [filter, form] } }
+        - { name: id, in: query, description: "Record id when context=form for an edit form", schema: { type: string } }
+        - { name: term, in: query, schema: { type: string } }
+        - { name: limit, in: query, description: "Max 100, default inline_options_limit", schema: { type: integer, minimum: 1 } }
+        - { name: cursor, in: query, description: "OptionsResponse.next_cursor of the previous page (opaque)", schema: { type: string } }
+        - name: value
+          in: query
+          description: "Comma-separated values to resolve labels for instead of searching (to display a selected typeahead value). At most 25, more is a 400."
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: Matching options
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OptionsResponse" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /admin/{resource}/_labels:
+    get:
+      operationId: getLabels
+      tags: [core]
+      description: "Display names of records by id, for the command palette's recents. Returns only resource, id and display_name. Each record needs READ (the same finder and authorization as show); missing or refused ids are omitted. At most 20 ids are looked up. Top-level resources only: a resource nested under a required parent has no _labels route. Metadata, so it may be sent as a background request; it is not a view of the record."
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+        - name: ids
+          in: query
+          required: true
+          description: Comma-separated record ids (more than 20 are ignored).
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string }, maxItems: 20 }
+      responses:
+        "200":
+          description: Labels of the readable records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LabelsResponse" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/{resource}/_options/lookup:
+    get:
+      operationId: lookupOptions
+      tags: [core]
+      description: |
+        Labels for the selected values of several typeahead fields in one request, so a form with many
+        typeaheads costs one call. Same sources, authorization (READ) and policy scoping as `_options`; a
+        value the user may not read is simply absent from its list. Served at the same nested paths as
+        `_options`. It has its own `lookup` rate bucket, separate from `options` (search).
+        At most 25 values per field and 100 in total; more is a 400.
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+        - name: fields
+          in: query
+          required: true
+          description: "Comma-separated values per field name, as `fields[<field>]=v1,v2`. Field names are those of `_options` (`<assoc>.<name>` inside has_many)."
+          style: deepObject
+          explode: true
+          schema: { type: object, additionalProperties: { type: string } }
+        - { name: context, in: query, required: true, schema: { type: string, enum: [filter, form] } }
+        - { name: id, in: query, description: "Record id when context=form for an edit form", schema: { type: string } }
+      responses:
+        "200":
+          description: Options per requested field
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LookupResponse" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /admin/{resource}/new:
+    get:
+      operationId: getNewForm
+      tags: [core]
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          headers: { X-Reactiveadmin-Degraded: { $ref: "#/components/headers/Degraded" } }
+          description: Form schema for a new record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FormResponse" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/{resource}/{id}/edit:
+    get:
+      operationId: getEditForm
+      tags: [core]
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          headers: { X-Reactiveadmin-Degraded: { $ref: "#/components/headers/Degraded" } }
+          description: Form schema prefilled with the record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FormResponse" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/{resource}/{id}/{action}:
+    post:
+      operationId: runMemberActionPost
+      tags: [core]
+      description: |
+        A member action declared with `member_action` (HTTP verb per `Action.method`). The action's
+        redirect + flash become an ActionResult; an alert/error flash becomes a 422. Authorized with
+        the same permission that gates `Action.enabled`. Collection actions are served the same way at
+        `/admin/{resource}/{action}` (no id).
+      parameters:
+        - { $ref: "#/components/parameters/Resource" }
+        - { $ref: "#/components/parameters/Id" }
+        - { $ref: "#/components/parameters/Action" }
+      requestBody: { $ref: "#/components/requestBodies/ActionParams" }
+      responses:
+        "200": { $ref: "#/components/responses/ActionResult" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Invalid" }
+    put:
+      operationId: runMemberActionPut
+      tags: [core]
+      description: See runMemberActionPost.
+      parameters:
+        - { $ref: "#/components/parameters/Resource" }
+        - { $ref: "#/components/parameters/Id" }
+        - { $ref: "#/components/parameters/Action" }
+      requestBody: { $ref: "#/components/requestBodies/ActionParams" }
+      responses:
+        "200": { $ref: "#/components/responses/ActionResult" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Invalid" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    patch:
+      operationId: runMemberActionPatch
+      tags: [core]
+      description: See runMemberActionPost.
+      parameters:
+        - { $ref: "#/components/parameters/Resource" }
+        - { $ref: "#/components/parameters/Id" }
+        - { $ref: "#/components/parameters/Action" }
+      requestBody: { $ref: "#/components/requestBodies/ActionParams" }
+      responses:
+        "200": { $ref: "#/components/responses/ActionResult" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Invalid" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      operationId: runMemberActionDelete
+      tags: [core]
+      description: See runMemberActionPost.
+      parameters:
+        - { $ref: "#/components/parameters/Resource" }
+        - { $ref: "#/components/parameters/Id" }
+        - { $ref: "#/components/parameters/Action" }
+      requestBody: { $ref: "#/components/requestBodies/ActionParams" }
+      responses:
+        "200": { $ref: "#/components/responses/ActionResult" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Invalid" }
+  /admin/{resource}:
+    post:
+      operationId: createRecord
+      tags: [core]
+      description: |
+        Body is AA's own param key wrapping the permitted attributes (`FormResponse.form` params show the
+        names, e.g. `{"post": {"published_on": "2026-01-01"}}`). Nested has_many rows use
+        `<assoc>_attributes` keyed by index with `_destroy`. `json` controls take structured JSON values.
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecordParams" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WriteResult" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Invalid" }
+    get:
+      operationId: listRecords
+      tags: [core]
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+        - name: q
+          in: query
+          style: deepObject
+          explode: true
+          description: Ransack predicates, e.g. q[published_on_gteq]=2026-01-01
+          schema: { type: object, additionalProperties: { type: string } }
+        - { name: scope, in: query, schema: { type: string } }
+        - { name: order, in: query, description: "<sort_key>_asc|_desc", schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: per_page, in: query, schema: { type: integer } }
+      responses:
+        "200":
+          headers: { X-Reactiveadmin-Degraded: { $ref: "#/components/headers/Degraded" } }
+          description: Filtered, scoped, sorted, paginated records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IndexResponse" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /admin/{resource}.csv:
+    get:
+      operationId: exportRecordsCsv
+      tags: [core]
+      description: "AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Only when `ResourceMeta.download_formats` includes csv; otherwise 403. Errors are JSON as elsewhere."
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+        - name: q
+          in: query
+          style: deepObject
+          explode: true
+          schema: { type: object, additionalProperties: { type: string } }
+        - { name: scope, in: query, schema: { type: string } }
+        - { name: order, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: "text/csv with Content-Disposition: attachment"
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /admin/{resource}/{id}:
+    get:
+      operationId: getRecord
+      tags: [core]
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          headers: { X-Reactiveadmin-Degraded: { $ref: "#/components/headers/Degraded" } }
+          description: Show page layout
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShowResponse" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      operationId: updateRecord
+      tags: [core]
+      description: Same body shape as createRecord. Validation failures (including a host override re-rendering the form) are 422 `invalid`.
+      parameters:
+        - { $ref: "#/components/parameters/Resource" }
+        - { $ref: "#/components/parameters/Id" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecordParams" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WriteResult" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Invalid" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      operationId: destroyRecord
+      tags: [core]
+      parameters:
+        - { $ref: "#/components/parameters/Resource" }
+        - { $ref: "#/components/parameters/Id" }
+      responses:
+        "200":
+          description: Destroyed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WriteResult" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Invalid" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Optional alternative to the session cookie where the host configures `ReactiveAdmin::Auth::Bearer`. Bearer requests skip CSRF and never fall back to cookies. With scopes, reads need `config.mcp.read_scope` and writes `write_scope`; a missing scope is 403 `insufficient_scope`."
+  parameters:
+    Resource: { name: resource, in: path, required: true, schema: { type: string } }
+    Id: { name: id, in: path, required: true, schema: { type: string } }
+    Action: { name: action, in: path, required: true, schema: { type: string } }
+  headers:
+    RetryAfter: { description: "Seconds until the user may retry.", schema: { type: integer, minimum: 1 } }
+    Degraded: { description: "Number of parts that fell back to a degraded rendering (see `degraded` in the body); 0 when none.", schema: { type: integer, minimum: 0 } }
+  requestBodies:
+    ActionParams:
+      required: false
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    BadRequest:
+      description: "Bad parameters: an undeclared sort, filter or predicate, or a malformed value."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: "A stale lock (`stale`) needs a fresh edit. A retryable failure (`retry`) carries `Retry-After` and can be resent unchanged."
+      headers:
+        Retry-After: { $ref: "#/components/headers/RetryAfter" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: "Over the user's request budget for this endpoint. Retry once `Retry-After` seconds have passed."
+      headers:
+        Retry-After: { $ref: "#/components/headers/RetryAfter" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Invalid:
+      description: |
+        Rejected. Either validation errors, a host override re-rendering the form (its flash lands in `base`),
+        an action whose redirect carried an alert, or a missing/stale CSRF token (code `invalid_csrf`, which
+        has no errors/base).
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/ValidationError"
+              - $ref: "#/components/schemas/Error"
+    ActionResult:
+      description: "The action ran. `message` is the flash notice; `location` is where the classic admin would have redirected. An action that renders its template again instead of redirecting (a search that lists its results) answers 200 with a FormResponse, which has `form` and no `ok`: show it in place of the form that was submitted. A 422 is kept for a rejected write: an alert flash or errors on the record or the form's object."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ActionResult" }
+  schemas:
+    McpRequest:
+      type: object
+      required: [jsonrpc, method]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { description: "Absent for notifications", oneOf: [{ type: string }, { type: integer }] }
+        method: { type: string, enum: [initialize, ping, tools/list, tools/call, notifications/initialized] }
+        params: { type: object, additionalProperties: true }
+    McpResponse:
+      type: object
+      required: [jsonrpc]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { nullable: true, oneOf: [{ type: string }, { type: integer }] }
+        result:
+          type: object
+          additionalProperties: true
+          description: "`tools/call`: `{content: [{type: \"text\", text: <compact JSON or message>}], isError}`. `tools/list`: `{tools: [{name, title, description, inputSchema, annotations}]}`."
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: integer }
+            message: { type: string }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [unauthorized, forbidden, insufficient_scope, not_found, invalid, invalid_csrf, unsupported, error, stale, retry, rate_limited, api_denied]
+          description: "`stale` is a lock mismatch: the record changed, so review it. `retry` is a 409 with a `Retry-After` header for a host error declared retryable: the write lost a race, so resend it unchanged. `api_denied` is a 403 from an `api` guard the host declared on an action, resource, page or attribute: never retry it, link to `classic_url`. `guard` names the guard."
+        message:
+          type: string
+          description: "For `error` this is `<ExceptionClass> while rendering <resource> <action>`, never the exception message."
+        location: { type: string, nullable: true }
+        guard: { type: string, description: "`api_denied`: the guard that refused: `deny`, `read_only`, `session_only` or the name the host registered" }
+        classic_url: { type: string, description: "`api_denied`: the classic admin page of the same request (the same page for a GET, else the record's or the resource's page)" }
+        attributes:
+          type: array
+          description: "`api_denied` for a write: the names of the guarded attributes it included, never their values"
+          items: { type: string }
+    ValidationError:
+      type: object
+      description: "`form` is present when the rejected write re-rendered a native template (ActionView mode native): the same form with the submitted values and errors, so the client can redraw it."
+      required: [code, message, errors, base]
+      properties:
+        code: { type: string, enum: [invalid] }
+        message: { type: string }
+        errors:
+          type: object
+          description: Messages keyed by attribute (`FormField.name`; nested rows use Rails keys like `insurance_carrier_aliases.alias`).
+          additionalProperties: { type: array, items: { type: string } }
+        row_errors:
+          type: object
+          description: "Nested rows that failed, by has_many association (`FormSection.name`). `errors` keeps its `assoc.attribute` keys; this says which row each belongs to."
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              required: [errors]
+              description: "A saved row is named by `id`; a new row by `new`, its zero-based place among the new rows in the order they were sent."
+              properties:
+                id: { type: string }
+                new: { type: integer }
+                errors:
+                  type: object
+                  description: Messages keyed by attribute, `base` for the row as a whole.
+                  additionalProperties: { type: array, items: { type: string } }
+        base:
+          type: array
+          description: Record-level errors plus any flash alert/error the host action set.
+          items: { type: string }
+        location: { $ref: "#/components/schemas/Location" }
+        form: { $ref: "#/components/schemas/FormResponse" }
+    Location:
+      type: object
+      description: Where an action redirected. `resource`/`id`/`view` are present when it points at a registered resource; `url` is always the classic admin (or external) URL.
+      required: [url]
+      properties:
+        url: { type: string }
+        resource: { type: string }
+        id: { type: string }
+        view: { type: string, enum: [index, show, new, edit] }
+    WriteResult:
+      type: object
+      required: [ok, id]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        id: { type: string }
+        message: { type: string, description: "Flash notice, e.g. Post was successfully updated." }
+        location: { $ref: "#/components/schemas/Location" }
+    ActionResult:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        message: { type: string }
+        location: { $ref: "#/components/schemas/Location" }
+    RecordParams:
+      type: object
+      description: "`{ <param_key>: { <attribute>: value } }` where param_key is the prefix of FormField.param (e.g. post)."
+      additionalProperties: { type: object, additionalProperties: true }
+    BatchActionRequest:
+      type: object
+      required: [batch_action, collection_selection]
+      properties:
+        batch_action: { type: string, description: BatchAction.key }
+        collection_selection:
+          type: array
+          items: { type: string }
+        batch_action_inputs:
+          type: object
+          additionalProperties: true
+          description: Values for BatchAction.inputs, keyed by name.
+    BatchAction:
+      type: object
+      required: [key, label, inputs]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        confirm: { type: string }
+        api_denied: { type: boolean, description: "The server refuses this batch action through the API; link to `classic_url` instead of offering it" }
+        api_guard: { type: string, description: "A guard the host registered may refuse this batch action, depending on the request" }
+        classic_url: { type: string }
+        disabled_reason: { type: string, description: "With `api_denied`: why, as the host worded it" }
+        inputs:
+          type: array
+          items: { $ref: "#/components/schemas/FormField" }
+    Session:
+      type: object
+      required: [user, csrf_token]
+      properties:
+        user:
+          type: object
+          required: [id, display_name]
+          properties:
+            id: { type: string }
+            display_name: { type: string }
+        csrf_token: { type: string, description: "Send as the X-CSRF-Token header on every write. Bearer-token requests need none and the server ignores it." }
+        ui:
+          $ref: "#/components/schemas/UiState"
+    UiState:
+      type: object
+      required: [available, default]
+      description: Whether this user may switch between the classic admin and this client, and which one the host would start them in. The browser's `reactiveadmin_ui` cookie, not the server, holds the choice.
+      properties:
+        available: { type: boolean }
+        default: { type: string, enum: [classic, new] }
+    OptionsResponse:
+      type: object
+      required: [options, truncated]
+      properties:
+        options:
+          type: array
+          items: { $ref: "#/components/schemas/Option" }
+        truncated: { type: boolean, description: More matches exist than `limit` }
+        next_cursor: { type: string, nullable: true, description: "Present when truncated; send as `cursor` to load more" }
+    LabelsResponse:
+      type: object
+      required: [labels]
+      properties:
+        labels:
+          type: array
+          items:
+            type: object
+            required: [resource, id, display_name]
+            properties:
+              resource: { type: string }
+              id: { type: string }
+              display_name: { type: string }
+    LookupResponse:
+      type: object
+      required: [lookups]
+      properties:
+        lookups:
+          type: object
+          description: "Options found for each requested field, keyed by field name"
+          additionalProperties:
+            type: array
+            items: { $ref: "#/components/schemas/Option" }
+    FormResponse:
+      type: object
+      x-degraded: true
+      description: |
+        The new/edit form of a resource, or the Formtastic form of a custom GET action template (ActionView mode native).
+        For a template, `resource` is the resource (or page) key, `id` the member id when the action has one, `title`
+        the template's first heading, and nested params such as `prior_authorization[approval][note]` appear as
+        fields named `approval.note`. Html around the form is kept as `html` fields. Typeahead `options_path` points
+        at the same action (`?context=template&field=<name>&term=`, plus the query the view was loaded with), which answers with an
+        OptionsResponse. A form with `action.method` get is a filter form: its results are the template's `layout` below it.
+      required: [resource, title, action, form, permissions]
+      properties:
+        layout:
+          type: array
+          description: "Template forms only. Present when the template shows more than its form: further forms, row actions (button_to forms and data-method links become `action` nodes), or content after the form such as search results. The whole template content as typed nodes in order, with a `form` node that has no `form` payload standing for this response's own form; render that form (fields and submit button) at that position. Further Formtastic forms are `form` nodes with their own FormResponse. When absent, content around the form is in `form.sections` as html fields."
+          items: { $ref: "#/components/schemas/Node" }
+        submittable: { type: boolean, description: "False when the form can't be submitted faithfully (form partial, raw inputs in html fields); clients disable Save and link to classic" }
+        unsupported_reason: { type: string, nullable: true }
+        lock: { $ref: "#/components/schemas/FormLock" }
+        degraded:
+          type: array
+          items: { $ref: "#/components/schemas/Degradation" }
+        resource: { type: string }
+        id: { type: string, description: Present for edit forms }
+        title: { type: string }
+        display_name: { type: string, nullable: true }
+        actions:
+          type: array
+          description: "Action items for the new/edit page (placement header)"
+          items: { $ref: "#/components/schemas/Action" }
+        action:
+          type: object
+          description: Where to submit. `path` is relative to the host root and already includes the mount.
+          required: [method, path]
+          properties:
+            method:
+              type: string
+              enum: [get, post, put, patch, delete]
+              description: "`get`: a read-only form (a filter with results below it). Never send it as a write: navigate the same view with the form's fields as the query string, named by each field's `param` (Rails nesting, e.g. `simulation[date]=2026-10-01`), and fetch `path` with that query. Needs no CSRF token. The browser URL carries the same query, so a page loaded with it shows the results and prefilled fields."
+            path: { type: string }
+        form: { $ref: "#/components/schemas/Form" }
+        submit_label: { type: string, description: "Label of the template's submit button (template forms and `form` nodes)" }
+        submit_confirm: { type: string, description: "Question the form's submit button asks (data-confirm: `f.action :submit, button_html:` or a template's submit); clients ask it before posting" }
+        permissions: { $ref: "#/components/schemas/Permissions" }
+    Form:
+      type: object
+      required: [sections]
+      properties:
+        sections:
+          type: array
+          items: { $ref: "#/components/schemas/FormSection" }
+    FormSection:
+      type: object
+      description: |
+        `inputs` is a fieldset of fields. `has_many` is a nested-attributes collection: submit existing rows as
+        `<param>[<index>][<field>]` (including their hidden `id`; add `[_destroy]=1` to remove when `destroy`),
+        and new rows from `template_fields` after replacing the `__INDEX__` placeholder in each param.
+      required: [kind, fields]
+      properties:
+        title: { type: string, nullable: true, description: "The section heading. A compact has_many without a `heading:` is named for its one control, pluralized." }
+        kind: { type: string, enum: [inputs, has_many] }
+        fields: { type: array, items: { $ref: "#/components/schemas/FormField" } }
+        name: { type: string, description: has_many association }
+        param_key: { type: string, example: insurance_carrier_aliases_attributes }
+        param: { type: string, example: "insurance_carrier[insurance_carrier_aliases_attributes]" }
+        allow_destroy: { type: boolean }
+        sortable: { type: string, description: Column to set to each row's position }
+        new_record_label: { type: string, description: Absent when rows cannot be added }
+        layout:
+          type: string
+          enum: [cards, compact]
+          description: "How to lay the rows out. `compact` when every row is a single visible control (a text, select or single typeahead; hidden `id` and `_destroy` aside): a dense list, one line per row, labelled by the section heading. `cards` otherwise, or when the host declared `nested_layout`. A client that doesn't know `layout` shows cards."
+        max_rows: { type: integer, description: "The most rows the host allows (the has_many `max_rows:` option). A hint: the server doesn't enforce it." }
+        template_fields:
+          type: array
+          items: { $ref: "#/components/schemas/FormField" }
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/FormRecord" }
+    FormRecord:
+      type: object
+      required: [fields]
+      properties:
+        id: { type: string }
+        param: { type: string, description: "Row prefix, e.g. insurance_carrier[insurance_carrier_aliases_attributes][0]" }
+        fields: { type: array, items: { $ref: "#/components/schemas/FormField" } }
+        destroy: { type: boolean, description: Whether this row may be removed }
+    FormField:
+      type: object
+      description: |
+        One input. `param` is the full bracket param (a trailing `[]` marks array values); null for `html` and `content`.
+        `json` controls take and return structured JSON values. `html` is the graceful fallback for content or
+        custom inputs the API cannot express: `value` is sanitized html to display read-only.
+        `content` is not an input: it is what the form block rendered between its inputs (headings, panels, tables
+        of the current record, notices) as typed nodes in `layout`, to show read-only at this position. It has no
+        `param` or `value` and takes no part in a write. A client that doesn't know `content` may skip it.
+        `typeahead` fields carry the current selection in `options` and search the rest via `options_path`
+        (append `&term=`); `free_text` means any typed value is accepted (datalist).
+
+        Writes follow HTML form semantics, applied by the server so every client behaves alike. A `null` for
+        a text-like or select control (text, textarea, email, url, phone, password, select, typeahead, number,
+        date, datetime, time, hidden, json) is stored as `""`, as a browser posts an empty input. An unselected
+        `radio` is sent as `""` or omitted: either leaves the attribute out of the write, since browsers post
+        nothing for it. `boolean`, `file`, `multiselect` and `checkboxes` keep their types. A `json` control
+        accepts any JSON value and is posted to the host as JSON text, as the classic textarea posts it, so
+        `permit_params` takes it as a scalar attribute. Errors in a rejected write are keyed by the `name` of
+        the field that posts the attribute (`category` and `category_id` both map to
+        the rendered field).
+
+        A `json` control with a `summary` was not sent its value. Omit it from the write to keep the stored value
+        (a `null` or `""` for it is also treated as unchanged; send `{}` or `[]` to empty it). A client that loaded the
+        value through `expand_path` submits it as usual. `[masked]` placeholders in a submitted json value are
+        replaced with the stored values of the same keys, and the literal is never written.
+      required: [name, label, control, required]
+      properties:
+        name: { type: string }
+        param: { type: string, nullable: true }
+        label: { type: string }
+        control:
+          type: string
+          enum: [text, textarea, number, email, url, phone, password, select, multiselect, typeahead, boolean, radio, checkboxes, date, datetime, time, json, file, hidden, html, content]
+        value: { nullable: true }
+        layout:
+          type: array
+          description: "`content` only: the nodes to show, in order, as a page's layout within the form's record."
+          items: { $ref: "#/components/schemas/Node" }
+        summary:
+          type: object
+          description: "json controls on an existing record: sent with `value: null` when the stored value is over the inline limit or holds a masked key at any depth. Nested masked keys read `[masked]` once loaded."
+          properties:
+            kind: { type: string, enum: [object, array, scalar] }
+            keys: { type: array, items: { type: string } }
+            size: { type: integer }
+        expand_path: { type: string, description: "json controls with a `summary`: API path of getRecordValue (an audited view) that returns the full value for editing. Absent for fields inside nested rows, which stay unchanged." }
+        masked: { type: boolean, description: "A secret: the current value is never sent (no `value`). Show an empty input and submit blank to keep the stored value; a non-blank value replaces it." }
+        required: { type: boolean }
+        hint: { type: string }
+        placeholder: { type: string }
+        options:
+          type: array
+          items: { $ref: "#/components/schemas/Option" }
+        options_path: { type: string }
+        multiple: { type: boolean }
+        free_text: { type: boolean }
+        disabled: { type: boolean }
+        api_denied: { type: boolean, description: "The host guarded this attribute: the server refuses a write that includes it. Shown read-only (`disabled` is also set) with a link to `classic_url`." }
+        api_guard: { type: string, description: "A guard the host registered may refuse a write that includes this attribute, depending on the request" }
+        classic_url: { type: string, description: "With `api_denied`: the classic page of this form" }
+        errors:
+          type: array
+          items: { type: string }
+        input_html:
+          type: object
+          properties:
+            rows: { type: integer }
+            min: { description: "A number for `number`. For `date` an ISO day (`2026-01-01`), for `datetime` an ISO time (`2026-01-01T09:00:00Z`): the earliest value the picker offers. Not enforced by the server." }
+            max: { description: "As `min`: the largest number, or the latest day or time the picker offers." }
+            step: {}
+            maxlength: { type: integer }
+    Manifest:
+      type: object
+      required: [schema_version, site, resources, menu]
+      description: Lightweight; everything needed for the shell. Per-resource details come from getResourceMeta.
+      properties:
+        schema_version: { type: integer, example: 2 }
+        site: { $ref: "#/components/schemas/Site" }
+        menu:
+          type: array
+          description: AA menu tree for the current user (items failing `if:`/authorization omitted), ordered by priority then label.
+          items: { $ref: "#/components/schemas/MenuItem" }
+        resources:
+          type: array
+          items: { $ref: "#/components/schemas/ResourceSummary" }
+    Site:
+      type: object
+      description: ActiveAdmin namespace settings evaluated for the current user.
+      required: [title, utility_menu, locale, time_zone, comments, default_per_page]
+      properties:
+        title: { type: string, description: "AA site_title, e.g. Core Admin" }
+        title_link: { type: string, nullable: true }
+        title_image: { type: string, nullable: true, description: URL }
+        favicon: { type: string, nullable: true, description: URL }
+        home:
+          type: object
+          nullable: true
+          description: "AA root_to: a resource or a page/url"
+          properties:
+            resource: { type: string, nullable: true }
+            url: { type: string, nullable: true }
+        logout:
+          type: object
+          nullable: true
+          required: [url, method]
+          properties:
+            url: { type: string }
+            method: { type: string, enum: [get, post, delete] }
+        utility_menu:
+          type: array
+          description: AA utility_navigation menu (current user, logout, custom links)
+          items: { $ref: "#/components/schemas/MenuItem" }
+        current_user:
+          type: object
+          nullable: true
+          required: [id, display_name]
+          properties:
+            id: { type: string }
+            display_name: { type: string }
+        locale: { type: string, example: en }
+        time_zone: { type: string, example: America/New_York }
+        date_format: { type: string, nullable: true, description: "strftime pattern from AA localize_format (e.g. :long)" }
+        datetime_format: { type: string, nullable: true, description: "strftime pattern from AA localize_format" }
+        footer: { type: string, nullable: true }
+        comments: { type: boolean, description: AA comments enabled }
+        default_per_page: { type: integer }
+        max_per_page: { type: integer, nullable: true }
+        trusted_media_hosts:
+          type: array
+          description: "Hostnames besides this site that image and document nodes may load from (the host's html_trusted_hosts). The client refuses any other host and the host app's CSP must allow these in img-src and frame-src."
+          items: { type: string }
+    ActionView:
+      type: object
+      nullable: true
+      description: |
+        How to present a GET action (member/collection action or action item that renders a template) inside the client.
+        Chosen server-side by the fallback ladder, overridable per action with `reactive { render_as ... }`:
+        native (template is Formtastic-only: `path` returns a FormResponse; a read-only template with no form or
+        control: `path` returns a PageResponse of its content as typed nodes, `view` absent) > frame (HTML over the wire: `path` is the
+        classic URL fetched with header X-Reactiveadmin-Frame: 1, returning layout-less HTML) > iframe (custom JS:
+        `path` is the classic URL with ?embed=1) > custom (host React component registered under `custom_key`).
+        For a link to a register_page the mode is native and `path` returns a PageResponse (getPage), whose nodes carry
+        any frames and iframes. Overridden with `reactive { render_as :frame, action: :name }`.
+      required: [mode]
+      properties:
+        mode: { type: string, enum: [native, frame, iframe, custom] }
+        path: { type: string }
+        custom_key: { type: string, nullable: true }
+        presentation: { type: string, enum: [page, dialog, sheet], description: "Suggested container; dialog for short forms" }
+    PageResponse:
+      type: object
+      required: [key, title, layout, actions]
+      description: |
+        A register_page, or the content of a read-only GET action template (`view.mode` native, `view` absent; `key` is the
+        resource or page key). `layout` holds typed nodes; forms in the content are `frame` nodes, and a page that runs its own
+        JS is a single `iframe` node. `view.mode` reports what the content turned out to be: native (typed nodes only), frame
+        (some nodes are frames), iframe (one iframe node) or custom (empty layout; render the host component for `custom_key`).
+        Served at `/admin/_pages/{page}`, or `/admin/{parent}/{parent_id}/_pages/{page}` for a page under a required parent.
+      properties:
+        degraded:
+          type: array
+          items: { $ref: "#/components/schemas/Degradation" }
+        key: { type: string }
+        title: { type: string }
+        view: { $ref: "#/components/schemas/ActionView" }
+        layout:
+          type: array
+          items: { $ref: "#/components/schemas/Node" }
+        actions:
+          type: array
+          description: Page action items and page_actions (placement header)
+          items: { $ref: "#/components/schemas/Action" }
+    FrameResponse:
+      type: object
+      description: |
+        Not JSON: frame requests (header X-Reactiveadmin-Frame: 1) to classic URLs return text/html without the AA layout,
+        scripts and handlers stripped; same authentication and authorization as classic. Failures are JSON `Error` (401
+        unauthorized, 403 forbidden, 422 invalid_csrf).
+        Writes from a frame (intercepted form submit / data-method link, sent as FormData with X-CSRF-Token) return either
+        200 text/html (re-rendered fragment: replace the frame), or 200 application/json `FrameRedirect` when the action redirected,
+        or a file download (Content-Disposition attachment).
+      properties: {}
+    FrameRedirect:
+      type: object
+      required: [redirect]
+      properties:
+        redirect: { $ref: "#/components/schemas/Location" }
+        flash:
+          type: object
+          additionalProperties: { type: string }
+    Degradation:
+      type: object
+      description: "Something the server could not represent faithfully. Clients surface these (dev toast, subtle banner) instead of failing silently."
+      required: [kind, reason]
+      properties:
+        kind: { type: string, example: sidebar_dropped }
+        where: { type: string, nullable: true, description: "Structural location, e.g. show/panel[2] or form/section[1]; never contains record data" }
+        reason: { type: string }
+    ValueResponse:
+      type: object
+      required: [value]
+      properties:
+        value: {}
+    FormLock:
+      type: object
+      description: "Optimistic-lock token. Send it back unchanged as `lock` in the update body; a mismatch returns 409 `stale`."
+      required: [field, value]
+      properties:
+        field: { type: string, enum: [lock_version, updated_at] }
+        value: { type: string }
+    ResourceSummary:
+      type: object
+      required: [key, label, plural_label, actions, permissions, meta_path]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        plural_label: { type: string }
+        menu_parent: { type: string, nullable: true, description: "Label of the immediate parent menu group (the last of a parent array), null for top-level items" }
+        menu_priority: { type: integer, nullable: true }
+        meta_path: { type: string, description: "API path of getResourceMeta, e.g. /api/admin/posts/_meta" }
+        belongs_to: { $ref: "#/components/schemas/BelongsTo" }
+        index_path_template: { type: string, nullable: true }
+        api_index_path_template: { type: string, nullable: true }
+        actions:
+          type: array
+          items: { type: string, enum: [index, show, new, create, edit, update, destroy] }
+        permissions: { $ref: "#/components/schemas/Permissions" }
+        api_denied: { $ref: "#/components/schemas/ApiDeniedSummary" }
+    ApiDeniedSummary:
+      type: object
+      description: "Present on a resource when an `api` guard refuses part of it for the requesting channel, a session or a token (a resource denied whole is not in the manifest). `actions` lists the refused standard and custom actions (`new` and `create`, `edit` and `update` go together): offer a classic link instead, e.g. for New."
+      properties:
+        actions: { type: array, items: { type: string } }
+        attributes: { type: array, items: { type: string } }
+        guards:
+          type: object
+          description: "Actions a guard the host registered may refuse, by action name to guard name. Only a request tells."
+          additionalProperties: { type: string }
+        classic_url: { type: string, description: "The classic index page" }
+    BelongsTo:
+      type: object
+      nullable: true
+      description: Set when the resource is nested under a parent. When `optional` is false it has no top-level routes and is not in the menu.
+      required: [parent, param, optional]
+      properties:
+        parent: { type: string, description: Parent resource key }
+        param: { type: string, description: "Path param carrying the parent id, e.g. post_id" }
+        optional: { type: boolean }
+    MenuItem:
+      type: object
+      required: [id, label, children]
+      properties:
+        id: { type: string, description: "Unique in the tree; overlay groups use their slugged label path, e.g. setup/billing" }
+        label: { type: string }
+        kind:
+          type: string
+          enum: [group, resource, page, link]
+          description: "group = container with children only (the client builds its overview page); resource, page and link are destinations. Absent in older servers: infer from resource/page/url."
+        description: { type: string, nullable: true, description: "Overlay text for a group overview or tooltip" }
+        icon: { type: string, nullable: true, description: "Icon name, resolved by the client's icon set" }
+        resource: { type: string, nullable: true, description: "ResourceMeta.key when the item is a registered resource" }
+        page: { type: string, nullable: true, description: "Page key when the item is an AA register_page (route /pages/{page}, data from getPage)" }
+        url: { type: string, nullable: true, description: "Classic/custom URL when not a resource (pages, external links)" }
+        priority: { type: integer, nullable: true }
+        method: { type: string, enum: [get, post, put, patch, delete], description: "HTTP verb for url items that act (e.g. logout); absent means get" }
+        api_denied: { type: boolean, description: "An `api` guard refuses this resource or page: `kind` is link and `url` is its classic page; open it in a new tab. `resource` or `page` still names it." }
+        children:
+          type: array
+          items: { $ref: "#/components/schemas/MenuItem" }
+    Permissions:
+      type: object
+      description: Result of the AA authorization adapter (Pundit) for the current user. Absent key = not applicable.
+      properties:
+        index: { type: boolean }
+        show: { type: boolean }
+        create: { type: boolean }
+        update: { type: boolean }
+        destroy: { type: boolean }
+    Action:
+      type: object
+      required: [key, label, kind, enabled]
+      properties:
+        key: { type: string, example: edit }
+        label: { type: string }
+        kind: { type: string, enum: [edit, destroy, member, collection, custom, link] }
+        placement:
+          type: string
+          enum: [header, row, inline]
+          description: "header = page action item or member action button; row = index row menu item; inline = button inside show content (see Node type action)"
+        external: { type: boolean, description: "Opens a non-admin URL (another site, or a path of this host outside the admin namespace, then with an absolute href); render in a new tab" }
+        form_path:
+          type: string
+          nullable: true
+          description: "API path returning a FormResponse to collect inputs before running the action (GET member/collection action forms, batch action forms)"
+        view:
+          $ref: "#/components/schemas/ActionView"
+        supported:
+          type: boolean
+          description: "False when the action can't run through the API (custom JS, unknown route); client renders it disabled with disabled_reason and a classic-admin href"
+        api_denied:
+          type: boolean
+          description: "An `api` guard refuses this action and the server answers 403 `api_denied`. It has no `api_path`; render a link to `classic_url`, opened in a new tab, never a button. Also sets `supported: false`, so older clients show it disabled."
+        api_guard: { type: string, description: "A guard the host registered may refuse this action, depending on the request: it is offered as usual" }
+        classic_url: { type: string, description: "With `api_denied`: where the action can be used" }
+        method: { type: string, enum: [get, post, put, patch, delete] }
+        href: { type: string, nullable: true, description: Classic admin URL }
+        api_path: { type: string, description: "API endpoint for this action (edit: GET the form; destroy/member: send with `method`)" }
+        confirm: { type: string, nullable: true }
+        navigate:
+          type: boolean
+          description: "A POST that navigates the browser to a route of this host outside the admin (an OmniAuth start such as `/auth/provider`). `kind` is link, `method` post, `href` the absolute same-origin URL, with no `api_path`. Submit a real hidden `<form method=post action=href>` in the top window with the CSRF token as `authenticity_token` and `params` as hidden fields (a full navigation, not a fetch or a popup). Offered to sessions only, never to bearer tokens."
+        params:
+          type: object
+          description: "With `navigate`: the hidden fields the form carries, besides its CSRF token and `_method`"
+          additionalProperties: { type: string }
+        enabled: { type: boolean }
+        disabled_reason: { type: string, nullable: true }
+    ResourceMeta:
+      type: object
+      required: [key, label, plural_label, actions, permissions, filters, scopes, per_page_options, default_per_page]
+      description: Full metadata (superset of ResourceSummary) returned by getResourceMeta.
+      properties:
+        key: { type: string, description: "AA route key, e.g. posts" }
+        action_items:
+          type: array
+          description: Index page action items and collection actions (header buttons), evaluated for the current user.
+          items: { $ref: "#/components/schemas/Action" }
+        download_formats:
+          type: array
+          description: "AA download_links, e.g. [csv]; export with GET {api index path}.{format} keeping current q/scope/order"
+          items: { type: string }
+        pagination_total:
+          type: boolean
+          description: "False when AA index pagination_total is off; IndexMeta.total_count and total_pages are then null"
+        label: { type: string }
+        plural_label: { type: string }
+        menu_parent: { type: string, nullable: true, description: "Label of the immediate parent menu group (the last of a parent array), null for top-level items" }
+        menu_priority: { type: integer, nullable: true }
+        belongs_to:
+          type: object
+          nullable: true
+          description: Set when the resource is nested under a parent. When `optional` is false it has no top-level routes and is not in the menu.
+          required: [parent, param, optional]
+          properties:
+            parent: { type: string, description: Parent resource key }
+            param: { type: string, description: "Path param carrying the parent id, e.g. post_id" }
+            optional: { type: boolean }
+        index_path_template:
+          type: string
+          nullable: true
+          description: "Classic path of the nested index, e.g. /admin/authors/{parent_id}/comments. Null unless belongs_to is set."
+        api_index_path_template:
+          type: string
+          nullable: true
+          description: "Same under the API mount, e.g. /api/admin/authors/{parent_id}/comments."
+        actions:
+          type: array
+          items: { type: string, enum: [index, show, new, create, edit, update, destroy] }
+        api_denied: { $ref: "#/components/schemas/ApiDeniedSummary" }
+        permissions: { $ref: "#/components/schemas/Permissions" }
+        filters:
+          type: array
+          items: { $ref: "#/components/schemas/Filter" }
+        scopes:
+          type: array
+          items: { $ref: "#/components/schemas/Scope" }
+        default_scope: { type: string, nullable: true }
+        per_page_options:
+          type: array
+          items: { type: integer }
+        default_per_page: { type: integer }
+        default_order: { type: string, nullable: true }
+        index_views:
+          type: array
+          description: "Set when the resource declares several index presenters (`index as: ...`); select one with ?as=<as> on the index request. Absent with a single view."
+          items:
+            type: object
+            required: [as, default]
+            properties:
+              as: { type: string, description: "AA index_name, e.g. table, grid, blog, block" }
+              label: { type: string }
+              default: { type: boolean }
+        batch_actions:
+          type: array
+          description: Batch actions the current user is offered on the index (AA `batch_action`, `if:` evaluated).
+          items: { $ref: "#/components/schemas/BatchAction" }
+    Filter:
+      type: object
+      required: [name, label, control]
+      description: |
+        One AA filter. The client sets ransack params under q[...]:
+        - text/number: one of predicates[].param
+        - select/typeahead/checkboxes/boolean: param
+        - date_range: range.from / range.to
+      properties:
+        name: { type: string }
+        label: { type: string }
+        control:
+          type: string
+          enum: [text, number, select, typeahead, boolean, date_range, checkboxes]
+          description: "checkboxes: pick any of `options` (AA `as: :check_boxes`); a large collection degrades to a multiple typeahead"
+        multiple:
+          type: boolean
+          description: "True when several values can be picked (checkboxes, multiple select or typeahead): send each as q[<param>][]=value, where param ends in _in"
+        param: { type: string, nullable: true, description: "Ransack key for single-param controls, e.g. billing_provider_id_eq" }
+        predicates:
+          type: array
+          nullable: true
+          items:
+            type: object
+            required: [param, label]
+            properties:
+              param: { type: string, example: title_cont }
+              label: { type: string, example: Contains }
+        range:
+          type: object
+          nullable: true
+          required: [from, to]
+          properties:
+            from: { type: string, example: published_on_gteq }
+            to: { type: string, example: published_on_lteq }
+        options:
+          type: array
+          nullable: true
+          items: { $ref: "#/components/schemas/Option" }
+        options_path:
+          type: string
+          nullable: true
+          description: Set when the collection exceeds the inline limit (control is then `typeahead` and `options` is empty); search it with getOptions semantics (append `&term=`, or `&value=` to label a selection).
+    Option:
+      type: object
+      required: [label, value]
+      properties:
+        label: { type: string }
+        value: { type: string }
+        hint: { type: string, nullable: true, description: "Secondary text to show muted next to the label (for example an email, or the raw value behind a friendly label)" }
+    Scope:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        count: { type: integer, nullable: true }
+        group: { type: string, nullable: true, description: "AA `scope group:`; scopes are listed in AA's render order (grouped), render each group as its own segmented control" }
+    Column:
+      type: object
+      required: [key, label, sortable]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        sortable: { type: boolean }
+        sort_key: { type: string, nullable: true, description: "Use as order=<sort_key>_asc|_desc" }
+        kind:
+          type: string
+          enum: [data, index]
+          description: "index: AA `index_column`, the row's running number (cells hold a number node)"
+        class_name: { type: string, nullable: true, description: "AA `column class:`, as written" }
+        align: { type: string, enum: [left, right, center], nullable: true, description: "Right for numeric columns and number-like classes; absent means left" }
+    IndexResponse:
+      type: object
+      required: [resource, columns, rows, meta]
+      properties:
+        degraded:
+          type: array
+          items: { $ref: "#/components/schemas/Degradation" }
+        resource: { type: string }
+        columns:
+          type: array
+          items: { $ref: "#/components/schemas/Column" }
+        rows:
+          type: array
+          items: { $ref: "#/components/schemas/Row" }
+        meta: { $ref: "#/components/schemas/IndexMeta" }
+    RecordPaths:
+      type: object
+      description: Classic and API paths of a record's pages, nested under the parent for nested resources. Only defined actions are present.
+      properties:
+        show: { type: string }
+        edit: { type: string }
+        api_show: { type: string }
+        api_edit: { type: string }
+    Row:
+      type: object
+      required: [id, cells, permissions]
+      properties:
+        id: { type: string }
+        display_name: { type: string, nullable: true, description: "AA display_name; null when AA would only fall back to Model #id" }
+        paths: { $ref: "#/components/schemas/RecordPaths" }
+        permissions: { $ref: "#/components/schemas/Permissions" }
+        actions:
+          type: array
+          description: "Custom row items from the index actions block (View/Edit/Delete come from permissions and paths)"
+          items: { $ref: "#/components/schemas/Action" }
+        cells:
+          type: object
+          description: "Keyed by Column.key; empty for non-table views"
+          additionalProperties: { $ref: "#/components/schemas/Node" }
+        layout:
+          type: array
+          description: "The record rendered by a grid, blog, block or custom index view (IndexMeta.view is not table)"
+          items: { $ref: "#/components/schemas/Node" }
+        class_name: { type: string, nullable: true, description: "AA `row_class:` result" }
+        tone:
+          type: string
+          nullable: true
+          enum: [success, warning, danger, info]
+          description: "Mapped from obvious row_class words (warning, error, danger, success, info)"
+    IndexMeta:
+      type: object
+      required: [page, per_page, total_count, total_pages, scopes]
+      properties:
+        page: { type: integer }
+        per_page: { type: integer }
+        total_count: { type: integer, nullable: true }
+        total_pages: { type: integer, nullable: true }
+        has_next_page: { type: boolean }
+        scopes:
+          type: array
+          items: { $ref: "#/components/schemas/Scope" }
+        current_scope: { type: string, nullable: true }
+        order: { type: string, nullable: true }
+        as: { type: string, description: "AA index_name of the presenter in effect" }
+        view:
+          type: string
+          enum: [table, grid, blog, block]
+          description: "table: columns and cells. Others: Row.layout per record (custom IndexAs classes arrive as block)."
+        grid_columns: { type: integer, description: "Cards per row for view grid (AA `columns:`, default 3)" }
+        title: { type: string, description: "AA `index title:`; absent means the plural label" }
+        blank_slate:
+          type: object
+          description: "AA `blank_slate_link:`; absent means the default create link. A null label and href means the resource declared no link."
+          properties:
+            label: { type: string, nullable: true }
+            href: { type: string, nullable: true, description: Classic admin URL }
+        default_row_actions:
+          type: boolean
+          description: "False when the index block has `actions defaults: false` or no `actions` at all: show only Row.actions, not View, Edit and Delete. Absent means true."
+        row_actions_label: { type: string, description: "AA `actions name:` (the column header) or, with a dropdown, `dropdown_name`" }
+        row_actions_dropdown: { type: boolean, description: "AA `actions dropdown: true`: put the row actions in one menu" }
+        paginator: { type: boolean, description: "False when the presenter has `paginator: false`; absent means true" }
+        per_page_options:
+          type: array
+          description: "Set when the presenter overrides `per_page:`; replaces ResourceMeta.per_page_options for this view (an empty list hides the selector)"
+          items: { type: integer }
+        sidebars:
+          type: array
+          description: "AA sidebar sections for the index page (the built-in filters and search-status sections are left out)"
+          items: { $ref: "#/components/schemas/Sidebar" }
+    Sidebar:
+      type: object
+      required: [title, layout]
+      properties:
+        title: { type: string }
+        layout:
+          type: array
+          items: { $ref: "#/components/schemas/Node" }
+    ShowResponse:
+      type: object
+      required: [resource, id, title, layout, permissions, actions]
+      properties:
+        degraded:
+          type: array
+          items: { $ref: "#/components/schemas/Degradation" }
+        resource: { type: string }
+        id: { type: string }
+        paths: { $ref: "#/components/schemas/RecordPaths" }
+        title: { type: string }
+        display_name: { type: string, nullable: true }
+        permissions: { $ref: "#/components/schemas/Permissions" }
+        actions:
+          type: array
+          description: "Edit, destroy, member actions and show-page action items (placement header)"
+          items: { $ref: "#/components/schemas/Action" }
+        layout:
+          type: array
+          items: { $ref: "#/components/schemas/Node" }
+        sidebars:
+          type: array
+          description: AA sidebar sections for the show page, rendered after the main layout.
+          items: { $ref: "#/components/schemas/Sidebar" }
+    Ref:
+      type: object
+      required: [resource, id]
+      properties:
+        resource: { type: string }
+        id: { type: string }
+        path: { type: string, description: "Classic show path; only set for nested-only resources, whose `resource` and `id` don't locate the record." }
+        api_path: { type: string, description: "The same under the API mount; only set with `path`." }
+    Node:
+      type: object
+      required: [type]
+      description: |
+        Discriminated by `type`. Fields used per type:
+        empty | text{text} | number{value} | boolean{value} | date{value: YYYY-MM-DD} | datetime{value: ISO8601}
+        | ref{label, ref?} | link{label, href, ref?, view?, external} | status{label, variant}
+        | json{value} | code{text, language?}: preformatted text that is not JSON (a stack trace, an id, a snippet); render monospaced and never as html
+        | html{html (sanitized; see `rake reactiveadmin:html_policy`)} | group{children}
+        | box{tag, layout?, width?, span?, text_align?, spacing?, max_width?, grow?, marks?, tone?, nowrap?, children} | panel{title, children}
+        | attributes_table{title?, rows[{label, value: Node[]}]} | table{headers[], rows: Node[][]}
+        | action{action: Action with placement inline}: a button or link inside content that performs a non-GET request
+          (rails-ujs data-method/data-confirm links, button_to forms); never render these as plain links
+        | tabs{children: tab[]} | tab{title, children} | columns{children: column[]} | column{children}
+        | toolbar{align, spacing?, children: (action|link)[]}: a row of actions and links with nothing else in it (button_to forms,
+          rails-ujs links, plain links, however deeply wrapped in divs); inside a panel it is the panel's footer actions
+        | list{ordered, children: list_item[]} | list_item{children}: ul/ol/li
+        | heading{level 1-6, children}: h1-h6; children are inline nodes (text, link, ...)
+        | paragraph{children}: inline content (text with marks, link, break, ...) that flows on one line and wraps
+        | break: a line break inside a paragraph or heading
+        | divider: a horizontal rule
+        | disclosure{summary_nodes: Node[], children, open}: details/summary; `open` is the initial state
+        | definition_list{rows[{label, value: Node[]}]}: dl/dt/dd, one row per term
+        | blockquote{children}
+        | text may carry `marks` (strong, em, code, underline, strike, mark, small, sub, sup; render each) and `title`
+          (an abbr's expansion; render as an abbr). Text inside a paragraph keeps its surrounding spaces.
+        | masked: a secret attribute (token, password) whose value is withheld; render a placeholder, never the value
+        | error{label}: the value could not be computed (the response's `degraded` names where); render `label` as a
+          subtle error marker, never as an empty cell. `empty` stays for genuinely empty data.
+        | frame{html, src, title?}: sanitized-but-interactive HTML (forms allowed, scripts/on* stripped) rendered inline;
+          intercept submits and data-method links and send them to `src`-relative URLs with X-Reactiveadmin-Frame: 1
+        | image{src, alt, width_px?, height_px?}: an image on this site or a trusted media host (http(s) only, never data:);
+          render lazily with referrerPolicy no-referrer and open it in a zoomable lightbox. width_px and height_px are the
+          markup's declared size (1-10000), a layout hint only.
+        | document{src, mime: "application/pdf", title?}: a PDF on this site or a trusted media host (http(s) only); render
+          it inline with the browser's own PDF viewer, an open-in-new-tab and a download link, and a plain link if the
+          browser won't embed it. Never proxied: the browser loads sensitive documents straight from `src`.
+        | iframe{src, title?}: same-origin classic page with ?embed=1 (chrome-free layout + postMessage bridge
+          emitting {type: "reactiveadmin:navigate"|"reactiveadmin:flash"|"reactiveadmin:resize", ...})
+        | form{form: FormResponse}: a Formtastic form in the content of a page or show view, rendered inline with the
+          same form renderer as `new`/`edit`. It submits to `form.action` through the API with the same param
+          semantics as other native forms (blanks, checkboxes and radios as a browser would post them) and no lock.
+          `form.submit_confirm`, when present, is asked about before posting. On success show the response's message
+          and refetch the page, or follow its location; on 422 show `base` and the field errors in the form. Typeahead
+          `options_path` points at the page (`?context=page_form&form=<n>&field=<name>&term=`) and answers with an
+          OptionsResponse. A form the server can't describe faithfully (raw controls, an off-site or non-admin action,
+          a GET form) stays a `frame` node. Inside a FormResponse `layout`, a `form` node without `form` stands for
+          the response's own form.
+
+        Layout hints (box only). The server translates a safelisted subset of utility classes and never passes raw
+        classes through; unknown classes and inline styles are ignored and reported by `doctor`.
+        `layout` with display flex: `direction` row or column; `breakpoint` sm|md|lg|xl means a row from that width
+        up and stacked below it (null means the same at every width, and `flex lg:flex-row` counts as lg);
+        `gap` 0-8 in 0.25rem steps; `wrap`; optional `align` (items-*) and `justify` (justify-*).
+        `layout` with display grid: `columns` is the count from `breakpoint` up (`base_columns`, default 1, below it) and
+        `gap`. Children of a grid may carry `span` (col-span-N, 1-12).
+        `width` (w-* or basis-*) is the share of the parent row; below the parent's breakpoint every child is full width.
+        Vocabulary: flex, inline-flex, grid, flex-row, flex-col, flex-wrap, flex-nowrap, gap-N, items-start|center|end|
+        stretch|baseline, justify-start|center|end|between, w-|basis- 1/4 1/3 1/2 2/3 3/4 full, text-left|center|right,
+        grid-cols-N, col-span-N, each with an optional sm: md: lg: xl: prefix where that means something.
+        Also: m|mt|mr|mb|ml|mx|my-N (N 1-8) and `margin` in whole 4px steps become `spacing`; max-w-sm|md|lg|xl|2xl becomes
+        `max_width`; grow, flex-grow and flex-1 become `grow`; font-bold|font-semibold and italic become `marks`
+        (strong, em); text-muted|success|danger|warning, text-gray|red|green|yellow|orange|amber-N become `tone`.
+        Inline styles are read as the same classes, one declaration at a time, and only when the value lands exactly
+        on the vocabulary (8px, 1rem and 0.5rem are steps; 10px, 1em, auto and negatives are not). What does not translate
+        is reported by `doctor` with the exact class or style and its source line (`rake reactiveadmin:styles`).
+        `spacing` is margin: `{top?, right?, bottom?, left?}`, each 1-8 in 0.25rem steps; zero margins are omitted.
+        `grow` (true) means the box takes the free space of the row it sits in. `marks` and `tone` on a box apply to
+        its content; on a text node they apply to the text. `tone` is meaning, not color: render the design system's
+        muted, success, danger or warning text color. `nowrap` (white-space: nowrap or whitespace-nowrap) means the text
+        stays on one line, on a text node or for a box's content.
+      properties:
+        type:
+          type: string
+          enum: [empty, text, number, boolean, date, datetime, ref, link, status, json, code, html, group, box, panel, attributes_table, table, action, tabs, tab, columns, column, frame, iframe, image, document, toolbar, list, list_item, masked, error, heading, paragraph, break, divider, disclosure, definition_list, blockquote, form]
+        form: { $ref: "#/components/schemas/FormResponse" }
+        src: { type: string, description: "frame/iframe source URL (classic, same-origin); image/document URL (this site or a trusted media host)" }
+        alt: { type: string, description: "image nodes: alternative text, empty when the markup gave none" }
+        mime: { type: string, enum: [application/pdf], description: "document nodes: the media type; only PDF is embedded" }
+        width_px: { type: integer, minimum: 1, maximum: 10000, description: "image nodes: declared width in pixels" }
+        height_px: { type: integer, minimum: 1, maximum: 10000, description: "image nodes: declared height in pixels" }
+        action: { $ref: "#/components/schemas/Action" }
+        summary:
+          type: object
+          nullable: true
+          description: "json nodes: present instead of `value` when the server summarizes (minimization or size); fetch the full value via expand_path"
+          properties:
+            kind: { type: string, enum: [object, array, scalar] }
+            keys: { type: array, items: { type: string } }
+            size: { type: integer }
+        expand_path: { type: string, nullable: true, description: "json nodes, and text nodes with `truncated`: API path of getRecordValue for this field (for text, the response value is the full string)" }
+        view: { $ref: "#/components/schemas/ActionView" }
+        text: { type: string }
+        truncated: { type: boolean, description: "text nodes: `text` is only the start of a longer value (a free-text column in a default view); render it with an ellipsis and offer expand_path to load the rest" }
+        language: { type: string, description: "code nodes: language hint from the markup (e.g. ruby), when it names one" }
+        label: { type: string }
+        value: {}
+        href: { type: string }
+        external: { type: boolean, description: "link nodes: another site, or a path of this host outside the admin namespace (href is then absolute); open in a new tab" }
+        ref: { $ref: "#/components/schemas/Ref" }
+        variant: { type: string, enum: [neutral, success, warning, danger, info] }
+        html: { type: string }
+        tag: { type: string }
+        class_name: { type: string, deprecated: true, description: "No longer emitted; layout hints replace raw classes" }
+        layout: { $ref: "#/components/schemas/NodeLayout" }
+        width: { type: string, enum: ["1/4", "1/3", "1/2", "2/3", "3/4", full] }
+        span: { type: integer, minimum: 1, maximum: 12 }
+        text_align: { type: string, enum: [left, center, right] }
+        spacing: { $ref: "#/components/schemas/NodeSpacing" }
+        max_width: { type: string, enum: [sm, md, lg, xl, 2xl], description: "Box: the widest it grows (max-w-*)" }
+        grow: { type: boolean, description: "Box: takes the free space of its row" }
+        tone: { type: string, enum: [muted, success, danger, warning], description: "Text or box: what the color means" }
+        nowrap: { type: boolean, description: "Text or box: keep the text on one line" }
+        align: { type: string, enum: [start, center, end], description: "Toolbar alignment" }
+        ordered: { type: boolean, description: "List: ol rather than ul" }
+        level: { type: integer, minimum: 1, maximum: 6, description: "Heading level (h1-h6)" }
+        marks:
+          type: array
+          description: "Text: inline formatting, in nesting order. Box: formatting that applies to its content (strong, em)"
+          items: { type: string, enum: [strong, em, code, underline, strike, mark, small, sub, sup] }
+        open: { type: boolean, description: "Disclosure: initially expanded" }
+        summary_nodes:
+          type: array
+          description: "Disclosure: the always-visible summary line (inline nodes)"
+          items: { $ref: "#/components/schemas/Node" }
+        title: { type: string, nullable: true }
+        children:
+          type: array
+          items: { $ref: "#/components/schemas/Node" }
+        headers:
+          type: array
+          items: { type: string }
+        rows:
+          type: array
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/AttributeRow"
+              - type: array
+                items: { $ref: "#/components/schemas/Node" }
+    NodeSpacing:
+      type: object
+      description: "Margin around a box or toolbar in 0.25rem steps; a side that is absent has none"
+      properties:
+        top: { type: integer, minimum: 1, maximum: 8 }
+        right: { type: integer, minimum: 1, maximum: 8 }
+        bottom: { type: integer, minimum: 1, maximum: 8 }
+        left: { type: integer, minimum: 1, maximum: 8 }
+    NodeLayout:
+      type: object
+      required: [display]
+      properties:
+        display: { type: string, enum: [flex, grid] }
+        direction: { type: string, enum: [row, column] }
+        breakpoint: { type: string, enum: [sm, md, lg, xl, null], nullable: true }
+        gap: { type: integer, minimum: 0, maximum: 8 }
+        wrap: { type: boolean }
+        align: { type: string, enum: [start, center, end, stretch, baseline] }
+        justify: { type: string, enum: [start, center, end, between] }
+        columns: { type: integer, minimum: 1, maximum: 12 }
+        base_columns: { type: integer, minimum: 1, maximum: 12 }
+    AttributeRow:
+      type: object
+      required: [label, value]
+      properties:
+        label: { type: string }
+        value:
+          type: array
+          items: { $ref: "#/components/schemas/Node" }
