@@ -68,7 +68,7 @@ module ReactiveAdmin
     end
 
     def collected(action, &)
-      Provenance.with_scope { Degradation.with_collection(resource: active_admin_config.resource_name, action:, &) }
+      Provenance.with_scope { Degradation.with_collection(resource: active_admin_config.resource_name, action:, controller: self, &) }
     end
 
     def render_body(body)

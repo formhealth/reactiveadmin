@@ -28,7 +28,7 @@ module ReactiveAdmin
 
     # What the content's forms recorded, to know how a write to one of them is shaped.
     def forms(controls_only: false)
-      Degradation.with_collection(resource: @config.resource_name, action: "page") { render_content(controls_only:) }
+      Degradation.with_collection(resource: @config.resource_name, action: "page", controller: @controller) { render_content(controls_only:) }
       Array(@forms&.recorded)
     end
 

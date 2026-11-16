@@ -9,7 +9,7 @@ module ReactiveAdmin
     KEY = :reactiveadmin_degradation
     STATE = ActiveSupport::IsolatedExecutionState
 
-    Collector = Struct.new(:resource, :action, :entries, :tallies)
+    Collector = Struct.new(:resource, :route_key, :action, :entries, :tallies, :controller)
 
     module_function
 
@@ -35,9 +35,11 @@ module ReactiveAdmin
     # Structural location under the current action, e.g. `show/div[0]/ul[1]`.
     def where(*steps) = [STATE[KEY]&.action, *steps].compact.join("/")
 
-    def with_collection(resource: nil, action: nil)
+    # `controller` is the request's own, so the audit envelope can be joined to it (channel, client id, request and correlation ids).
+    def with_collection(resource: nil, action: nil, controller: nil)
       previous = STATE[KEY]
-      collector = STATE[KEY] = Collector.new(resource&.to_s, action&.to_s, Set.new, {})
+      route_key = resource.respond_to?(:route_key) ? resource.route_key : resource&.to_s
+      collector = STATE[KEY] = Collector.new(resource&.to_s, route_key, action&.to_s, Set.new, {}, controller)
       yield.tap { collector.tallies.each { |kind, t| instrument({kind:, where: t[:where]}, collector) } }
     ensure
       STATE[KEY] = previous
@@ -49,7 +51,8 @@ module ReactiveAdmin
     end
 
     def instrument(entry, collector)
-      ActiveSupport::Notifications.instrument(EVENT, resource: collector&.resource, action: collector&.action, **entry.slice(:kind, :where))
+      payload = {resource: collector&.resource, action: collector&.action, **entry.slice(:kind, :where)}
+      Audit.instrument("degraded", collector&.controller, payload, payload.merge(resource: collector&.route_key, user_id: nil))
     end
   end
 end

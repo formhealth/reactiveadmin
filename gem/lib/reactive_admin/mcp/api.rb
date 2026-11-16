@@ -39,6 +39,7 @@ module ReactiveAdmin
         env.merge!(@request.env.slice(*FORWARDED))
         env.merge!("HTTP_HOST" => @request.host_with_port, "SERVER_NAME" => @request.host, "SERVER_PORT" => @request.port.to_s,
           "rack.url_scheme" => @request.scheme, "SCRIPT_NAME" => @request.script_name, "HTTP_X_REQUEST_ID" => @request.request_id, "HTTP_AUTHORIZATION" => @request.authorization, ENV_KEY => true)
+        env[Audit::CORRELATION_ENV] = @request.request_id
         env["HTTPS"] = "on" if @request.ssl?
         env.compact
       end

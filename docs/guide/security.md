@@ -453,7 +453,9 @@ The gem publishes two events for writes from a signed-in user:
 - `write.reactiveadmin` after a write succeeds and its transaction commits.
 - `write_rejected.reactiveadmin` when the API rejects a write, with the `code` of the error.
 
-Both carry `resource`, `action`, `id`, and `user_id`. A rejection also carries the `code`, including `api_denied`, with the `guard`, for what an `api` guard refused (see [API guards](#api-guards)). The `id` is included only when it is a plain identifier. The events never carry params or values.
+Both carry `resource`, `action`, `id`, and `user_id`. A rejection also carries the `code`, including `api_denied`, with the `guard`, for what an `api` guard refused (see [API guards](#api-guards)). The `id` is included only when it is a plain identifier. A batch action also carries `record_ids`, the selected ids that are plain identifiers. The events never carry params or values.
+
+To tell an agent's writes apart, or to join them to the tool call that made them, use the [audit envelope](#audit-envelope).
 
 ## Lookup audit
 
@@ -479,6 +481,52 @@ ActiveSupport::Notifications.subscribe("lookup.reactiveadmin") do |*, payload|
   Analytics.track(user_id: payload[:user_id], event: "Admin Lookup", properties: payload.slice(:resource, :field, :kind, :target, :result_count))
 end
 ```
+
+## Audit envelope
+
+Each event above is also published as one `audit.reactiveadmin` event with a single shape, so one subscriber can feed your audit trail. The per-kind events don't change. The envelope adds what they lack: the request, the channel, the MCP client, a correlation id, the ids of a batch, record views, and UI switches.
+
+Subscribe with `ReactiveAdmin.on_audit`. It yields a frozen `ReactiveAdmin::Audit::Event` and returns the subscriber, for `ActiveSupport::Notifications.unsubscribe`. Plain subscribers to `audit.reactiveadmin` get the same fields as a frozen hash.
+
+| Field | Value |
+| --- | --- |
+| `kind` | `write`, `write_rejected`, `export`, `value_viewed`, `lookup`, `mcp_call`, `degraded`, `view`, or `ui_switch`. |
+| `user_id` | The signed-in user. `nil` for `degraded`. |
+| `resource` | The route key, or `nil`. |
+| `action` | The controller action (`create`, `batch_action`, `show`), the MCP tool's verb or `run_action`'s action, or `nil`. |
+| `record_ids` | Ids as strings. Every selected id for a batch action. Empty when no record applies. |
+| `channel` | `session`, `token` (a bearer token on the API), or `mcp` (the MCP endpoint and the requests its tools make). `nil` outside a request. |
+| `client_id` | The `client_id` your bearer block returned, or `nil`. |
+| `request_id` | The request's `X-Request-Id`. |
+| `correlation_id` | The same as `request_id`, except on the requests an MCP tool makes, where it is the id of the tool call's request. A `write` with `channel: "mcp"` shares it with its `mcp_call`, and so does a `degraded` raised while a tool's request renders. |
+| `outcome` | `ok`, `rejected` (`write_rejected`), `error` (a failed `mcp_call`), or `degraded`. |
+| `at` | When the event was published. |
+| `details` | What the kind adds, ids and names only: `code` and `guard` for a rejection, `field` for a value view, `filters`, `scope` and `row_count` for an export, `field`, `type`, `target` and `result_count` for a lookup, `tool`, `http_status` and `duration_ms` for an MCP call, `type` and `where` for a degradation, `from` and `to` for a UI switch. |
+
+The envelope never carries params, values, search terms, display names or emails. A subscriber that raises is logged and never fails the request.
+
+Two kinds exist only in the envelope:
+
+- **`view`**, with `config.audit_views = true` (default `false`): one event per API `show` or `edit` read that succeeds, including one whose override renders JSON itself, from the client, a token, or an MCP tool. Classic pages aren't covered; audit them in your own controllers.
+- **`ui_switch`**: a user moved between the classic and the new admin. The switch is the browser writing the `reactiveadmin_ui` cookie, so the server notices it on the next signed-in request and keeps a signed, `HttpOnly` `reactiveadmin_ui_seen` cookie to remember the UI it last saw for that user. A browser that never chose gets no cookie. Right after you upgrade, a user already on the new admin is recorded once as switching from classic. Concurrent requests that carry the old marker, such as two tabs reloading together, can each record the same switch; dedupe on `user_id`, `from` and `to` within a few seconds if that matters.
+
+To write every event to a table:
+
+```ruby
+# create_table :admin_audit_events do |t|
+#   t.string :kind, null: false
+#   t.bigint :user_id
+#   t.string :resource, :action, :channel, :client_id, :request_id, :correlation_id, :outcome
+#   t.json :record_ids, :details
+#   t.datetime :at, null: false
+# end
+ReactiveAdmin.on_audit do |event|
+  next if event.kind == "degraded" # metrics, not an audit
+  AdminAuditEvent.create!(event.to_h)
+end
+```
+
+The subscriber runs in the request, after the write's transaction commits. Enqueue a job instead if inserting is slow.
 
 ## Error codes
 
@@ -520,6 +568,7 @@ The gem sends no analytics and no client-side error reports.
 - **No new data path.** The shell is a static page, the same for everyone, and the middleware that serves it knows nothing of users, resources or authorization. Every record still comes through the API, with its authorization, exposure, `api` guards and audit.
 - **A preference, not a credential.** The `reactiveadmin_ui` cookie holds `new` or `classic`, readable by scripts, with `SameSite=Lax`. Setting it by hand only chooses which UI renders. `ui.available` gates the interface; a user who isn't available is sent back to classic by the client, and the API doesn't depend on it.
 - **Failure means classic.** `ui.available` defaults to nobody, and a callable that raises counts as unavailable. Without a client build, the middleware does nothing.
+- **Switches are audited.** A switch publishes an `audit.reactiveadmin` event of kind `ui_switch`; see [Audit envelope](#audit-envelope).
 - **Public assets, uncached shell.** The built files are public and hold no secrets. The shell is `Cache-Control: no-store` and carries your app's default response headers and CSP nonce.
 
 ## Planned
@@ -543,6 +592,8 @@ Before you expose a resource that holds sensitive data:
 - [ ] Custom actions have an authorization rule, and `authorize_custom_actions` is `true`.
 - [ ] Your error reporter and log filters cover the sensitive data that can reach them.
 - [ ] `filter_parameter_logging` covers the sensitive parameters that can reach the API.
-- [ ] Your audit trail subscribes to `value_viewed.reactiveadmin` and `write.reactiveadmin`, and to `write_rejected.reactiveadmin` if you audit rejections.
+- [ ] Your audit trail subscribes with `ReactiveAdmin.on_audit`, or to `value_viewed.reactiveadmin` and `write.reactiveadmin`, and to `write_rejected.reactiveadmin` if you audit rejections.
+- [ ] `audit_views` is `true` if you must record who opened which record through the API.
+- [ ] If you allow MCP, your audit keeps `channel`, `client_id` and `correlation_id`, so an agent's writes can be traced to its tool calls.
 - [ ] `sensitive_resources` names every resource whose display name identifies an author, and your audit subscribes to `lookup.reactiveadmin`.
 - [ ] Background requests are handled in `on_background_request`, if your audit needs it.

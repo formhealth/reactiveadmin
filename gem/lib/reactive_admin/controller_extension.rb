@@ -71,8 +71,8 @@ module ReactiveAdmin
       record = AA.resource(self)
       field = params[:field].to_s
       value = ValuePayload.fetch(self, record, field, params[:path], token: params[:token])
-      ActiveSupport::Notifications.instrument("value_viewed.reactiveadmin",
-        resource: Registry.route_key(active_admin_config), id: record.to_param.to_s, field:, user_id: ReactiveAdmin.current_user(self)&.id)
+      Audit.instrument("value_viewed", self,
+        {resource: Registry.route_key(active_admin_config), id: WriteAudit.record_id(self), field:, user_id: ReactiveAdmin.current_user(self)&.id})
       response.cache_control[:no_store] = true
       render json: {value:}, content_type: "application/json"
     rescue ValuePayload::Forbidden
@@ -84,7 +84,7 @@ module ReactiveAdmin
       raise ActiveRecord::RecordNotFound unless Registry.actions(active_admin_config).include?(:index)
 
       lookup_context.formats = [:html]
-      meta = Degradation.with_collection(resource: active_admin_config.resource_name, action: "meta") { ResourceMeta.fetch(self) }
+      meta = Degradation.with_collection(resource: active_admin_config.resource_name, action: "meta", controller: self) { ResourceMeta.fetch(self) }
       render json: meta, content_type: "application/json"
     end
 
@@ -104,6 +104,12 @@ module ReactiveAdmin
     end
 
     private
+
+    def audit_view
+      return unless ReactiveAdmin.config.audit_views && %w[show edit].include?(action_name) && response.successful?
+
+      Audit.publish(:view, self, resource: Registry.route_key(active_admin_config), id: WriteAudit.record_id(self))
+    end
 
     # Choices for a form's controls expose what the form's own action would: someone who can't open
     # `new` or `edit` doesn't get them. Filter choices only need READ.
@@ -132,7 +138,8 @@ module ReactiveAdmin
         Masking.keep_unchanged(record_params, active_admin_config) if record_params.respond_to?(:keys) && WriteGuards::GUARDED.exclude?(action_name)
         take_lock_param
       end
-      super
+      # Here rather than in render_payload so a host override that renders JSON itself is audited too.
+      super.tap { audit_view if reactiveadmin_request? }
     end
 
     # AA authorizes custom actions only through the host's own code; the API enforces the same
