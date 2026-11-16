@@ -12,12 +12,27 @@ module AaBoundary
     /\bFormtastic::/,
     /InheritedResources/,
     /\b(get|set)_resource_ivar\b|@resource_params\b/,
-    /send\(:(active_admin_config|resource|build_resource|collection|collection_before_scope|current_scope|scope_chain|apply_decorations|authorize_resource!|find_resource|scoped_collection)\b/
+    /send\(:(active_admin_config|resource|build_resource|collection|collection_before_scope|current_scope|scope_chain|apply_decorations|authorize_resource!|find_resource|scoped_collection)\b/,
+    # Arbre and Formtastic by duck typing: their methods, and the form helpers AA and Formtastic define.
+    /\b(insert_tag|current_arbre_element|input_html_options)\b|(?<!AA\.)\barbre_context\b|def (semantic|active_admin)_form_for\b/,
+    # AA's markup: class names of its components. Node types of the same name (`type: "panel"`) are the contract's.
+    /(?<!type: |when )"(panel|attributes_table|status_tag|panel_contents|nav-tabs|table_actions)"/
   ].freeze
 
-  # path (relative to gem/) => why code outside the adapter may name AA internals. Empty on purpose: add an
-  # entry only for a documented integration surface, with the reason.
-  ALLOWLIST = {}.freeze
+  # path (relative to gem/) => why code outside the adapter may name AA internals. Add an entry only for a
+  # documented integration surface, with the reason, and shrink it as code moves behind the adapter.
+  ALLOWLIST = {
+    "lib/reactive_admin/form_recorder.rb" => "An Arbre element a form block runs in, recording its inputs as it builds tags",
+    "lib/reactive_admin/index_recorder.rb" => "An Arbre element the index block runs in, recording columns through AA's renderers",
+    "lib/reactive_admin/show_payload.rb" => "Its Page is the Arbre element a show block renders into",
+    "lib/reactive_admin/page_payload.rb" => "Its Content is the Arbre element a register_page's content block renders into",
+    "lib/reactive_admin/page_forms.rb" => "Overrides the form helpers AA and Formtastic define, to record a page's forms",
+    "lib/reactive_admin/template_form.rb" => "Overrides the form helpers AA and Formtastic define, to record a template's form",
+    "lib/reactive_admin/html_nodes.rb" => "Matches AA's component class names while walking classic html",
+    "lib/reactive_admin/form_field.rb" => "Reads Formtastic's input API",
+    "lib/reactive_admin/style_sources.rb" => "Reads a traced Arbre tag's context",
+    "lib/reactive_admin/ui/helper.rb" => "Renders the classic switch as an AA panel"
+  }.freeze
 
   module_function
 
@@ -48,9 +63,10 @@ RSpec.describe "the ReactiveAdmin::AA boundary" do
   end
 
   it "recognizes internals and skips comments" do
-    ["x = ActiveAdmin::Resource", "ActiveAdmin.application", "Arbre::Element", "Formtastic::Inputs", "c.send(:get_resource_ivar)", "@controller.send(:collection)"].each do |line|
+    ["x = ActiveAdmin::Resource", "ActiveAdmin.application", "Arbre::Element", "Formtastic::Inputs", "c.send(:get_resource_ivar)", "@controller.send(:collection)",
+      "insert_tag(Holder)", "page.arbre_context.to_s", "input.input_html_options", "def semantic_form_for(*args)", 'el.classes.include?("panel")', 'tag.div(class: "panel_contents")'].each do |line|
       expect(AaBoundary.internal?(line)).to be(true), line
     end
-    ["AA.page?(config)", "  # ActiveAdmin::Page in a comment"].each { |line| expect(AaBoundary.internal?(line)).to be(false), line }
+    ["AA.page?(config)", "  # ActiveAdmin::Page in a comment", "AA.arbre_context(assigns, view)", '{type: "panel", title:}', 'when "attributes_table" then rows'].each { |line| expect(AaBoundary.internal?(line)).to be(false), line }
   end
 end
