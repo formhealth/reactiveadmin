@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { apiFetch, errorMessage } from '@/api/fetcher'
+import { ApiError, apiFetch, errorMessage } from '@/api/fetcher'
 import type { Action, ActionResult, FormResponse, PageResponse } from '@/api/generated/model'
 import { FormSkeleton } from '@/components/FormSkeleton'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import { IframeView } from '@/frame/IframeView'
 import { NodeContext, OwnFormContext, ViewQueryContext, useViewQuery } from '@/nodes/context'
 import { NodeList } from '@/nodes/Node'
 import { customPages } from './customPages'
-import { presentationOf } from './presentation'
+import { fallbackMode, presentationOf } from './presentation'
 
 type Container = 'page' | 'dialog' | 'sheet'
 
@@ -86,10 +86,12 @@ function PageForm({ response, label, classicHref, ctx, onResult, onClose }: Page
   )
 }
 
+const isUnsupported = (error: unknown) => error instanceof ApiError && error.status === 501 && error.code === 'unsupported'
+
 // `native`: the action's template was Formtastic-only, so its path answers with a FormResponse (or, with no form at
 // all, a PageResponse). What a search sends back is shown in its place until the page refetches (after a row action,
 // say), as classic redirects to the form.
-function NativeView({ action, path, container, resource, id, onResult, onClose }: BodyProps & { path: string }) {
+function NativeView({ action, path, container, resource, id, onResult, onClose, onUnsupported }: BodyProps & { path: string; onUnsupported?: (search: string) => void }) {
   // A GET form replaces the view's query: in the address bar on a page, in this view's own state in an overlay.
   const routed = useViewQuery()
   const [held, setHeld] = useState('')
@@ -112,6 +114,7 @@ function NativeView({ action, path, container, resource, id, onResult, onClose }
   const [answer, setAnswer] = useState<{ response: FormResponse; at: number; count: number }>()
 
   const fail = useEffectEvent((cause: Error) => {
+    if (onUnsupported && isUnsupported(cause)) return onUnsupported(query.search)
     toast.error(errorMessage(cause))
     onClose()
   })
@@ -163,23 +166,41 @@ function NativeView({ action, path, container, resource, id, onResult, onClose }
   return <FormDialog key={key} open response={shown} submitLabel={label} send={send(shown)} onDone={sent} onClose={onClose} classicHref={classicHref} />
 }
 
-// One container per ladder mode; pages, dialogs and sheets differ only in chrome.
-export function ActionViewBody(props: BodyProps) {
-  const { action, resource, id, container, onClose } = props
-  const view = action.view
-  const path = view?.path ?? action.href ?? undefined
+function ClassicView({ action, mode, path, container, onClose }: Pick<BodyProps, 'action' | 'container' | 'onClose'> & { mode: 'frame' | 'iframe'; path?: string }) {
   const bare = container !== 'page'
-  if (!view) return null
-  if (view.mode === 'native' && view.path) return <NativeView {...props} path={view.path} />
-  if (view.mode === 'iframe' && path) return <IframeView src={path} title={action.label} bare={bare} onLeave={onClose} />
-  const Custom = view.mode === 'custom' && view.custom_key ? customPages[view.custom_key] : undefined
-  if (Custom) return <Custom action={action} resource={resource} id={id} onClose={onClose} />
-  // `custom` without a registered component falls back to the classic page.
+  if (mode === 'iframe') return path ? <IframeView src={path} title={action.label} bare={bare} onLeave={onClose} /> : null
   return (
     <FrameBoundary src={path} title={action.label}>
       <FrameView src={path} title={action.label} bare={bare} autoFocus onLeave={onClose} />
     </FrameBoundary>
   )
+}
+
+// A 501 means the page is classic-only: reopen it over the action's href, with the query the native request carried. The
+// fallback never comes back here, so it can't loop. Outside a page it needs the overlay chrome NativeView would have drawn.
+function NativeWithFallback(props: BodyProps & { path: string }) {
+  const { action, container, onClose } = props
+  const [fallback, setFallback] = useState<string>()
+  if (fallback === undefined || !action.href)
+    return <NativeView {...props} onUnsupported={action.href ? (search) => setFallback(withSearch(action.href!, search)) : undefined} />
+  const sheet = presentationOf(action) !== 'dialog'
+  const classic = <ClassicView action={action} mode={fallbackMode(action)} path={fallback} container={container === 'page' ? 'page' : sheet ? 'sheet' : 'dialog'} onClose={onClose} />
+  return container === 'page' ? classic : <OverlayChrome action={action} sheet={sheet} onClose={onClose}>{classic}</OverlayChrome>
+}
+
+// One container per ladder mode; pages, dialogs and sheets differ only in chrome.
+export function ActionViewBody(props: BodyProps) {
+  const { action, resource, id, container, onClose } = props
+  const view = action.view
+  const path = view?.path ?? action.href ?? undefined
+  if (!view) return null
+  // Keyed by path: another action on the same route makes its own fallback decision.
+  if (view.mode === 'native' && view.path) return <NativeWithFallback key={view.path} {...props} path={view.path} />
+  if (view.mode === 'iframe' && path) return <ClassicView action={action} mode="iframe" path={path} container={container} onClose={onClose} />
+  const Custom = view.mode === 'custom' && view.custom_key ? customPages[view.custom_key] : undefined
+  if (Custom) return <Custom action={action} resource={resource} id={id} onClose={onClose} />
+  // `custom` without a registered component falls back to the classic page.
+  return <ClassicView action={action} mode="frame" path={path} container={container} onClose={onClose} />
 }
 
 type OverlayProps = { action: Action; ctx: { resource?: string; id?: string }; onResult: BodyProps['onResult']; onClose: () => void }
@@ -189,6 +210,14 @@ export function ActionViewOverlay({ action, ctx, onResult, onClose }: OverlayPro
   const sheet = presentation !== 'dialog' && action.view?.mode !== 'native'
   const body = <ActionViewBody action={action} {...ctx} container={sheet ? 'sheet' : 'dialog'} onResult={onResult} onClose={onClose} />
   if (action.view?.mode === 'native') return body
+  return (
+    <OverlayChrome action={action} sheet={sheet} onClose={onClose}>
+      {body}
+    </OverlayChrome>
+  )
+}
+
+function OverlayChrome({ action, sheet, onClose, children }: { action: Action; sheet: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!sheet)
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -197,7 +226,7 @@ export function ActionViewOverlay({ action, ctx, onResult, onClose }: OverlayPro
             <DialogTitle>{action.label}</DialogTitle>
             <DialogDescription className="sr-only">{action.label}</DialogDescription>
           </DialogHeader>
-          {body}
+          {children}
         </DialogContent>
       </Dialog>
     )
@@ -208,7 +237,7 @@ export function ActionViewOverlay({ action, ctx, onResult, onClose }: OverlayPro
           <SheetTitle>{action.label}</SheetTitle>
           <SheetDescription className="sr-only">{action.label}</SheetDescription>
         </SheetHeader>
-        <div className="p-4">{body}</div>
+        <div className="p-4">{children}</div>
       </SheetContent>
     </Sheet>
   )
