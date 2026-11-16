@@ -8,6 +8,7 @@ ActiveAdmin.register AdminUser do
 
   api :deny, only: [:create, :destroy, :impersonate, :sweep, :promote]
   api :deny, attributes: [:role, :rating, :bio], reason: "Roles and ratings are changed in the classic admin"
+  reactive { mcp :full }
 
   batch_action :promote do |ids|
     redirect_to collection_path, notice: "Promoted #{ids.size}"

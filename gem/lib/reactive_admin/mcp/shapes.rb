@@ -86,7 +86,11 @@ module ReactiveAdmin
       # What the API marks `api_denied` (an action, a form field) can't run through it, so it isn't offered.
       def usable(items) = Array(items).reject { it["api_denied"] }
 
-      def summary(key) = ApiGuards.summary(Registry.find(key.to_s))
+      # Built outside the dispatched request, so in its channel explicitly.
+      def summary(key)
+        config = Registry.find(key.to_s) or return
+        ApiGuards.with_channel(:mcp) { ApiGuards.summary(config) }
+      end
 
       # A registered guard decides per request, so what it covers is offered with a warning.
       def guarded(guards) = guards&.transform_values { "may be refused (#{it})" }

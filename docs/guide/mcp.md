@@ -48,7 +48,7 @@ The block runs on every request, so a revoked token stops working at once. Keep 
 
 ### 2. Require scopes
 
-When the block returns `scopes`, reads need `config.mcp.read_scope` (default `admin:read`) and writes need `config.mcp.write_scope` (default `admin:write`). GET and HEAD requests are reads, except for a GET custom action the registration lists in `reactive { unsafe_gets ... }`. This applies to the whole API, not only `_mcp`. A token without the needed scope gets `403` with code `insufficient_scope` and a `WWW-Authenticate: Bearer error="insufficient_scope", scope="admin:write"` header. `tools/list` omits the write tools for a token that lacks the write scope, and `tools/call` answers them as unknown tools. `run_action` runs only the member, collection and batch actions the resource declares, with a method the action declares.
+When the block returns `scopes`, reads need `config.mcp.read_scope` (default `admin:read`) and writes need `config.mcp.write_scope` (default `admin:write`). GET and HEAD requests are reads, except for a GET custom action the registration lists in `reactive { unsafe_gets ... }`. This applies to the whole API, not only `_mcp`. A token without the needed scope gets `403` with code `insufficient_scope` and a `WWW-Authenticate: Bearer error="insufficient_scope", scope="admin:write"` header. `tools/list` omits the write tools for a token that lacks the write scope, and `tools/call` answers them as unknown tools. Scopes don't open a resource to writes: its [mode](#resource-modes) must as well. `run_action` runs only the member, collection and batch actions the resource declares, with a method the action declares.
 
 Grant both scopes for an agent that edits, because a write tool also reads the form first. A token whose block returns a bare user has no scope claim, so no scope is required of it. Set `read_scope` or `write_scope` to `nil` to stop requiring one.
 
@@ -87,7 +87,17 @@ end
 
 `enabled` is `true`, `false`, or a callable that gets the authenticated user. When it is `false` for everyone, or the callable returns false for this user, the endpoint answers `404`. A plain `false` answers before authentication, so a disabled deployment reveals nothing.
 
-### 5. Origin
+### 5. Choose what agents may change
+
+Agents only read until you opt a resource in. Out of the box every resource and page is `:read_only` through MCP, whatever the token's scopes. See [Resource modes](#resource-modes).
+
+```ruby
+ActiveAdmin.register Post do
+  reactive { mcp :full }
+end
+```
+
+### 6. Origin
 
 A browser that calls `_mcp` sends an `Origin` header. The endpoint refuses any origin that is not this site's own or in `config.mcp.allowed_origins`, with `403`, which blocks DNS-rebinding attacks. Requests with no `Origin`, such as Claude Code and other non-browser clients, pass. Keep your `config.hosts` list tight as well.
 
@@ -115,7 +125,7 @@ The tools are generic: a dozen that take a resource key, not one per operation. 
 | `list_records` | Records as typed values. `filters` takes declared filter params, plus `scope`, `order`, `page` and `per_page`. | read-only |
 | `get_record` | One record's fields and sections as text, and its custom actions. | read-only |
 | `get_page` | A custom page as text, with its actions. A page with a filter (GET) form lists its fields as `query_fields`; `query` takes values for them and returns the results. | read-only |
-| `get_form` | The new or edit form: each field's `key`, control, requirement, value and options, and the `lock`. | read-only |
+| `get_form` | The new or edit form: each field's `key`, control, requirement, value and options, and the `lock`. Only on resources whose mode allows the write. | read-only |
 | `field_options` | Typeahead for a filter or form field. | read-only |
 | `reveal_value` | The full value behind an `expand_path` (a long text or a json value shown as a summary). Audited as a view. | read-only |
 | `create_record` | Creates a record from `values` keyed by form field keys. | additive write |
@@ -132,6 +142,36 @@ Tool results are compact JSON. Layout is reduced to text, `json` and long text v
 Buttons that navigate the browser with a POST (see [Custom views](custom-views.md#navigating-post-buttons)) are never offered to MCP: the page has no node or action for them.
 
 A nested resource needs its parent: pass `parent_id`. `list_resources` shows `nested_under`.
+
+### Resource modes
+
+Each resource and page has an MCP mode: `config.mcp.default` (`:read_only` unless you change it), or its own `reactive { mcp ... }`.
+
+| Mode | Agents get |
+| --- | --- |
+| `:read_only` | The read tools: `describe_resource`, `list_records`, `get_record`, `reveal_value`, `field_options` for filters, and `get_page`. `run_action` reaches GET and HEAD actions, which are reads, except any listed in `unsafe_gets`, and the actions you list; an action declared for both GET and POST is judged by the verb of the call, so its GET runs and its POST is refused. No forms, no writes. |
+| `:none` | Nothing. The resource or page is left out of `list_resources`, and every tool answers it as an unknown resource. |
+| `:full` | Everything the `api` guards and the policy allow, as before modes existed. |
+
+```ruby
+ActiveAdmin.register Order do
+  reactive { mcp :read_only, actions: [:approve, :refund_batch] } # or `mcp actions: [...]`
+end
+
+ActiveAdmin.register Patient do
+  reactive { mcp :none }
+end
+```
+
+`actions:` names custom member, collection and batch actions that agents may run on a read-only resource. It doesn't open `create_record`, `update_record`, `delete_record` or `get_form`, even for a name like `:destroy` that a batch action shares with a standard one: `actions: [:destroy]` lets agents run the batch delete, not `delete_record`. Use `:full` for those. Pages have no `run_action`.
+
+`tools/list` leaves out any tool that no resource's mode offers: with no `:full` resource, the create, update, delete and form tools aren't listed, and `tools/call` answers them as unknown tools, like a write tool a token's scopes don't cover. A tool that is listed but called on a resource whose mode excludes it fails with the same "Unknown resource" tool error as a resource that doesn't exist, and changes nothing. `list_resources`, `describe_resource` and `get_record` show only what the mode leaves, so a read-only resource's `can` is `index` and `show`.
+
+The API enforces the mode too, not only the tools: the requests MCP tools dispatch carry `reactiveadmin.mcp`, and the API refuses what the mode excludes with `403` `api_denied`, like an `api` guard. The React client and other token clients are unaffected.
+
+A mode only narrows what the `api` guards leave open, and an `api` guard only narrows what the mode allows. Neither widens the other: `mcp :full` doesn't reopen an action `api :deny` reserves, and listing an action in `actions:` doesn't run it past a guard. The tightest of the two wins.
+
+`rake reactiveadmin:doctor` lists each resource's mode with the tools and actions it leaves agents, and warns about `:full` on a resource in `sensitive_resources` or with masked attributes. See [Doctor](doctor.md).
 
 ### API guards
 

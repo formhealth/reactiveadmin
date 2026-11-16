@@ -22,6 +22,8 @@ module ReactiveAdmin
       attr_accessor :max_response_bytes, :max_per_page
       # Shown to the agent by `initialize`.
       attr_accessor :instructions
+      # What agents get of a resource or page without `reactive { mcp ... }`: :read_only, :none or :full.
+      attr_reader :default
 
       def initialize
         @enabled = false
@@ -30,6 +32,13 @@ module ReactiveAdmin
         @allowed_origins = []
         @max_response_bytes = 20_000
         @max_per_page = 25
+        @default = :read_only
+      end
+
+      def default=(mode)
+        raise ArgumentError, "mcp.default must be one of #{ReactiveAdmin::Mcp::Access::MODES.map(&:inspect).join(", ")}" unless ReactiveAdmin::Mcp::Access::MODES.include?(mode)
+
+        @default = mode
       end
 
       def enabled_for?(user) = enabled.respond_to?(:call) ? !!enabled.call(user) : !!enabled

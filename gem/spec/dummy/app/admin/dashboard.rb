@@ -1,5 +1,6 @@
 ActiveAdmin.register_page "Dashboard" do
   menu priority: 1, label: "Dashboard"
+  reactive { mcp :full }
 
   content title: "Dashboard" do
     text_node reactiveadmin_ui_toggle

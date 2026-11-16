@@ -6,4 +6,5 @@ ActiveAdmin.register Locker do
   filter :label
 
   api :deny, only: :edit
+  reactive { mcp :full }
 end

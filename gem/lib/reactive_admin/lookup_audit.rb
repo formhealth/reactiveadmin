@@ -10,6 +10,10 @@ module ReactiveAdmin
       config = model && AA.resource_for(Registry.namespace, model)
       return false unless config
 
+      sensitive_resource?(config)
+    end
+
+    def sensitive_resource?(config)
       config.reactive_options.fetch(:sensitive) { ReactiveAdmin.config.sensitive_resources.map(&:to_s).include?(Registry.route_key(config)) }
     end
 

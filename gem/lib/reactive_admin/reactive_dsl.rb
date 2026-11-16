@@ -78,6 +78,10 @@ module ReactiveAdmin
     # audited and confirmed in MCP, and `api :read_only` refuses them.
     def unsafe_gets(*actions) = (@options[:unsafe_gets] ||= []).concat(actions.map(&:to_sym))
 
+    # What agents get through MCP: `mcp :full`, `mcp :none`, or `mcp :read_only, actions: [:approve]`
+    # (`mcp actions: [...]` for short). Defaults to `config.mcp.default`; see Mcp::Access.
+    def mcp(mode = nil, actions: nil) = Mcp::Access.declare(@config, mode, actions:)
+
     # The same as `api` outside the block.
     def api(guard = nil, **) = ApiGuards.declare(@config, guard, **)
 

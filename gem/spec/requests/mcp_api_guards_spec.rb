@@ -140,6 +140,36 @@ RSpec.describe "MCP and the api guards", type: :request do
     end
   end
 
+  describe "with the MCP modes" do
+    def with_mode(mode = nil, **options)
+      config = ReactiveAdmin::Registry.find("admin_users")
+      saved = config.reactive_options[:mcp]
+      ReactiveAdmin::Mcp::Access.declare(config, mode, **options)
+      yield
+    ensure
+      config.reactive_options[:mcp] = saved
+    end
+
+    it "never opens what a guard reserves: the guard's refusal stands whatever the mode lists" do
+      expect_any_instance_of(Admin::AdminUsersController).not_to receive(:impersonate)
+
+      with_mode(actions: [:impersonate]) do
+        call("run_action", {resource: "admin_users", action: "impersonate", kind: "member", id: other.id.to_s, confirm: true})
+
+        refused(url: "/admin/admin_users/#{other.id}")
+      end
+    end
+
+    it "narrows what the guards leave open" do
+      with_mode(:read_only) do
+        expect(tool("list_resources")["resources"].find { it["key"] == "admin_users" }["can"]).to eq(%w[index show])
+        call("run_action", {resource: "admin_users", action: "greet", kind: "member", id: other.id.to_s, confirm: true})
+
+        expect(@result).to include("Unknown resource \"admin_users\" for this tool")
+      end
+    end
+  end
+
   describe "ahead of the guard" do
     it "doesn't offer a token without the write scope the action tool, so nothing reveals the reservation" do
       read_only = token_for(admin, scopes: ["admin:read"])

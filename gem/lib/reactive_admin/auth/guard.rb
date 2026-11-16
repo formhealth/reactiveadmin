@@ -27,7 +27,7 @@ module ReactiveAdmin
       def process_action(*)
         return super unless reactiveadmin_request?
 
-        ApiGuards::Current.channel = token_request? ? :token : :session
+        ApiGuards::Current.channel = ApiGuards.channel_of(request)
         unless token_request?
           return super unless token_only?
 

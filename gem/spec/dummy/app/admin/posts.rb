@@ -1,5 +1,6 @@
 ActiveAdmin.register Post do
   menu parent: "Content", priority: 1
+  reactive { mcp :full }
 
   permit_params :title, :body, :status, :published_at, :author_id, :category_id, :featured,
     metadata: {}, tag_ids: [], comments_attributes: [:id, :body, :approved, :_destroy]
