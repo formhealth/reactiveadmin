@@ -32,10 +32,85 @@ module ReactiveAdmin
       end
     end
 
-    # Distinct values of a plain column.
-    def column(klass, name, view)
-      scope = klass.unscope(:order).where.not(name => nil).distinct.select(name).reorder(name)
-      records(OptionSource.implicit(scope, label: name, value: name), view, scope, policy: false)
+    # Distinct values of a plain column, among the rows the user may read: the resource's own relation, under its
+    # policy scope, so the values of rows the index hides aren't listed. Read through a derived table, so the
+    # relation's includes and joins don't meet the distinct select. Its order is kept only where a
+    # limit or offset makes it pick the rows; a DISTINCT one keeps its own projection, which Postgres
+    # requires to hold its ordering columns. One that omits both the column and part of the key can't be tied
+    # back to its rows (an unresolved key column binds to the outer table and lists every row), so it offers nothing.
+    def column(relation, name, view)
+      readable = Authorizer.for(view.controller).scope(relation)
+      klass = relation.klass
+      attribute = klass.arel_table[name]
+      keys = Array(klass.primary_key)
+      rows =
+        if !(readable.limit_value || readable.offset_value) then readable.unscope(:order).reselect(attribute)
+        elsif !readable.distinct_value then bounded_rows(readable, attribute, name)
+        elsif projecting?(readable, name) then readable
+        elsif keys.any? && projecting?(readable, *keys) then rejoin(readable, keys)
+        else return Choices.for([], view)
+        end
+      scope = bare(klass).from(rows, klass.table_name).where.not(name => nil).distinct.reselect(name).reorder(name)
+      records(OptionSource.new(nil, scope, label: name, value: name, search: name), view, scope, policy: false, by_primary_key: false)
+    end
+
+    COLUMN = /\A(?:["`]?\w+["`]?\.)?(?:["`]?\w+["`]?|\*)\z/
+
+    # Whether the relation is proven to project the named columns of its own table. Only bare column
+    # references count; any other expression is opaque, so a name inside it proves nothing, and one
+    # aliased to a name would shadow that column in the derived table.
+    def projecting?(relation, *names)
+      return true if relation.select_values.empty?
+
+      items = relation.select_values.flat_map do
+        if it.respond_to?(:relation) then ["#{it.relation.name}.#{it.name}"]
+        elsif it.is_a?(Arel::Nodes::As) then ["#{it.left.to_sql} AS #{it.right.to_sql}"]
+        else split_top_level(it.to_s)
+        end
+      end.map(&:strip)
+      bare, expressions = items.partition { COLUMN.match?(it) }
+      return false if expressions.any? { names.map(&:to_s).include?(it[/\s["`]?(\w+)["`]?\z/, 1]) }
+
+      projected = bare.map { it.delete('"`').delete_prefix("#{relation.klass.table_name}.") }
+      projected.include?("*") || names.all? { projected.include?(it.to_s) }
+    end
+
+    # Commas inside parentheses or quotes belong to an expression. A doubled quote closes and reopens, so
+    # an escaped one stays inside its string.
+    def split_top_level(sql)
+      depth = 0
+      quote = nil
+      sql.each_char.with_object([+""]) do |char, parts|
+        if quote then quote = nil if char == quote
+        elsif "'\"`".include?(char) then quote = char
+        elsif char == "(" then depth += 1
+        elsif char == ")" then depth -= 1
+        end
+        (char == "," && depth.zero? && !quote) ? parts << +"" : parts.last << char
+      end
+    end
+
+    # A bounded relation keeps any aliases its order refers to, so the column is added to its projection
+    # rather than replacing it. It goes in under its own name and is renamed outside, because the
+    # projection may already hold it (`posts.*, ...`) and Postgres rejects the duplicate.
+    def bounded_rows(relation, attribute, name)
+      return relation.reselect(attribute) if relation.select_values.empty?
+      return relation if projecting?(relation, name)
+
+      klass = relation.klass
+      bare(klass).from(relation.select(attribute.as("reactive_admin_option")), klass.table_name).select(klass.arel_table["reactive_admin_option"].as(name.to_s))
+    end
+
+    # The class's table with no default scope or inheritance predicate: a derived table may not carry the type column.
+    # The relations it wraps already apply them.
+    def bare(klass) = klass.unscoped.unscope(where: klass.inheritance_column)
+
+    # A bounded DISTINCT projection that omits the column: its chosen rows, read back from the table by key.
+    def rejoin(relation, keys)
+      klass = relation.klass
+      keys = keys.map { klass.arel_table[it] }
+      chosen = bare(klass).from(relation, klass.table_name).select(*keys).arel
+      klass.unscoped.where(Arel::Nodes::In.new(Arel::Nodes::Grouping.new(keys), chosen))
     end
 
     def path(config, field, context, id: nil, parent_id: nil)
@@ -44,8 +119,9 @@ module ReactiveAdmin
 
     # Varies by everything an options list can depend on, including who is asking.
     def cache_key(config, context, field, view, id: nil, parent_id: nil)
-      who = ReactiveAdmin.user_fingerprint(view.controller)
-      ["reactiveadmin/options", Registry.route_key(config), context, field, parent_id, id, who].compact.join("/")
+      controller = view.controller
+      who = [ReactiveAdmin.current_user(controller)&.id, ReactiveAdmin.user_fingerprint(controller)].compact.join(":")
+      ["reactiveadmin/options", Registry.route_key(config), context, field, parent_id, id, who.presence].compact.join("/")
     end
 
     def option(label, value, hint: nil) = {label: CGI.unescapeHTML(label.to_s), value: value.to_s, hint: hint&.to_s}.compact
@@ -61,7 +137,7 @@ module ReactiveAdmin
 
     def call(method, record) = method.respond_to?(:call) ? method.call(record) : record.public_send(method)
 
-    def records(source, view, scope, policy:) = Records.new(scope, view, source:, policy: policy && source.policy?)
+    def records(source, view, scope, policy:, **) = Records.new(scope, view, source:, policy: policy && source.policy?, **)
 
     def pairs(collection, view, label, value)
       Pairs.new(collection.is_a?(Hash) ? collection.to_a : Array(collection).map { pair(it, view, label, value) })
@@ -127,8 +203,9 @@ module ReactiveAdmin
     end
 
     class Records
-      def initialize(scope, view, source:, policy: false)
+      def initialize(scope, view, source:, policy: false, by_primary_key: true)
         @relation = scope
+        @by_primary_key = by_primary_key
         @view = view
         @source = source
         @policy = policy
@@ -193,7 +270,7 @@ module ReactiveAdmin
       def search_columns = @search_columns ||= Search.columns_for(klass, @source, label_column:)
 
       def by_columns(term, limit, offset)
-        Search.new(ordered, columns: search_columns, value_column:).call(term, limit:, offset:)
+        Search.new(ordered, columns: search_columns, value_column:, by_primary_key: @by_primary_key).call(term, limit:, offset:)
       end
 
       # No column to search: match computed labels in Ruby, over a bounded window.

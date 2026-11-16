@@ -19,6 +19,30 @@ RSpec.describe ReactiveAdmin::Authorizer do
     expect(authorizer(admin).scope(Post.all).count).to eq(3)
   end
 
+  it "keeps a limit the policy itself imposes on an unbounded relation" do
+    policy_adapter = Class.new do
+      def initialize(*)
+      end
+
+      def scope_collection(relation, _action) = relation.order(:id).limit(1)
+    end
+    allow(ReactiveAdmin::AA).to receive(:authorization_adapter).and_return(policy_adapter)
+
+    expect(authorizer(admin).scope(Post.all).limit_value).to eq(1)
+  end
+
+  it "keeps a deny-all limit the policy imposes on an unbounded relation" do
+    policy_adapter = Class.new do
+      def initialize(*)
+      end
+
+      def scope_collection(relation, _action) = relation.limit(0)
+    end
+    allow(ReactiveAdmin::AA).to receive(:authorization_adapter).and_return(policy_adapter)
+
+    expect(authorizer(admin).scope(Post.all).to_a).to eq([])
+  end
+
   it "leaves relations of unregistered models alone" do
     expect(authorizer(editor).scope(Tagging.all).to_sql).to eq(Tagging.all.to_sql)
   end

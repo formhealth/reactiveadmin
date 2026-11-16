@@ -112,7 +112,9 @@ The API honors only the Ransack predicates that a declared filter can produce. A
 { "code": "invalid", "message": "Unsupported filter: npi_null" }
 ```
 
-This keeps `q` from probing columns the page never shows. Classic pages aren't affected by this guard.
+This keeps `q` from probing columns the page never shows. A filter whose `if:` or `unless:` hides it from the user doesn't count, and its options answer `404`. Classic pages aren't affected by this guard.
+
+The options of a filter on a plain column are the distinct values of the rows the user may read: the resource's scoped collection under its authorization scope.
 
 Typeahead searches cover only the source's `search` columns. The search matches the start of words, and pasting an id returns that record. Choose the `label` of an option source with care, because anyone who can read the source can see its labels.
 

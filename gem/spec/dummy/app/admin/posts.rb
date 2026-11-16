@@ -19,6 +19,8 @@ ActiveAdmin.register Post do
   filter :category, as: :check_boxes, collection: -> { Category.all }
   filter :author_id_eq, label: "Author", as: :typeahead, source: :authors
   filter :tags
+  filter :created_at, if: proc { current_admin_user.role == "admin" }
+  filter :updated_at, if: proc { @private_filters }
 
   index do
     selectable_column
@@ -196,6 +198,8 @@ ActiveAdmin.register Post do
   end
 
   controller do
+    before_action { @private_filters = params[:private_filters] == "1" }
+
     def scoped_collection = super.includes(:author)
 
     def update
