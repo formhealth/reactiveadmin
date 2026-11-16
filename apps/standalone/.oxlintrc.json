@@ -3,13 +3,51 @@
   "plugins": ["react", "typescript", "oxc"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/fetcher"],
+            "importNames": ["apiFetch"],
+            "message": "Call the generated client (src/api/generated/core.ts). apiFetch is for paths the server hands out; add the file to the allowlist in .oxlintrc.json with the reason."
+          }
+        ]
+      }
+    ]
   },
   "overrides": [
     {
       // shadcn primitives export their cva variant helpers (buttonVariants, ...) next to the component by design.
       "files": ["src/components/ui/**"],
       "rules": { "react/only-export-components": "off" }
+    },
+    {
+      // apiFetch allowlist. The generated client and tests.
+      "files": ["src/api/**", "**/*.test.ts", "**/*.test.tsx"],
+      "rules": { "no-restricted-imports": "off" }
+    },
+    {
+      // Server-supplied paths: Action.view.path, form_path and api_path (ActionView, useRecordAction), a form's
+      // action.path (save, StaleDialog), options_path (useOptionSource, optionLookup) and expand_path (expand).
+      // Nested resources make these unbuildable from a resource key.
+      "files": [
+        "src/views/ActionView.tsx",
+        "src/hooks/useRecordAction.tsx",
+        "src/forms/save.ts",
+        "src/forms/StaleDialog.tsx",
+        "src/forms/fields/useOptionSource.ts",
+        "src/forms/fields/optionLookup.ts",
+        "src/json/expand.ts"
+      ],
+      "rules": { "no-restricted-imports": "off" }
+    },
+    {
+      // URLs the generated helpers can't encode: multi-valued `q[x_in][]` predicates and `as` (useIndex), a GET
+      // form's arbitrary fields as the query (PageView).
+      "files": ["src/hooks/useIndex.ts", "src/pages/PageView.tsx"],
+      "rules": { "no-restricted-imports": "off" }
     }
   ]
 }
