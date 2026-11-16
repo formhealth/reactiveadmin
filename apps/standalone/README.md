@@ -102,13 +102,12 @@ pnpm lint
 pnpm a11y   # every story under axe (WCAG 2.0-2.2 A/AA + best practices), once per theme; needs `pnpm exec playwright install chromium`
 ```
 
-Runs through the Storybook Vitest addon (`vitest.a11y.config.ts`, `.storybook/vitest.setup.ts`) in headless Chromium and fails on serious or critical violations; moderate and minor ones are reported only. `A11Y_REPORT=file.jsonl` writes every violation (story, theme, rule, nodes) for tallies. The `@storybook/addon-a11y` panel shows the same checks while developing.
+Runs through the Storybook Vitest addon (`vitest.a11y.config.ts`, `.storybook/vitest.setup.ts`) in headless Chromium and fails on serious or critical violations; moderate and minor ones are reported only. `A11Y_REPORT=file.jsonl` writes every violation (story, theme, rule, nodes) for tallies. Tests don't retry, so a flaky play fails the run. `pnpm stories` runs the play functions once, without axe. The `@storybook/addon-a11y` panel shows the same checks while developing.
 
 Allowlist, kept deliberately small:
 
 - Rules `region`, `page-has-heading-one` and `landmark-one-main` are off: stories render fragments, not documents.
 - `aria-hidden-focus` ignores elements Radix marks `data-aria-hidden` while a modal is open; focus is trapped, so the hidden content is unreachable.
-- Stories tagged `a11y-skip` (16) have play functions that don't run reliably under the a11y runner (iframes served by msw, toast timing). Fix the play, then drop the tag.
 - Per story, `parameters.a11y.config.rules` or `parameters.a11y.disable` opt out of a rule or the whole check; add a comment saying why.
 
 Keyboard: `Cmd/Ctrl+K` opens the page palette; arrow keys, `Home`/`End` move through the menu tree; `/` focuses the first filter, `j`/`k` move between rows, `Enter` opens the focused row.

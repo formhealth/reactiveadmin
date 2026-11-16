@@ -1,5 +1,5 @@
 import type { Decorator, Preview } from '@storybook/react-vite'
-import { setupWorker } from 'msw/browser'
+import { type SetupWorker, setupWorker } from 'msw/browser'
 import { mswLoader } from 'msw-storybook-addon/csf3'
 import { handlers } from '@/mocks/handlers'
 import '../src/index.css'
@@ -22,15 +22,19 @@ const withProviders: Decorator = (Story, { id, globals, parameters }) => (
   </Providers>
 )
 
+// Kept on globalThis so a re-evaluated preview (HMR, a second story file in the same page) reuses the running worker
+// instead of starting another one that races it for requests.
+const shared = globalThis as { raMswWorker?: Promise<SetupWorker> }
+const startWorker = () =>
+  (shared.raMswWorker ??= (async () => {
+    const worker = setupWorker(...handlers)
+    await worker.start({ quiet: true, onUnhandledRequest: 'bypass' })
+    return worker
+  })())
+
 const preview: Preview = {
   decorators: [withProviders],
-  loaders: [
-    mswLoader(async () => {
-      const worker = setupWorker(...handlers)
-      await worker.start({ quiet: true, onUnhandledRequest: 'bypass' })
-      return worker
-    }),
-  ],
+  loaders: [mswLoader(startWorker)],
   globalTypes: {
     theme: {
       description: 'Color theme',

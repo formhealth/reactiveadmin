@@ -22,6 +22,7 @@
     "storybook": "TZ=UTC storybook dev -p 6006",
     "build-storybook": "storybook build",
     "a11y": "node scripts/a11y.mjs",
+    "stories": "TZ=UTC VITE_SKIP_AXE=1 vitest run --config vitest.a11y.config.ts",
     "crawl": "node crawl/cli.ts",
     "crawl:dummy": "node scripts/crawl-dummy.mjs"
   },
