@@ -2026,7 +2026,7 @@ export const getExportRecordsCsvUrl = (resource: string,
 }
 
 /**
- * AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Only when `ResourceMeta.download_formats` includes csv; otherwise 403. Errors are JSON as elsewhere.
+ * AA's streamed CSV export (`csv do` block, current q/scope/order, all pages). Without a `csv` block it takes the index block's attribute columns, else the secure default columns. Only when `ResourceMeta.download_formats` includes csv; otherwise 403. 422 when the export is refused: more rows than `max_export_rows`, or no `csv` block under strict defaults. Errors are JSON as elsewhere.
  */
 export const exportRecordsCsv = async (resource: string,
     params?: ExportRecordsCsvParams, options?: Parameters<typeof apiFetch>[1]): Promise<Blob> => {

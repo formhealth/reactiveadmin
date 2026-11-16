@@ -31,6 +31,12 @@ module ReactiveAdmin
         # A copy of a table column that reads `data` instead (a masked export, say).
         def column_with_data(column, data) = column.dup.tap { it.instance_variable_set(:@data, data) }
 
+        # No `csv` block: AA would export the id and every content column.
+        def default_csv?(config) = config.csv_builder.equal?(config.send(:default_csv_builder))
+
+        # A builder of its own for one export, so the resource's shared one is never changed.
+        def csv_builder(config, names) = ::ActiveAdmin::CSVBuilder.new(resource: config) { names.each { column(it) } }
+
         # AA's parse of an `order` param (`name_desc`), which rewrites keys it doesn't recognise.
         def order_clause(config, order) = config.order_clause.new(config, order)
 

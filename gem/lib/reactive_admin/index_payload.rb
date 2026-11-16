@@ -41,6 +41,16 @@ module ReactiveAdmin
     # Attributes shown as symbol columns: the allowlist for `_value`.
     def symbol_columns = columns_recorder.columns.filter_map { it.data if it.data.is_a?(Symbol) }
 
+    # What an API export without a `csv` block shows, chosen as the index chooses: the index block's columns, else
+    # secure defaults. Nil when strict defaults block it.
+    def export_columns
+      return symbol_columns if @views.table? && @views.presenter&.block
+      return ImplicitDefaults.blocked("csv") if ImplicitDefaults.strict?
+
+      key = @config.resource_class.primary_key
+      [*(key.to_sym if key.is_a?(String)), *(ImplicitDefaults.columns(@config, where: "csv") & @config.content_columns)]
+    end
+
     # The requested `order`'s sort key when the index doesn't offer it. Ordering by a column the
     # page hides would leak how its values compare.
     def unsupported_sort(recorder = columns_recorder)

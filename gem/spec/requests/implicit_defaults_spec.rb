@@ -202,6 +202,41 @@ RSpec.describe "secure implicit defaults", type: :request do
     end
   end
 
+  describe "csv export" do
+    def export = api_get("/api/admin/memos.csv")
+
+    def table = CSV.parse(response.body.delete_prefix("\uFEFF"), headers: true)
+
+    it "takes the secure default columns, leaving out encrypted ones" do
+      export
+
+      expect(response).to have_http_status(:ok)
+      expect(table.headers).to include("Id", "Title", "Summary")
+      expect(table.headers).not_to include("Secret")
+      expect(response.body).not_to include("sensitive-secret")
+    end
+
+    it "is refused under strict_defaults" do
+      ReactiveAdmin.config.strict_defaults = true
+      export
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to include("code" => "invalid")
+      expect(response.body).not_to include("sensitive-secret")
+    ensure
+      ReactiveAdmin.config.strict_defaults = false
+    end
+
+    it "keeps a declared csv block under strict_defaults" do
+      ReactiveAdmin.config.strict_defaults = true
+      api_get("/api/admin/posts.csv")
+
+      expect(response).to have_http_status(:ok)
+    ensure
+      ReactiveAdmin.config.strict_defaults = false
+    end
+  end
+
   describe "binary columns" do
     let!(:scan) { Scan.create!(title: "Receipt", image: "sensitive-image") }
     def scan_hidden = hidden.map { it["reason"] }
@@ -276,14 +311,15 @@ RSpec.describe "secure implicit defaults", type: :request do
   describe ReactiveAdmin::ImplicitDefaults do
     it "audits sections that fall back to defaults, by hidden column name" do
       expect(described_class.audit(ActiveAdmin.application.namespace(:admin).resource_for(Memo)))
-        .to eq(index: %w[secret], show: %w[secret])
+        .to eq(index: %w[secret], show: %w[secret], csv: %w[secret])
     end
 
     it "reports hidden columns per resource in the doctor, without sampling" do
       report = ReactiveAdmin::Doctor.run(sample: false)
 
-      expect(report[:resources].find { it[:key] == "memos" }[:implicit_view]).to eq(index: %w[secret], show: %w[secret])
-      expect(report[:diagnostics]).to include(a_hash_including(kind: "implicit_view", resource: "memos", view: "index", hidden: "secret"))
+      expect(report[:resources].find { it[:key] == "memos" }[:implicit_view]).to eq(index: %w[secret], show: %w[secret], csv: %w[secret])
+      expect(report[:diagnostics]).to include(a_hash_including(kind: "implicit_view", resource: "memos", view: "index", hidden: "secret"),
+        a_hash_including(kind: "implicit_view", resource: "memos", view: "csv", hidden: "secret"))
     end
 
     it "leaves out sections with a block" do

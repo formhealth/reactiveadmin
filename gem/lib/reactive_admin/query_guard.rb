@@ -65,8 +65,10 @@ module ReactiveAdmin
       end
 
       def export_allowed?
-        sort = IndexPayload.new(self).unsupported_sort
+        payload = IndexPayload.new(self)
+        sort = payload.unsupported_sort
         raise ApiErrors::BadRequest, "Unsupported sort: #{sort}" if sort
+        return false unless export_columns(payload)
 
         limit = ReactiveAdmin.config.max_export_rows
         rows = QueryGuard.count_rows(AA.collection(self), limit) if limit
@@ -78,6 +80,27 @@ module ReactiveAdmin
         ActiveSupport::Notifications.instrument("export.reactiveadmin", resource: Registry.route_key(active_admin_config),
           user_id: ReactiveAdmin.current_user(self)&.id, filters: params[:q].try(:keys).to_a.map(&:to_s), scope: AA.current_scope(self)&.id, row_count: rows)
         true
+      end
+
+      # Without a `csv` block AA exports every column, credentials included; the index's choice applies instead.
+      def export_columns(payload)
+        return true unless AA.default_csv?(active_admin_config)
+
+        columns = payload.export_columns
+        return @reactiveadmin_csv_builder = AA.csv_builder(active_admin_config, columns) if columns
+
+        render_api_error(:invalid, "This resource declares no csv block, and strict defaults refuse to export it", 422)
+        false
+      end
+
+      def reactiveadmin_csv_builder = @reactiveadmin_csv_builder
+    end
+
+    # Prepended to AA's CSV builder: an export the guard chose columns for is built by its own builder.
+    module ExportBuilder
+      def build(controller, csv)
+        builder = controller.send(:reactiveadmin_csv_builder) if controller.respond_to?(:reactiveadmin_csv_builder, true)
+        (builder && !builder.equal?(self)) ? builder.build(controller, csv) : super
       end
     end
   end
