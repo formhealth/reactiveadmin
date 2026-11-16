@@ -74,6 +74,10 @@ module ReactiveAdmin
     # filter guard leaves them alone: `own_query_params :search_toc`. They must not hand `q` to AA's `collection`.
     def own_query_params(*actions) = (@options[:own_query_params] ||= []).concat(actions.map(&:to_sym))
 
+    # GET actions that change data, which the API otherwise takes for reads: they need the write scope, are
+    # audited and confirmed in MCP, and `api :read_only` refuses them.
+    def unsafe_gets(*actions) = (@options[:unsafe_gets] ||= []).concat(actions.map(&:to_sym))
+
     # The same as `api` outside the block.
     def api(guard = nil, **) = ApiGuards.declare(@config, guard, **)
 

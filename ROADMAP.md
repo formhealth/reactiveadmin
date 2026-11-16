@@ -4,7 +4,7 @@ This page describes where reactiveadmin is heading. It's a statement of directio
 
 ## In progress
 
-- **Security hardening:** limit API CSV export to index columns ([#42](https://github.com/formhealth/reactiveadmin/pull/42)), treat data-changing GET actions as writes ([#43](https://github.com/formhealth/reactiveadmin/pull/43)), scope filter options and honor filter conditions ([#44](https://github.com/formhealth/reactiveadmin/pull/44)), hold API writes to the fields of their form ([#45](https://github.com/formhealth/reactiveadmin/pull/45)), and send frame writes only to admin pages ([#46](https://github.com/formhealth/reactiveadmin/pull/46)).
+- **Security hardening:** limit API CSV export to index columns ([#42](https://github.com/formhealth/reactiveadmin/pull/42)), MCP tool visibility, declared actions, and `unsafe_gets` for mutating GET actions ([#43](https://github.com/formhealth/reactiveadmin/pull/43)), scope filter options and honor filter conditions ([#44](https://github.com/formhealth/reactiveadmin/pull/44)), hold API writes to the fields of their form ([#45](https://github.com/formhealth/reactiveadmin/pull/45)), and send frame writes only to admin pages ([#46](https://github.com/formhealth/reactiveadmin/pull/46)).
 - **Correctness and CI:** fix stale index rows, the packaged contract and strict contract checks ([#24](https://github.com/formhealth/reactiveadmin/pull/24)); test Rails 7.2 and audit dependencies ([#23](https://github.com/formhealth/reactiveadmin/pull/23)).
 - **Refactors:** the custom-action contract, the generated client and the adapter boundary ([#26](https://github.com/formhealth/reactiveadmin/pull/26)).
 - **Install generator:** `rails g reactiveadmin:install` ([#47](https://github.com/formhealth/reactiveadmin/issues/47)).

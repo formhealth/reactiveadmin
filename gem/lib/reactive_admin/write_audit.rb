@@ -11,7 +11,7 @@ module ReactiveAdmin
 
     # Never raises: the write has already been answered, and an audit hiccup must not turn it into a 500.
     def self.emit(event, controller, always: false, **extra)
-      return if (!always && (controller.request.get? || controller.request.head?)) || unaudited?(controller)
+      return if (!always && read?(controller)) || unaudited?(controller)
 
       user_id = ReactiveAdmin.current_user(controller)&.id
       return unless user_id
@@ -22,6 +22,8 @@ module ReactiveAdmin
     rescue => e
       Rails.logger.error("[reactiveadmin] write audit failed: #{e.class}")
     end
+
+    def self.read?(controller) = ActionSafety.request_read?(controller)
 
     def self.unaudited?(controller) = controller.respond_to?(:audit_writes?, true) && !controller.send(:audit_writes?)
 

@@ -86,6 +86,21 @@ ActiveAdmin.register Post do
 
   member_action :note, method: :get
 
+  member_action :bump, method: :get do
+    resource.increment!(:views_count)
+    redirect_to resource_path, notice: "Counted"
+  end
+
+  member_action :permalink, method: :get do
+    redirect_to resource_path
+  end
+
+  member_action :download, method: :get do
+    send_data resource.title, filename: "post.txt"
+  end
+
+  reactive { unsafe_gets :bump }
+
   member_action :publish, method: :put do
     resource.published!
     redirect_to resource_path, notice: "Published #{resource.title}"

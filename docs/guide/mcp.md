@@ -48,7 +48,7 @@ The block runs on every request, so a revoked token stops working at once. Keep 
 
 ### 2. Require scopes
 
-When the block returns `scopes`, reads need `config.mcp.read_scope` (default `admin:read`) and writes need `config.mcp.write_scope` (default `admin:write`). This applies to the whole API, not only `_mcp`. A token without the needed scope gets `403` with code `insufficient_scope` and a `WWW-Authenticate: Bearer error="insufficient_scope", scope="admin:write"` header. `tools/list` omits the write tools for a token that lacks the write scope.
+When the block returns `scopes`, reads need `config.mcp.read_scope` (default `admin:read`) and writes need `config.mcp.write_scope` (default `admin:write`). GET and HEAD requests are reads, except for a GET custom action the registration lists in `reactive { unsafe_gets ... }`. This applies to the whole API, not only `_mcp`. A token without the needed scope gets `403` with code `insufficient_scope` and a `WWW-Authenticate: Bearer error="insufficient_scope", scope="admin:write"` header. `tools/list` omits the write tools for a token that lacks the write scope, and `tools/call` answers them as unknown tools. `run_action` runs only the member, collection and batch actions the resource declares, with a method the action declares.
 
 Grant both scopes for an agent that edits, because a write tool also reads the form first. A token whose block returns a bare user has no scope claim, so no scope is required of it. Set `read_scope` or `write_scope` to `nil` to stop requiring one.
 

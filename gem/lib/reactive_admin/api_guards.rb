@@ -143,12 +143,12 @@ module ReactiveAdmin
     def unsafe?(config, names, verb)
       return true if verb && %w[GET HEAD].exclude?(verb.to_s.upcase)
 
-      expand(names).any? { UNSAFE.include?(it) || custom_unsafe?(config, it) }
+      expand(names).any? { UNSAFE.include?(it) || custom_unsafe?(config, it, verb) }
     end
 
-    def custom_unsafe?(config, name)
+    def custom_unsafe?(config, name, verb)
       declaration = AA.custom_actions(config).find { it.name.to_s == name }
-      !!declaration && Array.wrap(declaration.http_verb).any? { it.to_s.upcase != "GET" }
+      !!declaration && (verb ? [verb] : Array.wrap(declaration.http_verb)).any? { !ActionSafety.read?(config, name, it) }
     end
 
     # The declaration that statically refuses these actions in `channel`, for the metadata.

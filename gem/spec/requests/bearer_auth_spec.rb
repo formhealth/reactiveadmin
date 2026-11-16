@@ -35,6 +35,21 @@ RSpec.describe "bearer authentication", type: :request do
       expect(json).to include("location" => "/login")
     end
 
+    it "serves read-scope shell endpoints whatever the root page declares" do
+      read_only = token_for(admin, scopes: ["admin:read"])
+      key = ReactiveAdmin::AA.root_page_key(ReactiveAdmin::Registry.namespace)
+      root = ReactiveAdmin::Registry.pages.find { it.controller.controller_path.split("/").last == key }
+      root.reactive_options[:unsafe_gets] = %i[show]
+
+      %w[_session _manifest _openapi].each do |endpoint|
+        api_get("/api/admin/#{endpoint}", headers: bearer(read_only))
+
+        expect(response).to have_http_status(:ok), endpoint
+      end
+    ensure
+      root.reactive_options.delete(:unsafe_gets)
+    end
+
     it "sets no cookie on a token request" do
       api_get("/api/admin/posts", headers: bearer(token))
 
@@ -134,6 +149,22 @@ RSpec.describe "bearer authentication", type: :request do
       expect(response).to have_http_status(:forbidden)
       expect(json).to include("code" => "insufficient_scope")
       expect(response.headers["WWW-Authenticate"]).to eq('Bearer error="insufficient_scope", scope="admin:write"')
+    end
+
+    it "holds a GET action listed in unsafe_gets to the write scope" do
+      path = "/api/admin/posts/#{first_post.id}/bump"
+      expect { api_get(path, headers: bearer(token_for(admin, scopes: ["admin:read"]))) }.not_to(change { first_post.reload.views_count })
+      expect(json).to include("code" => "insufficient_scope")
+
+      expect { api_get(path, headers: bearer(token_for(admin, scopes: ["admin:write"]))) }.to change { first_post.reload.views_count }.by(1)
+    end
+
+    it "lets a read-scope token run a GET action that redirects or sends data" do
+      %w[permalink download].each do |action|
+        get "/api/admin/posts/#{first_post.id}/#{action}", headers: {"ACCEPT" => "application/json"}.merge(bearer(token_for(admin, scopes: ["admin:read"])))
+
+        expect(response).to have_http_status(:ok), action
+      end
     end
 
     it "refuses a read without the read scope" do
