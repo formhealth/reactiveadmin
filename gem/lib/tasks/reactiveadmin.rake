@@ -10,6 +10,14 @@ namespace :reactiveadmin do
     ReactiveAdmin::Readiness::CLI.run
   end
 
+  desc "Record scrubbed API responses as JSON fixtures for Storybook and MSW, as config.doctor_user. " \
+    "Args: resources (a+b, default all), out_dir (default tmp/reactiveadmin/fixtures)"
+  task :fixtures, [:resources, :out_dir] => :environment do |_, args|
+    ReactiveAdmin::Fixtures::CLI.run(**args.to_h)
+  rescue ReactiveAdmin::Fixtures::Error => e
+    abort(e.message)
+  end
+
   desc "Print the HTML sanitizer policy as JSON, for the client to configure DOMPurify from"
   task html_policy: :environment do
     puts JSON.pretty_generate(ReactiveAdmin::HtmlPolicy.export)

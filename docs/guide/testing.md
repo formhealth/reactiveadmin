@@ -178,6 +178,65 @@ end
 
 Seed at least one record per resource to cover the show pages. The same file defines a `match_contract` matcher (`expect(json).to match_contract("IndexResponse")`) for your own specs.
 
+## Fixtures for Storybook and MSW
+
+Hand-written mocks drift from what the API sends. `rake reactiveadmin:fixtures` records real response shapes from your app as JSON files, with the record data replaced by fakes, so your Storybook stories and MSW handlers use the payloads your admin produces.
+
+```sh
+bin/rails "reactiveadmin:fixtures[posts+authors,spec/fixtures/reactiveadmin]"
+```
+
+The arguments are the resources to record, joined with `+` (blank or `all` for every resource the user can open), and the output directory (default `tmp/reactiveadmin/fixtures`). The task renders the payloads as the user from `config.doctor_user`, the same sampling user as `rake reactiveadmin:doctor`, Database writes are blocked while it runs. It writes:
+
+| File | Payload |
+| --- | --- |
+| `_manifest.json` | The manifest |
+| `<resource>/meta.json` | `_meta` |
+| `<resource>/index.json` | The first page of the index |
+| `<resource>/show.json` | The show page of the first row |
+| `<resource>/new.json`, `<resource>/edit.json` | The new form, and the edit form of the first row |
+
+A section the user can't see or the resource doesn't have (nested under a required parent, denied by an API guard, no rows) is skipped, and the task prints why. The output names resources and sections, never values. Files of a skipped section that an earlier recording left in the directory are removed.
+
+### What is scrubbed
+
+Scrubbing is default deny. A string stays only when it is structural: types, keys, params, paths, enum names from your models where the payload marks a choice of that same attribute (the options of its select or filter, or a status tag in that attribute's index column or attributes-table row, unless a record holds the same text; a choice whose value is a record id is always replaced), and the labels, titles and confirmations that you wrote. Every other string is replaced with a deterministic fake of the same shape: words for text, `user12345@example.com` for an email, a valid fake date for a date, digits for a number, a UUID for a UUID, and tags kept around fake text for HTML. Numbers and JSON values are faked too. Every JSON key is replaced, in the value and its summary, so only the structure stays; distinct keys get distinct fakes.
+
+- Ids are replaced with stable fakes, in `id` fields, refs, option values and the paths that contain them. The same record has the same fake id in every file. A numeric id stays numeric and keeps its sign.
+- Masked values stay masked, and a masked form field still has no value.
+- HTML inside a record value keeps only attribute names that HTML defines. Any other attribute (`data-patient-name`) is dropped. Its name and value are learned, as is the content of a dropped comment or style declaration, so text that quotes them is still scrubbed.
+- Text you wrote (a label, a confirmation) is replaced when it quotes a record value found elsewhere in the payloads, wherever that value appears.
+- Paths keep only the segments of your admin routes. Any other segment, such as a signed file token or a file name, is replaced; a known file extension stays. A query name stays only when the API reads it (such as `q[...]`, `scope`, `order`, `page`, `field` or `format`); any other name, and a name with no value, is replaced. Query values stay only when they are structural: a numeric `page` or `per_page`, a scope id, sort order, field name or download format that the payloads declare.
+- A row's `class_name` and its actions' labels, confirmations and disabled reasons are replaced when they differ between rows. An input's `min` and `max` stay only when they're small whole numbers (up to four digits), such as a rating's 1 to 5. Those stay even when they come from a record, so don't put record data in a small numeric bound. Every other bound, a date included, is faked and learned, and the fake bounds keep their order. A field's value is then picked anywhere inside its bounds, kept or fake, on the step grid and at the value's precision (whole days for a date, minutes or seconds for a datetime), so a valid value stays valid. Nothing links the fake value to a real bound, so knowing a bound (a hard-coded `1900-01-01`) doesn't reveal the value. Kept bounds that allow only the original value (a `min` and `max` of 3) would reveal it, so they're faked too. A faked field value also fits the field's `maxlength` and `minlength`.
+- HTML of a frame keeps the names of its form controls, an `<input>` with a `min` or `max` follows the same bounds rule as a form field, and a Rails `authenticity_token` is replaced with a constant.
+- The same data produces the same files, so a diff shows what changed in your app, as long as the seed stays the same.
+- Text with angle brackets, such as `Contact <someone@example.com>`, is treated as HTML only when it contains real HTML elements. An element name that HTML doesn't define is replaced.
+- Text you wrote is scrubbed when it quotes a short value (two or three characters) only as a whole word.
+
+Known limits of fidelity:
+
+- A record id that equals a literal segment of your routes (an id of `posts`) is replaced everywhere it appears, including that segment, so the recorded path no longer matches your route. Telling the two apart needs route templates; record such a resource with ids that aren't route words.
+
+Review the files before you commit them. Labels, menu entries and page text that your own code builds from record data, outside an attribute the scrubber recognizes, are structural to the scrubber and stay as they are. The task prints a warning that lists every text you wrote that it kept as is, so you can check that none of it quotes a record.
+
+### Seed
+
+Every fake is derived from a private seed, so nobody can work back from a fake to the value it replaced. The task reads the seed from `REACTIVEADMIN_FIXTURES_SEED`, and otherwise from `tmp/reactiveadmin_fixtures_seed`, which it creates with a random seed on the first run, readable only by you (mode `0600`). If that file is readable by others, the task warns and restricts it. Keep the seed out of your repository: `tmp/` is ignored in a Rails app, and in CI set the variable from a secret. The same seed produces the same files. To make every fake new, rotate the seed: delete the file or set a new value, then record again.
+
+### Use them in Storybook
+
+`fixtureHandlers` in `apps/standalone/src/mocks/fixtureHandlers.ts` turns the directory into MSW handlers for the manifest, each resource's meta, index and new form, and the recorded record's show page and edit form (everything else, such as other record ids, `_options` and `_value`, falls through to your other handlers):
+
+```ts
+import { fixtureHandlers } from './fixtureHandlers'
+
+const files = import.meta.glob('../fixtures/reactiveadmin/**/*.json', { eager: true, import: 'default' })
+
+export const handlers = [...fixtureHandlers(files), ...yourOtherHandlers]
+```
+
+Pass `{ base: '/my/api/admin' }` when your API isn't mounted at `/api/admin`. The handlers answer index requests with the recorded page whatever the query, so use them for how screens look, not for filtering and paging behavior.
+
 ## CI
 
 GitHub Actions runs two workflows on pull requests and on `main`: `gem` (standardrb; `STRICT_GAPS=1` specs for every auth adapter on Ruby 4.0 with sqlite, and the default adapter on Ruby 3.4 and on Postgres; an ActiveAdmin 4 probe that is allowed to fail) and `client` (contract drift, types, lint, unit tests, build, Storybook build, a11y sharded by theme, the dummy-app crawl). `actionlint` checks the workflow files themselves.

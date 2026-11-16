@@ -88,6 +88,7 @@ module ReactiveAdmin
   autoload :PageForms, "reactive_admin/page_forms"
   autoload :PagePayload, "reactive_admin/page_payload"
   autoload :PageControllerExtension, "reactive_admin/page_controller_extension"
+  autoload :Fixtures, "reactive_admin/fixtures"
   autoload :Doctor, "reactive_admin/doctor"
   autoload :LegacyInventory, "reactive_admin/legacy_inventory"
   autoload :IndexViews, "reactive_admin/index_views"
