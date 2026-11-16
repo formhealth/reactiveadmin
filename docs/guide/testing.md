@@ -1,6 +1,6 @@
 # Testing
 
-Two suites cover the React client. Storybook stories cover components in isolation (`pnpm a11y`). The crawl covers the real app against a real server: it opens every screen your manifest describes and fails on anything a person would notice.
+Two suites cover the React client. Storybook stories cover components in isolation (`pnpm a11y`). The crawl covers the real app against a real server: it opens every screen your manifest describes and fails on anything a person would notice. In your own app's request specs, [contract examples](#contract-examples) check that your registrations answer as the client expects.
 
 ## Crawl
 
@@ -112,6 +112,26 @@ Baselines live in `~/.cache/reactiveadmin-crawl/baselines/<host>` (change it wit
 `pnpm crawl:dummy` needs no running server. It seeds the gem's dummy app into a scratch sqlite database (`gem/spec/dummy/db/seeds.rb`, through `gem/spec/dummy/bin/crawl_prepare`), starts it with `rackup` on port 3098, starts Vite on port 5198 pointed at it (`RA_API_TARGET`), runs the crawl signed in through the dummy's test-only `/test/sign_in`, and stops both. It takes extra options (`pnpm crawl:dummy --resources=posts`), and `CRAWL_RAILS_PORT` and `CRAWL_VITE_PORT` move the ports. It needs `bundle install` in `gem/` and Playwright's Chromium (`pnpm exec playwright install chromium`).
 
 The dummy's allowlist (`crawl/allowlists/dummy.json`) holds one known finding: the classic form partial for `sketches` renders a bare `<li>` outside a list.
+
+## Contract examples
+
+`ReactiveAdmin::RSpec.contract_examples` adds a request spec per registration. Each one gets the resource's meta, its index, and the show page of the first listed record, and checks every answer against `openapi/core.yaml`, the contract the client is generated from. Objects in the contract are closed for the check, so a key the contract doesn't declare fails it. Resources that only exist under a parent are left out.
+
+Add `json_schemer` to your test group, then sign in, as a user who can read every resource, in a `before`:
+
+```ruby
+# spec/requests/reactive_admin_contract_spec.rb
+require "rails_helper"
+require "reactive_admin/rspec"
+
+RSpec.describe "reactiveadmin contract", type: :request do
+  before { sign_in create(:admin_user) }
+
+  ReactiveAdmin::RSpec.contract_examples(self)
+end
+```
+
+Seed at least one record per resource to cover the show pages. The same file defines a `match_contract` matcher (`expect(json).to match_contract("IndexResponse")`) for your own specs.
 
 ## CI
 
