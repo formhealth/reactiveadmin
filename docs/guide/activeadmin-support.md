@@ -30,7 +30,7 @@ Index, show, form and page responses list what they fell back to in a `degraded`
 | `pagination_total: false` | Supported | Total counts are `null`. A one-row probe finds the next page. |
 | `scope_count: false` | Supported | Scope counts are omitted. |
 | Scope counts (`show_count`) | Supported | Counts come back with the index response, one query per scope. |
-| Scope `group:` | Not supported | Scopes appear as one flat list. |
+| Scope `group:` | Supported | Each group's scopes stay together, in order of first appearance. A default scope inside a group is the current one. |
 | Scope `if:` | Supported (check) | Evaluated per request. |
 | `download_links` and `csv do` | Supported | `GET /api/admin/<resource>.csv` streams ActiveAdmin's CSV. The client's export UI: check. |
 | Filters: string, numeric, date range, boolean, select | Supported | Typed controls in the manifest. |
