@@ -26,20 +26,15 @@ import { useIndex } from '@/hooks/useIndex'
 import { useListState } from '@/hooks/useListState'
 import { useIsDesktop, useIsWide } from '@/hooks/useMediaQuery'
 import { useDocumentTitle, useMapClassic, useResourceMeta, useResourceSummary, useSite } from '@/hooks/useManifest'
+import { useRowCursor } from '@/hooks/useRowCursor'
 import { useSelection } from '@/hooks/useSelection'
-import { classicUrl } from '@/lib/classic'
+import { useShortcutScope } from '@/hooks/useShortcutScope'
+import { classicUrl, withClassic } from '@/lib/classic'
 import { classicPage, isDenied } from '@/lib/apiDenied'
 import { exportHref } from '@/lib/export'
 import { undeclared } from '@/lib/list'
 import { pluralLabel } from '@/lib/humanize'
-
-const rowLinks = () => [...document.querySelectorAll<HTMLElement>('[data-row-link]')]
-
-const moveRow = (step: 1 | -1) => () => {
-  const links = rowLinks()
-  const current = links.indexOf(document.activeElement as HTMLElement)
-  links[current < 0 ? (step > 0 ? 0 : links.length - 1) : Math.min(Math.max(current + step, 0), links.length - 1)]?.focus()
-}
+import type { Capability } from '@/lib/shortcuts'
 
 // New is a link to the classic admin when the host reserved creating for it, and absent when there is none to link to.
 function NewButton({ summary, variant }: { summary: ResourceSummary; variant?: 'outline' }) {
@@ -118,18 +113,52 @@ export function ResourceIndex() {
 
   const { data, error, isPlaceholderData, refetch } = useIndex(resource, list.params, !forbidden && (!hasQuery || !!meta) && unknown.length === 0)
 
+  const rows = data?.rows ?? []
+  const cursor = useRowCursor(
+    rows.map((row) => row.id),
+    `${resource}|${parent?.param}|${parent?.id}`,
+  )
+  const failure = metaError ?? error
+  const canFilter = !!meta?.filters.length
+  const canSelect = batchActions.length > 0
+  // Keys must not act on rows that aren't on screen: placeholders belong to the previous query, and a failed refetch keeps
+  // its data while the list gives way to the error.
+  const hasRows = !!meta && rows.length > 0 && !isPlaceholderData && !failure && !forbidden
+  const offers: Record<Capability, boolean> = { rows: hasRows, filters: canFilter, batch: canSelect }
+  useShortcutScope('index', (Object.keys(offers) as Capability[]).filter((cap) => offers[cap]))
+
+  const step = (by: 1 | -1) => (e: KeyboardEvent) => {
+    e.preventDefault()
+    cursor.move(by)
+  }
   useHotkeys({
-    '/': (e) => {
-      e.preventDefault()
-      const first = document.querySelector<HTMLElement>('#filters > :first-child')
-      ;(first?.querySelector<HTMLElement>('input') ?? first)?.focus()
-    },
-    j: moveRow(1),
-    k: moveRow(-1),
+    filter: canFilter
+      ? (e) => {
+          const first = document.querySelector<HTMLElement>('#filters > :first-child')
+          if (!first) return
+          e.preventDefault()
+          ;(first.querySelector<HTMLElement>('input') ?? first).focus()
+        }
+      : undefined,
+    down: hasRows ? step(1) : undefined,
+    up: hasRows ? step(-1) : undefined,
+    // On a link or button Enter already does its own thing.
+    open: hasRows
+      ? (e) => {
+          const row = rows.find((r) => r.id === cursor.id)
+          if (!row?.permissions.show || (e.target as Element).closest('a,button')) return
+          // Like the row menu: a show page the API refuses opens in the classic admin, or not at all.
+          const classic = classicPage(summary, 'show', `/${row.id}`)
+          if (isDenied(summary, 'show') && !classic) return
+          e.preventDefault()
+          if (classic) window.open(withClassic(classic), '_blank', 'noopener,noreferrer')
+          else navigate(`/${resource}/${row.id}`, { state: { search: location.search } })
+        }
+      : undefined,
+    select: hasRows && canSelect ? () => cursor.id && selection.toggle(cursor.id) : undefined,
   })
 
   const label = pluralLabel(meta ?? summary, resource)
-  const failure = metaError ?? error
   if (forbidden) return <ErrorState error={new ApiError(403)} label={label} />
   if (failure) return <ErrorState error={failure} label={label} onRetry={refetch} />
   if (!manifestPending && !summary) return <ErrorState error={new Error(`Unknown resource "${resource}"`)} />
@@ -218,7 +247,7 @@ export function ResourceIndex() {
         ) : (
           <>
             {view !== 'table' ? (
-              <RecordViews resource={resource} view={view} rows={data.rows} gridColumns={data.meta.grid_columns} stale={isPlaceholderData} defaultRowActions={defaults} />
+              <RecordViews resource={resource} view={view} rows={data.rows} gridColumns={data.meta.grid_columns} stale={isPlaceholderData} selection={batchActions.length ? selection : undefined} cursor={cursor} defaultRowActions={defaults} />
             ) : wide ? (
               <DataTable
                 resource={resource}
@@ -228,11 +257,12 @@ export function ResourceIndex() {
                 onOrder={(order) => list.setParam('order', order)}
                 stale={isPlaceholderData}
                 selection={batchActions.length ? selection : undefined}
+                cursor={cursor}
                 defaultRowActions={defaults}
                 rowActionsLabel={actionsLabel}
               />
             ) : (
-              <RecordCards resource={resource} columns={data.columns} rows={data.rows} stale={isPlaceholderData} selection={batchActions.length ? selection : undefined} defaultRowActions={defaults} />
+              <RecordCards resource={resource} columns={data.columns} rows={data.rows} stale={isPlaceholderData} selection={batchActions.length ? selection : undefined} cursor={cursor} defaultRowActions={defaults} />
             )}
             {data.meta.paginator !== false && (
               <Pagination

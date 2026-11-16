@@ -2,7 +2,10 @@ import type { CSSProperties } from 'react'
 import { Link, useLocation } from 'react-router'
 import type { IndexMetaView, Row } from '@/api/generated/model'
 import { RowMenu } from '@/components/RowMenu'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { cursorClass, type RowCursor } from '@/hooks/useRowCursor'
+import type { Selection } from '@/hooks/useSelection'
 import { hasRowActions } from '@/lib/permissions'
 import { rowTone } from '@/lib/tone'
 import { cn } from '@/lib/utils'
@@ -15,13 +18,15 @@ type RecordViewsProps = {
   rows: Row[]
   gridColumns?: number
   stale?: boolean
+  selection?: Selection
+  cursor?: RowCursor
   defaultRowActions?: boolean
 }
 
 const grid = (n: number) => `repeat(${n}, minmax(0, 1fr))`
 
 // Grid, blog and block presenters: each record is the layout the server walked out of the presenter's block.
-export function RecordViews({ resource, view, rows, gridColumns = 3, stale, defaultRowActions = true }: RecordViewsProps) {
+export function RecordViews({ resource, view, rows, gridColumns = 3, stale, selection, cursor, defaultRowActions = true }: RecordViewsProps) {
   const { search } = useLocation()
   const layout =
     view === 'grid'
@@ -33,8 +38,13 @@ export function RecordViews({ resource, view, rows, gridColumns = 3, stale, defa
   return (
     <ul className={cn(layout, stale && 'opacity-60')} style={{ '--columns': grid(gridColumns) } as CSSProperties}>
       {rows.map((row) => (
-        <li key={row.id} data-row-id={row.id} className="flex min-w-0">
-          <Card className={cn('h-full w-full', row.tone && rowTone[row.tone])}>
+        <li key={row.id} data-row-id={row.id} {...cursor?.rowProps(row.id)} className={cn(cursorClass, 'flex min-w-0 rounded-xl data-cursor:outline-offset-2')}>
+          <Card className={cn('h-full w-full', row.tone && rowTone[row.tone], selection?.ids.has(row.id) && 'border-primary/50 bg-info-soft')}>
+            {selection && (
+              <div className="px-(--card-spacing)">
+                <Checkbox aria-label={`Select record ${row.id}`} checked={selection.ids.has(row.id)} onCheckedChange={() => selection.toggle(row.id)} />
+              </div>
+            )}
             <CardContent className={cn('flex flex-1 flex-col gap-3', view === 'blog' && 'gap-4')}>
               <NodeContext value={{ resource, id: row.id, name: row.display_name }}>
                 <NodeList nodes={row.layout} />
