@@ -94,7 +94,7 @@ module ReactiveAdmin
     # record answer as core.yaml says. Sign in, as a user who can read everything, in a `before`.
     # Resources that only exist under a parent are left out.
     def contract_examples(group)
-      Rails.application.reload_routes_unless_loaded
+      Rails.application.try(:reload_routes_unless_loaded)
       Registry.resources.reject { Paths.nested?(it) }.each do |config|
         key = Registry.route_key(config)
         group.it "serves #{key} as the contract describes" do
