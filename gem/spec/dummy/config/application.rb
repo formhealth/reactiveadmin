@@ -13,7 +13,7 @@ module Dummy
     config.root = File.expand_path("..", __dir__)
     FileUtils.mkdir_p([root.join("log"), root.join("tmp")])
 
-    config.load_defaults 8.1
+    config.load_defaults Rails::VERSION::STRING.to_f
     config.eager_load = false
     config.secret_key_base = "reactiveadmin-dummy"
     config.active_support.deprecation = :stderr
