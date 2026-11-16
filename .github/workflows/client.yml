@@ -46,6 +46,25 @@ jobs:
         env:
           TZ: UTC
 
+  # Play functions only, once: a broken play fails here without waiting on, or being mistaken for, an axe failure.
+  stories:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-client
+        with:
+          playwright: "true"
+      - run: pnpm --filter standalone stories
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-client
+      - run: pnpm audit --prod --audit-level high
+
   # Runs every story in Chromium under axe (light and dark); fails on serious/critical WCAG 2.2 AA violations.
   a11y:
     runs-on: ubuntu-latest
