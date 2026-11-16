@@ -47,15 +47,31 @@ jobs:
           TZ: UTC
 
   # Runs every story in Chromium under axe (light and dark); fails on serious/critical WCAG 2.2 AA violations.
-  a11y:
+  a11y-shard:
+    name: a11y (${{ matrix.theme }} ${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        theme: [light, dark]
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-client
         with:
           playwright: "true"
-      - run: pnpm --filter standalone a11y
+      - run: pnpm --filter standalone a11y --shard=${{ matrix.shard }}/2
+        env:
+          A11Y_THEMES: ${{ matrix.theme }}
+
+  # The required check: passes only when every shard did.
+  a11y:
+    needs: a11y-shard
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.a11y-shard.result }}" = success
 
   # Boots the gem's dummy app and the client, then opens every screen the manifest describes.
   crawl:

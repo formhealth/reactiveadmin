@@ -1,7 +1,8 @@
-// Runs the axe story suite once per theme; exits non-zero if either run fails.
+// Runs the axe story suite once per theme (A11Y_THEMES narrows them); exits non-zero if any run fails.
 import { spawnSync } from 'node:child_process'
 
-const failed = ['light', 'dark'].filter(
+const themes = process.env.A11Y_THEMES?.split(',') ?? ['light', 'dark']
+const failed = themes.filter(
   (theme) =>
     spawnSync('pnpm', ['exec', 'vitest', 'run', '--config', 'vitest.a11y.config.ts', ...process.argv.slice(2)], {
       stdio: 'inherit',
