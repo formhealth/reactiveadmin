@@ -1,6 +1,6 @@
 # Roll out the new admin
 
-reactiveadmin can serve the React client at your classic admin's own URLs. `/admin/authors/123` opens the classic page or the new one, depending on a cookie in the browser. People switch with one click, and you decide who can.
+ReactiveAdmin can serve the React client at your classic admin's own URLs. `/admin/authors/123` opens the classic page or the new one, depending on a cookie in the browser. People switch with one click, and you decide who can.
 
 The server stays out of the decision. A small Rack middleware answers a page load with the client's shell when the browser's `reactiveadmin_ui` cookie says `new`. The client then checks with the API whether this user can use it and whether it has a screen for the URL, and sends the browser back to classic when it doesn't.
 

@@ -1,6 +1,6 @@
 # OpenAPI
 
-reactiveadmin describes your admin API as an OpenAPI 3.1 document, built from your ActiveAdmin registrations. Point a docs viewer such as Scalar at it to browse every resource, filter, form and action your admin serves, and to try requests as the signed-in user.
+ReactiveAdmin describes your admin API as an OpenAPI 3.1 document, built from your ActiveAdmin registrations. Point a docs viewer such as Scalar at it to browse every resource, filter, form and action your admin serves, and to try requests as the signed-in user.
 
 The document is typed from declarations only. It never contains record data, option values, or anything masked, hidden or not exposed.
 

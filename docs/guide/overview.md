@@ -1,10 +1,10 @@
 # Overview
 
-reactiveadmin turns the ActiveAdmin registrations you already have into a JSON API, an OpenAPI description, a React admin client, and a Model Context Protocol (MCP) server for AI agents. Your `app/admin` files stay the single source of truth. You don't write serializers, API controllers, or frontend pages per resource.
+ReactiveAdmin turns the ActiveAdmin registrations you already have into a JSON API, an OpenAPI description, a React admin client, and a Model Context Protocol (MCP) server for AI agents. Your `app/admin` files stay the single source of truth. You don't write serializers, API controllers, or frontend pages per resource.
 
 This page explains why the project exists, which parts of ActiveAdmin it reuses, what it replaces, what you can add on top, and where it stops.
 
-## Why reactiveadmin exists
+## Why ReactiveAdmin exists
 
 ActiveAdmin is a productive way to build back-office screens in Rails, and large apps accumulate a lot of it. Over the years, a mature app's registrations (resources and pages) come to encode a great deal of operational knowledge: filters, scopes, forms, custom actions, and authorization rules.
 
@@ -15,28 +15,28 @@ That investment is locked inside ActiveAdmin's server-rendered views:
 - **It can't be embedded.** The admin can't live inside another product, such as a customer-facing dashboard, with that product's navigation.
 - **Rewriting is risky.** Rebuilding every screen by hand would duplicate business rules, drift from the original, and take months.
 
-reactiveadmin takes a different path: keep ActiveAdmin as the definition of each screen and of who may use it, and generate everything else from that definition. Migration becomes incremental. Every screen works on day one, and each one improves as the gaps close.
+ReactiveAdmin takes a different path: keep ActiveAdmin as the definition of each screen and of who may use it, and generate everything else from that definition. Migration becomes incremental. Every screen works on day one, and each one improves as the gaps close.
 
-## What reactiveadmin reuses from ActiveAdmin
+## What ReactiveAdmin reuses from ActiveAdmin
 
-reactiveadmin runs inside ActiveAdmin rather than beside it. The API redraws ActiveAdmin's routes under a mount path (for example, `/api/admin`) and answers through ActiveAdmin's own controllers. As a result, you keep the following without changes:
+ReactiveAdmin runs inside ActiveAdmin rather than beside it. The API redraws ActiveAdmin's routes under a mount path (for example, `/api/admin`) and answers through ActiveAdmin's own controllers. As a result, you keep the following without changes:
 
 - **Registrations and the DSL.** `ActiveAdmin.register`, `register_page`, `index`, `show`, `form`, `filter`, `scope`, `action_item`, `member_action`, `collection_action`, `batch_action`, `permit_params`, `belongs_to`, and `menu`.
 - **Controllers and their overrides.** `scoped_collection`, `find_resource`, `build_new_resource`, custom `create`, `update`, and `destroy`, and `before_action` callbacks run as they do today.
 - **Querying.** ActiveAdmin's collection pipeline handles filtering (Ransack), scoping, sorting, and pagination, so results match the classic pages exactly.
-- **Authorization.** Your ActiveAdmin authorization adapter (Pundit, for example) decides every read, write, and action. reactiveadmin adds no second permission system.
+- **Authorization.** Your ActiveAdmin authorization adapter (Pundit, for example) decides every read, write, and action. ReactiveAdmin adds no second permission system.
 - **Authentication.** The default adapter uses ActiveAdmin's `authentication_method` and `current_user_method`, including CSRF protection.
 - **Forms.** Formtastic forms are recorded into typed form schemas, including `has_many` nested attributes, `fields_for`, and option collections.
 - **Show pages.** Arbre component trees (`attributes_table`, `panel`, `table_for`, `tabs`, `columns`, and `status_tag`) are read as typed nodes instead of HTML.
-- **Classic HTML as a fallback.** Any view reactiveadmin can't represent natively still renders, either as sanitized HTML inline or as the classic page in a frame.
+- **Classic HTML as a fallback.** Any view ReactiveAdmin can't represent natively still renders, either as sanitized HTML inline or as the classic page in a frame.
 
 Because the same code paths serve both UIs, a read through the API returns the same records the classic page shows, and a write produces the same database change. The gem's specs check this against the dummy app's resources, and you can run the same comparison against your own.
 
-## What reactiveadmin replaces
+## What ReactiveAdmin replaces
 
-reactiveadmin replaces ActiveAdmin's presentation layer and adds the interfaces ActiveAdmin never had.
+ReactiveAdmin replaces ActiveAdmin's presentation layer and adds the interfaces ActiveAdmin never had.
 
-| ActiveAdmin today | reactiveadmin |
+| ActiveAdmin today | ReactiveAdmin |
 | --- | --- |
 | Arbre and ERB views, Sass, and jQuery | A React client built with Vite, TypeScript, Tailwind CSS, shadcn/ui, TanStack Table, and React Query |
 | Full page loads for every filter, sort, and save | Client-side navigation with real URLs, cached data, and optimistic form state |
@@ -64,7 +64,7 @@ The following capabilities build on the API. Each one is opt-in through configur
 - **API guards.** `api false`, `api :deny`, `api :read_only`, `api :session_only`, and registered custom guards keep sensitive actions, such as impersonation or superadmin grants, in classic only. The server enforces each guard, and the client and MCP never offer what it refuses.
 - **Masking and safe defaults.** `reactive { mask }` hides credentials. Binary, encrypted, and filtered columns are hidden by default, and large JSON values are summarized until a user expands them, which is audited.
 - **Agent tokens.** Bearer tokens authenticate only under the API mount, never on classic routes, and scopes separate reads from writes.
-- **Audit events.** reactiveadmin emits notifications for writes, exports, lookups, value reveals, refused requests, and MCP calls, with ids only and no record data.
+- **Audit events.** ReactiveAdmin emits notifications for writes, exports, lookups, value reveals, refused requests, and MCP calls, with ids only and no record data.
 
 ### Developer experience
 
