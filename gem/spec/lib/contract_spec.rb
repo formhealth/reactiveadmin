@@ -62,6 +62,19 @@ RSpec.describe "openapi/core.yaml" do
       expect(Contract.valid?(schema, {"options" => [], "truncated" => false})).to be(true)
     end
 
+    it "matches routes nested under a parent to the resource's own" do
+      expect(Contract.response_schema("GET", "/api/admin/posts/42/comments/new", 200)).to eq("FormResponse")
+      expect(Contract.response_schema("GET", "/api/admin/posts/42/comments/7", 200)).to eq("ShowResponse")
+    end
+
+    it "matches a custom namespace to the canonical paths" do
+      allow(ReactiveAdmin.config).to receive(:namespace).and_return(:backoffice)
+      allow(ReactiveAdmin::Registry).to receive(:find)
+
+      expect(Contract.response_schema("GET", "/api/backoffice/posts/_meta", 200)).to eq(Contract.response_schema("GET", "/api/admin/posts/_meta", 200))
+      expect(Contract.response_schema("GET", "/api/backoffice/posts/_meta", 200)).not_to be_nil
+    end
+
     it "is nil where the contract declares nothing" do
       expect(Contract.response_schema("GET", "/api/admin/posts/1/publish", 200)).to be_nil
     end
