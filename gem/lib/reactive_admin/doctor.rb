@@ -126,8 +126,8 @@ module ReactiveAdmin
       Rails.application.reload_routes_unless_loaded
       ReactiveAdmin.diagnostics.clear
       report = ApiGuards.with_channel(:session) { ActiveRecord::Base.while_preventing_writes { silence { StyleSources.trace { build } } } }
-      [*Exposure.audit(user: @user), *ApiGuards.audit, *self.class.config_warnings].each { ReactiveAdmin.diagnostics.record(it[:kind], **it.except(:kind)) }
-      report.merge(api_guards: ApiGuards.accepted, menu_links: MenuOverlay.links, diagnostics: ReactiveAdmin.diagnostics.entries.map { it.transform_values(&:to_s) })
+      [*Exposure.audit(user: @user), *ApiGuards.audit, *Mcp::Access.audit, *self.class.config_warnings].each { ReactiveAdmin.diagnostics.record(it[:kind], **it.except(:kind)) }
+      report.merge(api_guards: ApiGuards.accepted, mcp: mcp_surface, menu_links: MenuOverlay.links, diagnostics: ReactiveAdmin.diagnostics.entries.map { it.transform_values(&:to_s) })
     end
 
     # Baseline: what a later run must not do worse than.
@@ -167,7 +167,7 @@ module ReactiveAdmin
 
     def self.rank(mode) = Ladder::RANK.fetch(mode.to_s, 0)
 
-    CONFIG_KINDS = %w[expose_all null_cache_store].freeze
+    CONFIG_KINDS = %w[expose_all null_cache_store mcp_full_sensitive].freeze
 
     # Gem defaults that are permissive, or protections that silently do nothing in this environment.
     def self.config_warnings
@@ -184,6 +184,13 @@ module ReactiveAdmin
     end
 
     private
+
+    # What agents reach of each resource and page, only where the MCP endpoint may be on.
+    def mcp_surface
+      return unless ReactiveAdmin.config.mcp.possibly_enabled?
+
+      {default: ReactiveAdmin.config.mcp.default.to_s, resources: Mcp::Access.surface}
+    end
 
     def build
       resources = Registry.resources.select { Exposure.allowed?(it) && !ApiGuards.fully_denied?(it) }.map { resource(it) }
@@ -345,7 +352,7 @@ module ReactiveAdmin
       end
 
       def to_s
-        [summary, ladder, resources, api_guards, menu_links, failures, warnings].compact.join("\n\n")
+        [summary, ladder, resources, api_guards, mcp, menu_links, failures, warnings].compact.join("\n\n")
       end
 
       private
@@ -391,6 +398,15 @@ module ReactiveAdmin
           "  #{d[:kind]} #{d[:key]}: #{d[:guard]} #{scope.join("; ").presence || "all"}#{" (#{d[:reason]})" if d[:reason]}"
         end
         ("API guards (accepted)\n#{rows.join("\n")}" if rows.any?)
+      end
+
+      def mcp
+        surface = report[:mcp] or return
+        rows = surface[:resources].map do |r|
+          reach = [("tools #{r[:tools].join(", ")}" if r[:tools].any?), ("actions #{r[:actions].join(", ")}" if r[:actions].any?)].compact
+          "  #{r[:kind]} #{r[:key]}: #{r[:mode]}#{"; #{reach.join("; ")}" if reach.any?}"
+        end
+        "MCP surface (default #{surface[:default]})\n#{rows.join("\n")}"
       end
 
       def menu_links

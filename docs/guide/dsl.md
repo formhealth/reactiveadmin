@@ -118,6 +118,18 @@ unsafe_gets :reset_counter
 
 Marks GET custom actions that change data. The API takes every GET and HEAD action for a read, even one that redirects or sends data, so list the rare GET that mutates. A listed action is a write: a bearer token needs the write scope for it, the write audit records it, `api :read_only` refuses it, and MCP's `run_action` asks for confirmation.
 
+### `mcp`
+
+```ruby
+mcp :full                                   # every tool the api guards and the policy allow
+mcp :read_only                              # the read tools only
+mcp :read_only, actions: [:approve, :tidy]  # plus these custom or batch actions
+mcp actions: [:approve]                     # the same, for short
+mcp :none                                   # left out of MCP entirely
+```
+
+Sets what AI agents get of this resource or page through the [MCP server](mcp.md#resource-modes). Without it, `config.mcp.default` applies, which is `:read_only`. `actions:` only adds to `:read_only`, and any other mode with it raises `ArgumentError`. A mode never widens an [`api`](#api) guard: whichever of the two refuses wins.
+
 ## `api`
 
 ```ruby
@@ -154,7 +166,7 @@ Options:
 - **`attributes:`** applies the guard to writes that include one of these names at any depth of their params, including inside `*_attributes`. Reading them is unchanged. For an association, the foreign key and `_ids` count too. It combines with `only:` and `except:`, which scope the write actions that check it (the default is every write). `:read_only` takes no attributes.
 - **`reason:`** is the message users read instead of the guard's default.
 
-Guards stack: any refusal wins. A refused request gets `403` with code `api_denied`, the `guard` that refused, a `classic_url`, and for attributes their names. See [Security](security.md#api-guards).
+Guards stack: any refusal wins. On MCP requests the resource's [`mcp`](#mcp) mode stacks the same way, so a guard narrows what the mode allows and never widens it. A refused request gets `403` with code `api_denied`, the `guard` that refused, a `classic_url`, and for attributes their names. See [Security](security.md#api-guards).
 
 ### What the metadata says
 

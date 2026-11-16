@@ -516,6 +516,167 @@ RSpec.describe "MCP endpoint", type: :request do
     end
   end
 
+  describe "MCP modes" do
+    def with_mode(key, mode = nil, **options)
+      config = ReactiveAdmin::Registry.find(key) || ReactiveAdmin::Registry.find_page(key)
+      saved = config.reactive_options[:mcp]
+      ReactiveAdmin::Mcp::Access.declare(config, mode, **options)
+      yield
+    ensure
+      saved ? config.reactive_options[:mcp] = saved : config.reactive_options.delete(:mcp)
+    end
+
+    def tool_names = rpc("tools/list", token:).dig("result", "tools").pluck("name")
+
+    def unknown_for_tool?(result) = tool_error? && result.include?("Unknown resource \"tags\" for this tool")
+
+    describe "read-only, the default" do
+      it "lists the resource with only what it reads" do
+        tags = call_tool("list_resources", token:)["resources"].find { it["key"] == "tags" }
+
+        expect(tags["can"]).to eq(%w[index show])
+      end
+
+      it "describes it without the create form" do
+        expect(call_tool("describe_resource", {resource: "tags"}, token:)).not_to have_key("form")
+      end
+
+      it "reads records" do
+        expect(call_tool("list_records", {resource: "tags"}, token:)["records"].pluck("label")).to include("ruby")
+        expect(call_tool("get_record", {resource: "tags", id: ruby.id.to_s}, token:)).to include("label" => "ruby")
+      end
+
+      it "answers the write tools and forms as for an unknown resource, and changes nothing" do
+        expect(unknown_for_tool?(call_tool("create_record", {resource: "tags", values: {name: "go"}}, token:))).to be(true)
+        expect(unknown_for_tool?(call_tool("update_record", {resource: "tags", id: ruby.id.to_s, values: {name: "rust"}}, token:))).to be(true)
+        expect(unknown_for_tool?(call_tool("delete_record", {resource: "tags", id: ruby.id.to_s, confirm: true}, token:))).to be(true)
+        expect(unknown_for_tool?(call_tool("get_form", {resource: "tags", id: ruby.id.to_s}, token:))).to be(true)
+
+        expect(Tag.pluck(:name)).to eq(["ruby"])
+      end
+
+      it "runs the GET of an action declared for GET and POST, and refuses its POST" do
+        with_mode("posts", :read_only) do
+          result = call_tool("run_action", {resource: "posts", id: first_post.id.to_s, action: "rename", kind: "member", method: "get"}, token:)
+
+          expect(tool_error?).to be(false)
+          expect(result["fields"].first).to include("param" => "post[title]")
+
+          refused = call_tool("run_action", {resource: "posts", id: first_post.id.to_s, action: "rename", kind: "member", method: "post", inputs: {post: {title: "Renamed"}}, confirm: true}, token:)
+
+          expect(tool_error?).to be(true)
+          expect(refused).to include("Unknown resource")
+          expect(first_post.reload.title).not_to eq("Renamed")
+        end
+      end
+
+      it "runs the listed actions and GET actions, but not those in unsafe_gets" do
+        with_mode("posts", actions: [:archive]) do
+          expect(call_tool("run_action", {resource: "posts", id: first_post.id.to_s, action: "archive", kind: "member", confirm: true}, token:)).to include("ok" => true)
+
+          result = call_tool("run_action", {resource: "posts", action: "import", kind: "collection", confirm: true}, token:)
+          expect(tool_error?).to be(true)
+          expect(result).to include("Unknown resource \"posts\" for this tool")
+
+          expect(call_tool("run_action", {resource: "posts", id: first_post.id.to_s, action: "download", kind: "member"}, token:)).not_to include("Unknown resource")
+          expect(call_tool("run_action", {resource: "posts", id: first_post.id.to_s, action: "permalink", kind: "member"}, token:)).not_to include("Unknown resource")
+          expect(call_tool("run_action", {resource: "posts", id: first_post.id.to_s, action: "bump", kind: "member", confirm: true}, token:)).to include("Unknown resource \"posts\" for this tool")
+        end
+      end
+
+      it "keeps standard writes and their forms closed when a batch action shares their name" do
+        with_mode("posts", actions: [:destroy, :update]) do
+          expect(call_tool("delete_record", {resource: "posts", id: first_post.id.to_s, confirm: true}, token:)).to include("Unknown resource \"posts\" for this tool")
+          expect(call_tool("update_record", {resource: "posts", id: first_post.id.to_s, values: {title: "x"}}, token:)).to include("Unknown resource \"posts\" for this tool")
+          expect(call_tool("get_form", {resource: "posts", id: first_post.id.to_s}, token:)).to include("Unknown resource \"posts\" for this tool")
+
+          delete "/api/admin/posts/#{first_post.id}.reactiveadmin", headers: bearer(token), env: {ReactiveAdmin::Mcp::Api::ENV_KEY => true}
+          expect(response).to have_http_status(:forbidden)
+          expect(Post.exists?(first_post.id)).to be(true)
+
+          expect(call_tool("run_action", {resource: "posts", action: "destroy", kind: "batch", ids: [first_post.id.to_s], confirm: true}, token:).to_s).not_to include("Unknown resource")
+        end
+      end
+
+      it "offers only the actions it runs, and no writes, in its metadata" do
+        with_mode("posts", actions: [:archive]) do
+          described = call_tool("describe_resource", {resource: "posts"}, token:)
+          record = call_tool("get_record", {resource: "posts", id: first_post.id.to_s}, token:)
+
+          expect(described["can"]).to eq(%w[index show])
+          expect(described["batch_actions"]).to eq([])
+          expect(described["actions"].pluck("key")).not_to include("import")
+          expect(record["can"]).to eq(%w[show])
+          expect(record["actions"].pluck("key")).to include("archive")
+          expect(record["actions"].pluck("key")).not_to include("flag", "publish")
+        end
+      end
+
+      it "refuses an MCP-dispatched write that bypasses the tools" do
+        post "/api/admin/tags.reactiveadmin", params: {tag: {name: "go"}}.to_json,
+          headers: {"CONTENT_TYPE" => "application/json"}.merge(bearer(token)), env: {ReactiveAdmin::Mcp::Api::ENV_KEY => true}
+
+        expect(response).to have_http_status(:forbidden)
+        expect(response.parsed_body).to include("code" => "api_denied", "guard" => "read_only")
+        expect(Tag.count).to eq(1)
+      end
+    end
+
+    describe ":none" do
+      it "leaves the resource out of the listing and answers it as unknown everywhere" do
+        with_mode("tags", :none) do
+          expect(call_tool("list_resources", token:)["resources"].pluck("key")).not_to include("tags")
+          expect(call_tool("list_records", {resource: "tags"}, token:)).to eq(call_tool("list_records", {resource: "nope"}, token:).sub("nope", "tags"))
+          expect(call_tool("get_record", {resource: "tags", id: ruby.id.to_s}, token:)).to include("Unknown resource \"tags\".")
+        end
+      end
+
+      it "leaves a page out too" do
+        with_mode("dashboard", :none) do
+          expect(call_tool("list_resources", token:)["pages"].pluck("page")).not_to include("dashboard")
+          expect(call_tool("get_page", {page: "dashboard"}, token:)).to include("Unknown page")
+        end
+      end
+
+      it "answers reveal_value on its expand_path as unknown, not as a refusal that names the resource" do
+        first_post.update!(metadata: {"notes" => "n" * 3_000})
+        path = call_tool("get_record", {resource: "posts", id: first_post.id.to_s}, token:).dig("fields", "Metadata", "expand_path")
+
+        with_mode("posts", :none) do
+          result = call_tool("reveal_value", {expand_path: path}, token:)
+
+          expect(tool_error?).to be(true)
+          expect(result).to include("Unknown resource \"posts\".")
+          expect(result).not_to include("classic admin")
+        end
+      end
+
+      it "doesn't touch the API outside MCP" do
+        with_mode("tags", :none) do
+          get "/api/admin/tags.reactiveadmin", headers: bearer(token)
+
+          expect(response).to have_http_status(:ok)
+        end
+      end
+    end
+
+    describe "tools/list" do
+      it "hides the tools no resource's mode offers, and answers them as unknown" do
+        allow(ReactiveAdmin::Mcp::Access).to receive(:mode).and_return(:read_only)
+
+        expect(tool_names).to eq(%w[list_resources describe_resource list_records get_record get_page run_action field_options reveal_value])
+        expect(rpc("tools/call", {name: "create_record", arguments: {resource: "posts", values: {title: "x"}}}, token:)["error"]).to include("message" => "Unknown tool: create_record")
+      end
+
+      it "leaves only list_resources when everything is :none" do
+        allow(ReactiveAdmin::Mcp::Access).to receive(:mode).and_return(:none)
+
+        expect(tool_names).to eq(%w[list_resources])
+        expect(call_tool("list_resources", token:)).to include("resources" => [], "pages" => [])
+      end
+    end
+  end
+
   describe "authorization stays with the host's policy" do
     it "surfaces a denial as a tool error, not a protocol error" do
       reply = rpc("tools/call", {name: "list_records", arguments: {resource: "categories"}}, token: editor_token)

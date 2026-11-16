@@ -81,6 +81,15 @@ Fallback views
 
 **API guards (accepted).** Every `api` declaration, with the resource or page, the guard, whether it covers everything or only named actions (`only`, `except`) or attributes, and its reason. These are decisions, not findings: a resource or page that is denied whole (`api false`), or whose every action a static `api :deny` covers, isn't sampled, and none count against coverage or appear in the legacy inventory, not even as `not_exposed`. The doctor samples as a session. A name in `only:` or `except:` that matches no action is an `api_guard_unknown_action` diagnostic, because it guards nothing.
 
+**MCP surface.** Shown when `config.mcp.enabled` isn't `false`. Each served resource and page with its [MCP mode](mcp.md#resource-modes) and what agents reach of it after the `api` guards: the tools and the custom or batch actions. `FORMAT=json` has it under `mcp`. A resource that is `:full` while it is in `sensitive_resources` or masks attributes is an `mcp_full_sensitive` warning, listed under "Configuration warnings".
+
+```text
+MCP surface (default read_only)
+  resource posts: full; tools list_records, get_record, get_form, create_record, update_record, delete_record, run_action; actions archive, feature
+  resource patients: none
+  page dashboard: read_only; tools get_page
+```
+
 **Menu links (accepted).** Every explicit `link "Label", url:` in `ReactiveAdmin.menu`, by its path in the menu, with its URL (`computed` for a proc). Like the guards, these are the host's decisions. Only menu nodes inherited from ActiveAdmin's own menu that point at a classic URL stay in the legacy inventory as `menu_link`. `FORMAT=json` has them under `menu_links`.
 
 **Failures.** Sections that raised during sampling, with the exception class and the host file and line. Messages are never printed.

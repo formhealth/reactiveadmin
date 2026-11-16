@@ -93,6 +93,7 @@ Things to know:
 - `api` guards don't protect classic URLs. The classic admin keeps answering in any format ActiveAdmin allows, with whatever authentication the host accepts there. The gem never authenticates a bearer token on a classic route, so a token can't reach them; a host that adds its own token authentication to classic routes reopens the gap.
 - `:session_only` trusts the host's bearer adapter to tell tokens from sessions. A custom guard that checks `request` headers does too.
 - A name that matches no action guards nothing. `rake reactiveadmin:doctor` lists every declaration as an accepted decision, and reports a name that matches no action as `api_guard_unknown_action`.
+- MCP requests also answer to the resource's [MCP mode](mcp.md#resource-modes), read-only by default. The mode acts as one more guard on those requests only: it narrows what the guards leave open, and a guard narrows what the mode allows. Neither widens the other.
 
 ## Format lockdown
 
@@ -589,6 +590,7 @@ Before you expose a resource that holds sensitive data:
 - [ ] `html_trusted_hosts` lists only hosts you control.
 - [ ] Option sources declare `search:` columns and a safe `label`.
 - [ ] Actions and attributes that grant privileges or act as another user are behind an `api` guard (`:deny`, or `:session_only` where the React client may use them), and your own code doesn't authenticate bearer tokens on classic routes (the gem doesn't).
+- [ ] If MCP is on, `config.mcp.default` is `:read_only` or `:none`, only resources agents must change are `mcp :full` (or list the actions they need), resources with PHI that agents don't need are `mcp :none`, and the doctor's "MCP surface" shows no `mcp_full_sensitive` warning you haven't accepted.
 - [ ] Custom actions have an authorization rule, and `authorize_custom_actions` is `true`.
 - [ ] Your error reporter and log filters cover the sensitive data that can reach them.
 - [ ] `filter_parameter_logging` covers the sensitive parameters that can reach the API.

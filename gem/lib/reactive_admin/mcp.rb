@@ -16,6 +16,7 @@ module ReactiveAdmin
     autoload :Output, "reactive_admin/mcp/output"
     autoload :Layout, "reactive_admin/mcp/layout"
     autoload :Shapes, "reactive_admin/mcp/shapes"
+    autoload :Access, "reactive_admin/mcp/access"
 
     PROTOCOL_VERSIONS = %w[2025-06-18 2025-03-26 2024-11-05].freeze
     # What a client that sends no MCP-Protocol-Version header is assumed to speak (per the spec).

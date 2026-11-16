@@ -23,17 +23,22 @@ module ReactiveAdmin
     STANDARD = %w[index show new create edit update destroy batch_action].freeze
     UNSAFE = %w[create update destroy batch_action].freeze
 
-    Declaration = Data.define(:guard, :only, :except, :attributes, :reason) do
+    # `exempt` is for the MCP mode only: the custom actions and batch keys it leaves open, which unlike
+    # `except` never match the standard action of the same name.
+    Declaration = Data.define(:guard, :only, :except, :attributes, :reason, :exempt) do
+      def initialize(exempt: nil, **) = super
+
       def name = guard.to_s
 
       def static? = STATIC.include?(guard)
 
-      def blanket? = only.nil? && except.nil? && attributes.nil?
+      def blanket? = only.nil? && except.nil? && attributes.nil? && exempt.nil?
     end
     Refusal = Data.define(:guard, :message, :attributes)
 
     # The channel of the request being served: :session for the React client, :token for bearer
-    # requests (the MCP endpoint, scripts). Unset means :token, so metadata never offers more than it should.
+    # requests (scripts), :mcp for the calls MCP tools dispatch, which the resources' MCP modes also
+    # guard. Unset means :token, so metadata never offers more than it should.
     class Current < ActiveSupport::CurrentAttributes
       attribute :channel
     end
@@ -77,7 +82,11 @@ module ReactiveAdmin
 
     def channel = Current.channel || :token
 
-    def channel_of(request) = Auth.token_based?(request) ? :token : :session
+    def channel_of(request)
+      return :session unless Auth.token_based?(request)
+
+      request.env[Mcp::Api::ENV_KEY] ? :mcp : :token
+    end
 
     def with_channel(channel)
       previous = Current.channel
@@ -112,9 +121,12 @@ module ReactiveAdmin
 
     def declarations(config) = config.try(:reactive_options)&.dig(:api_guards) || []
 
-    def declared?(config) = declarations(config).any?
+    def declared?(config, channel = self.channel) = actions_of(config, channel).any? || attributes_of(config).any?
 
-    def actions_of(config) = declarations(config).select { it.attributes.nil? }
+    # On MCP requests the resource's MCP mode is one more guard, so it can only narrow what the others leave open.
+    def actions_of(config, channel = self.channel)
+      [*declarations(config).select { it.attributes.nil? }, *(Mcp::Access.declaration(config) if channel == :mcp)]
+    end
 
     def attributes_of(config) = declarations(config).select(&:attributes)
 
@@ -125,8 +137,17 @@ module ReactiveAdmin
     def applies?(declaration, names)
       return matches?(declaration.only, names) if declaration.only
       return !matches?(declaration.except, names) if declaration.except
+      return !exempt?(declaration.exempt, names) if declaration.exempt
 
       true
+    end
+
+    def exempt?(list, names)
+      case names
+      in ["batch_action", key] then list.include?(key)
+      in [key] then STANDARD.exclude?(key) && list.include?(key)
+      else false
+      end
     end
 
     # Whether a static guard refuses this request or action in `channel`. A read-only guard also
@@ -134,7 +155,7 @@ module ReactiveAdmin
     def refuses_statically?(declaration, config, names, verb:, channel:)
       case declaration.guard
       when :deny then true
-      when :session_only then channel == :token
+      when :session_only then channel != :session
       when :read_only then unsafe?(config, names, verb)
       else false
       end
@@ -153,7 +174,7 @@ module ReactiveAdmin
 
     # The declaration that statically refuses these actions in `channel`, for the metadata.
     def denial(config, names, verb: nil, channel: self.channel)
-      actions_of(config).find do |declaration|
+      actions_of(config, channel).find do |declaration|
         declaration.static? && applies?(declaration, names) && refuses_statically?(declaration, config, names, verb:, channel:)
       end
     end
@@ -172,7 +193,7 @@ module ReactiveAdmin
 
     # A resource or page nothing of which the channel may use.
     def whole?(config, channel: self.channel)
-      actions_of(config).any? { it.blanket? && refuses_statically?(it, config, [], verb: nil, channel:) }
+      actions_of(config, channel).any? { it.blanket? && refuses_statically?(it, config, [], verb: nil, channel:) }
     end
 
     # Nothing of it is reachable through the API: denied whole, or every action it serves denied one by one.
@@ -180,7 +201,7 @@ module ReactiveAdmin
       return true if whole?(config, channel:)
 
       names = served_actions(config)
-      declared?(config) && names.any? && names.all? { denial(config, [it], channel:) }
+      declared?(config, channel) && names.any? && names.all? { denial(config, [it], channel:) }
     end
 
     def served_actions(config)
@@ -193,7 +214,7 @@ module ReactiveAdmin
     # guards run). `verb` is the request's own.
     def refusal(controller, config, names, verb: controller.request.request_method)
       channel = channel_of(controller.request)
-      actions_of(config).each do |declaration|
+      actions_of(config, channel).each do |declaration|
         next unless applies?(declaration, names)
         next unless refused?(declaration, controller, config, names, verb:, channel:)
 
@@ -243,7 +264,7 @@ module ReactiveAdmin
 
     def check(controller)
       config = AA.config_of(controller)
-      return unless declared?(config)
+      return unless declared?(config, channel_of(controller.request))
 
       refusal(controller, config, names_for(controller)) || attribute_refusal(controller, config)
     end

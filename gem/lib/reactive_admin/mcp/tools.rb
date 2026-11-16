@@ -4,8 +4,11 @@ module ReactiveAdmin
     # the list stays small however many resources the host registers. Each tool is a thin translation
     # onto an API route; what the caller may see or do is decided there.
     module Tools
-      Tool = Data.define(:name, :title, :description, :properties, :required, :annotations, :write, :fit, :handler) do
+      Tool = Data.define(:name, :title, :description, :properties, :required, :annotations, :write, :fit, :offered, :handler) do
         def schema = {type: "object", properties:, required:, additionalProperties: false}
+
+        # Whether some resource's MCP mode leaves this tool anything to do.
+        def offered? = offered.nil? || offered.call
 
         def definition = {name:, title:, description:, inputSchema: schema, annotations:}
       end
@@ -18,8 +21,21 @@ module ReactiveAdmin
 
         def limit = ReactiveAdmin.config.mcp.max_response_bytes
 
+        # A resource left out of MCP is answered exactly like one that doesn't exist.
         def config_for(args)
-          Registry.find(args["resource"].to_s) || raise(ToolError.new("Unknown resource #{args["resource"].to_s.first(60).inspect}. Call list_resources for the valid keys.", code: "unknown_resource"))
+          config = Registry.find(args["resource"].to_s)
+          return config if config && Access.visible?(config)
+
+          raise ToolError.new("Unknown resource #{args["resource"].to_s.first(60).inspect}. Call list_resources for the valid keys.", code: "unknown_resource")
+        end
+
+        # What the resource's MCP mode leaves out is unknown to this tool, as a tool the caller isn't offered is.
+        # `verbs`: some declared verb must pass the mode (before the call's own verb is known); `verb`: that verb must.
+        def permit!(args, *names, verb: nil, verbs: nil)
+          config = config_for(args)
+          return config if verbs ? Access.allows_any?(config, names, verbs) : Access.allows?(config, names, verb:)
+
+          raise ToolError.new("Unknown resource #{args["resource"].to_s.first(60).inspect} for this tool. Call list_resources for the valid keys and what each allows (`can`).", code: "unknown_resource")
         end
 
         def path(rest = nil) = Paths.api(File.join("/", ReactiveAdmin.config.namespace.to_s, rest.to_s))
@@ -35,7 +51,7 @@ module ReactiveAdmin
         def member_path(args) = File.join(collection_path(args), encode(args["id"].presence || raise(ToolError, "id is required")))
 
         def page_path(args)
-          page = Registry.find_page(args["page"].to_s) || raise(ToolError.new("Unknown page #{args["page"].to_s.first(60).inspect}. Call list_resources for the valid keys.", code: "unknown_page"))
+          page = Registry.find_page(args["page"].to_s)&.then { it if Access.visible?(it) } || raise(ToolError.new("Unknown page #{args["page"].to_s.first(60).inspect}. Call list_resources for the valid keys.", code: "unknown_page"))
           return path("_pages/#{page.underscored_resource_name}") unless Paths.nested?(page)
 
           parent = args["parent_id"].presence || raise(ToolError, "#{args["page"]} is nested; pass parent_id.")
@@ -55,6 +71,8 @@ module ReactiveAdmin
       QUERY = {type: "object", description: "Values for the GET form's fields (`query_fields`), nested by each field's `param`: {\"simulation\": {\"date\": \"2026-10-01\"}}. Only declared fields; the response shows the results."}.freeze
       LOCK = {type: "object", description: "The `lock` object from get_form, passed back unchanged. The update is refused if the record changed since."}.freeze
 
+      READABLE = -> { Access.any_visible?(Registry.resources) }
+
       @tools = {}
 
       class << self
@@ -64,10 +82,11 @@ module ReactiveAdmin
 
         def find(name) = tools[name.to_s]
 
-        # Tools a caller's scopes allow: a token without the write scope isn't offered writes.
+        # Tools a caller's scopes allow and some MCP mode offers: a token without the write scope isn't
+        # offered writes, nor is anyone when no resource takes them.
         def visible(identity)
           write_scope = ReactiveAdmin.config.mcp.write_scope
-          all.select { !it.write || identity.allows?(write_scope) }
+          all.select { (!it.write || identity.allows?(write_scope)) && it.offered? }
         end
 
         def call(tool, args, context)
@@ -76,9 +95,9 @@ module ReactiveAdmin
           Output.render(payload, limit: context.limit, **tool.fit)
         end
 
-        def define(name, title:, description:, properties: {}, required: [], write: false, destructive: false, idempotent: false, fit: {}, &handler)
+        def define(name, title:, description:, properties: {}, required: [], write: false, destructive: false, idempotent: false, fit: {}, offered: READABLE, &handler)
           annotations = write ? {readOnlyHint: false, destructiveHint: destructive, idempotentHint: idempotent, openWorldHint: false} : {readOnlyHint: true, openWorldHint: false}
-          tools[name.to_s] = Tool.new(name: name.to_s, title:, description:, properties:, required: required.map(&:to_s), annotations:, write:, fit:, handler:)
+          tools[name.to_s] = Tool.new(name: name.to_s, title:, description:, properties:, required: required.map(&:to_s), annotations:, write:, fit:, offered:, handler:)
         end
 
         private
@@ -102,7 +121,7 @@ module ReactiveAdmin
       QUERY_LIMIT = 50
       FILTER_NAME = /\A\w+\z/
 
-      define :list_resources, title: "List admin resources", fit: {rows: :resources},
+      define :list_resources, title: "List admin resources", fit: {rows: :resources}, offered: nil,
         description: "Lists the resources (record types) and pages this user may open, with what they can do (index, show, create, update, destroy). Start here." do |ctx, _|
         Shapes.resources(ctx.api.get!(ctx.path("_manifest")))
       end
@@ -138,42 +157,46 @@ module ReactiveAdmin
         Shapes.show(ctx.api.get!(ctx.member_path(args)))
       end
 
-      define :get_page, title: "Get a page", fit: {text: :sections},
+      define :get_page, title: "Get a page", fit: {text: :sections}, offered: -> { Access.any_visible?(Registry.pages) },
         description: "A custom admin page (dashboards, reports) as text. Page keys are listed by list_resources. A page with a filter form lists its fields as `query_fields`; pass `query` to see the results for them.",
         properties: {page: {type: "string", description: "Page key."}, parent_id: PARENT, query: QUERY}, required: [:page] do |ctx, args|
         Shapes.page(read_view(ctx, ctx.page_path(args), args["query"]))
       end
 
-      define :get_form, title: "Get a form",
+      define :get_form, title: "Get a form", offered: -> { Access.anywhere?("new", "edit") },
         description: "The fields of the new-record form (omit id) or the edit form (pass id): each field's `key` (what create_record and update_record take in values), control, whether it is required, its current value and options. The edit form's `lock` is needed by update_record.",
         properties: {resource: RESOURCE, id: {type: "string", description: "Record id for the edit form; omit for the new form."}, parent_id: PARENT}, required: [:resource] do |ctx, args|
+        ctx.permit!(args, args["id"].present? ? "edit" : "new")
         path = args["id"].present? ? File.join(ctx.member_path(args), "edit") : File.join(ctx.collection_path(args), "new")
         Shapes.form(ctx.api.get!(path)).merge(mode: args["id"].present? ? "edit" : "new")
       end
 
-      define :create_record, title: "Create a record", write: true,
+      define :create_record, title: "Create a record", write: true, offered: -> { Access.anywhere?("create") },
         description: "Creates a record. values is an object keyed by the `key` of each field from get_form (nested rows go under the key of their section, as an array of objects). Fields the form doesn't offer are rejected.",
         properties: {resource: RESOURCE, parent_id: PARENT, values: {type: "object", description: "Field key to value."}}, required: %i[resource values] do |ctx, args|
+        ctx.permit!(args, "create")
         written ctx.api.call!("POST", ctx.collection_path(args), body: {ctx.param_key(args) => args["values"]}), args
       end
 
-      define :update_record, title: "Update a record", write: true, idempotent: true,
+      define :update_record, title: "Update a record", write: true, idempotent: true, offered: -> { Access.anywhere?("update") },
         description: "Changes fields of one record. Send only the fields to change, keyed as in get_form, plus the `lock` from the same get_form call. A stale lock is refused: reload with get_form and review before retrying.",
         properties: {resource: RESOURCE, id: ID, parent_id: PARENT, values: {type: "object", description: "Field key to new value."}, lock: LOCK,
                      lock_version: {type: "string", description: "Shorthand for the lock of a model with lock_version."}}, required: %i[resource id values] do |ctx, args|
+        ctx.permit!(args, "update")
         lock = args["lock"] || ({field: "lock_version", value: args["lock_version"]} if args["lock_version"])
         written ctx.api.call!("PATCH", ctx.member_path(args), body: {ctx.param_key(args) => args["values"], :lock => lock}.compact), args
       end
 
-      define :delete_record, title: "Delete a record", write: true, destructive: true, idempotent: true,
+      define :delete_record, title: "Delete a record", write: true, destructive: true, idempotent: true, offered: -> { Access.anywhere?("destroy") },
         description: "Deletes one record. Requires confirm: true. Hard to undo: confirm with the user first.",
         properties: {resource: RESOURCE, id: ID, parent_id: PARENT, confirm: CONFIRM}, required: %i[resource id] do |ctx, args|
+        ctx.permit!(args, "destroy")
         path = ctx.member_path(args)
         unconfirmed!(args, "delete #{args["resource"]}/#{args["id"]} (DELETE #{path}), which may not be reversible.")
         written ctx.api.call!("DELETE", path), args
       end
 
-      define :run_action, title: "Run an action", write: true, destructive: true,
+      define :run_action, title: "Run an action", write: true, destructive: true, offered: -> { Access.any_runnable? },
         description: "Runs a custom action: kind member (needs id), collection, or batch (needs ids and a key from describe_resource's batch_actions). Action keys come from get_record, get_page or describe_resource. inputs is sent as the JSON body exactly as given; for actions with a form, read it first with method: get and nest values under the param names it shows. A GET action with a filter form takes `query` (see `query_fields`). Anything but a GET requires confirm: true.",
         properties: {resource: RESOURCE, action: {type: "string", description: "Action key."}, kind: {type: "string", enum: %w[member collection batch]}, id: ID, ids: {type: "array", description: "Record ids for kind batch (at most 100)."},
                      parent_id: PARENT, inputs: {type: "object", description: "Request body."}, query: QUERY, method: {type: "string", enum: %w[get post put patch delete], description: "Defaults to the action's own method."},
@@ -186,6 +209,7 @@ module ReactiveAdmin
         properties: {resource: RESOURCE, field: {type: "string", description: "The `search` value of a filter or form field."}, context: {type: "string", enum: %w[filter form], description: "Default filter."},
                      term: {type: "string"}, value: {type: "array", description: "Values to resolve to labels."}, id: {type: "string", description: "Record id when searching an edit form's field."},
                      limit: {type: "integer"}, parent_id: PARENT}, required: %i[resource field] do |ctx, args|
+        ctx.permit!(args, args["id"].present? ? "edit" : "new") if args["context"] == "form"
         query = {field: args["field"], context: args.fetch("context", "filter"), term: args["term"], value: args["value"]&.join(","), id: args["id"],
                  limit: [args["limit"] || 10, ReactiveAdmin.config.mcp.max_per_page].min}
         body = ctx.api.get!(File.join(ctx.collection_path(args), "_options"), query)
@@ -224,10 +248,13 @@ module ReactiveAdmin
           kind = args["kind"]
           config = ctx.config_for(args)
           verbs = declared_verbs(config, name, kind)
+          names = (kind == "batch") ? ["batch_action", name] : [name]
+          ctx.permit!(args, *names, verbs:)
           base = ctx.collection_path(args)
           known = action_info(ctx, args, base, name, kind)
           asked = (args["method"] || known["method"])&.upcase
           verb = verbs.include?(asked) ? asked : verbs.first
+          ctx.permit!(args, *names, verb:)
           path = action_path(ctx, args, base, name, kind)
           body = args["inputs"]
           query = args["query"]
@@ -327,6 +354,7 @@ module ReactiveAdmin
           valid = uri.host.nil? && uri.path.start_with?("#{root}/") && uri.path.end_with?("/_value") && uri.path.exclude?("..") && uri.path.exclude?("//")
           raise ToolError, "expand_path must be a path returned by a previous result, unchanged." unless valid
 
+          ctx.permit!({"resource" => uri.path.delete_prefix("#{root}/").split("/")[-3]}, "show")
           query = Rack::Utils.parse_query(uri.query).slice("field", "token").merge("path" => args["path"])
           value = ctx.api.get!(uri.path, query)["value"]
           size = JSON.generate(value).bytesize

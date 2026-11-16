@@ -41,7 +41,7 @@ reactiveadmin replaces ActiveAdmin's presentation layer and adds the interfaces 
 | Arbre and ERB views, Sass, and jQuery | A React client built with Vite, TypeScript, Tailwind CSS, shadcn/ui, TanStack Table, and React Query |
 | Full page loads for every filter, sort, and save | Client-side navigation with real URLs, cached data, and optimistic form state |
 | HTML only | A JSON API (`application/vnd.reactiveadmin+json`) with a generated OpenAPI 3.1 document |
-| No agent access | An MCP server whose tools call the same API, so agents act as a signed-in admin |
+| No agent access | An MCP server whose tools call the same API, so agents act as a signed-in admin, read-only unless a resource opts in |
 | Hand-maintained menus | A menu overlay DSL that arranges resources into an information architecture |
 | `datalist` helpers | Declared option sources that power typeaheads in forms and filters |
 | Free-form ActiveAdmin HTML in the API | A strict HTML policy: only DSL-rendered controls become actions, and stored data never does |
