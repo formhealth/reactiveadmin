@@ -39,6 +39,7 @@ Run client scripts from the repository root with `pnpm --filter standalone <scri
 | Accessibility (axe over every story) | `pnpm --filter standalone a11y` |
 | End-to-end crawl against the dummy app | `pnpm crawl:dummy` |
 | Website, with live reload | `pnpm --filter site dev` |
+| Refresh the site's screenshots (with the preview running) | `pnpm --filter standalone site-screenshots` |
 | Website, demo, and Storybook, as Pages serves them | `pnpm --filter site build:full && pnpm --filter site preview` (http://localhost:4173/reactiveadmin/) |
 
 CI runs the same commands; see `.github/workflows/`. To run the client against a Rails app, see [Getting started](docs/guide/getting-started.md). Without a backend, `pnpm dev:mocks` serves fixtures from `apps/standalone/src/mocks`.

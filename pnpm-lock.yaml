@@ -13,6 +13,12 @@ importers:
 
   apps/site:
     devDependencies:
+      '@fontsource-variable/ibm-plex-sans':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/ibm-plex-mono':
+        specifier: ^5.3.0
+        version: 5.3.0
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -1368,11 +1374,9 @@ packages:
 
   /@fontsource-variable/ibm-plex-sans@5.3.0:
     resolution: {integrity: sha512-agG8tXFEo0hD9+J7npa4vbbWult52eMLVaQ6WQRlhs/iCAojrMAoejru85W9HTVXHfyUj96KM7gp/KGAS87XaQ==}
-    dev: false
 
   /@fontsource/ibm-plex-mono@5.3.0:
     resolution: {integrity: sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==}
-    dev: false
 
   /@iconify-json/simple-icons@1.2.102:
     resolution: {integrity: sha512-IwbAj1ZI6LBy+qU7sVYxB1wgbSSIDKjY9I0BnnpjfIdlqfXoYnBb80UvYA0WkodUFWfQyL4AjaKMg48fqX8sIw==}
