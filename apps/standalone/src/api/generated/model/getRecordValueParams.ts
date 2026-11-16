@@ -13,13 +13,9 @@
  */
 
 export type GetRecordValueParams = {
-field: string;
-/**
- * Dot path inside the value, e.g. insurance.member_id
- */
-path?: string;
-/**
- * Short-lived signed proof from the expand_path that the page rendered this field for this user. Opaque: pass it back unchanged. Required unless the server runs with value_token disabled.
- */
-token?: string;
+  field: string;
+  /** Dot path inside the value, e.g. insurance.member_id */
+  path?: string;
+  /** Short-lived signed proof from the expand_path that the page rendered this field for this user. Opaque: pass it back unchanged. Required unless the server runs with value_token disabled. */
+  token?: string;
 };

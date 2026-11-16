@@ -13,9 +13,9 @@
  */
 
 export type GetLabelsParams = {
-/**
- * Comma-separated record ids (more than 20 are ignored).
- * @maxItems 20
- */
-ids: string[];
+  /**
+   * Comma-separated record ids (more than 20 are ignored).
+   * @maxItems 20
+   */
+  ids: string[];
 };
