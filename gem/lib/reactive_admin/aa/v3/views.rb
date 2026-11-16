@@ -32,7 +32,10 @@ module ReactiveAdmin
 
         def plural_many_count = ::ActiveAdmin::Helpers::I18n::PLURAL_MANY_COUNT
 
-        def arbre_element = ::Arbre::Element
+        # The elements the index block and a show or page block run in, to subclass.
+        def index_recorder_base = Recorders::Index
+
+        def page_element_base = Recorders::Page
 
         def arbre_context(assigns, view) = ::Arbre::Context.new(assigns, view)
 

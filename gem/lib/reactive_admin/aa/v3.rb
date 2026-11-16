@@ -10,6 +10,8 @@ module ReactiveAdmin
       require "reactive_admin/aa/v3/views"
       require "reactive_admin/aa/v3/menu"
       require "reactive_admin/aa/v3/forms"
+      require "reactive_admin/aa/v3/recorders"
+      require "reactive_admin/aa/v3/form_hooks"
 
       include Registry
       include Controller
