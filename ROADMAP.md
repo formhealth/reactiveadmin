@@ -1,6 +1,6 @@
 # Roadmap
 
-This page describes where reactiveadmin is heading. It's a statement of direction, not a commitment to dates. Track the details in the linked [issues](https://github.com/formhealth/reactiveadmin/issues) and [pull requests](https://github.com/formhealth/reactiveadmin/pulls).
+This page describes where ReactiveAdmin is heading. It's a statement of direction, not a commitment to dates. Track the details in the linked [issues](https://github.com/formhealth/reactiveadmin/issues) and [pull requests](https://github.com/formhealth/reactiveadmin/pulls).
 
 ## In progress
 

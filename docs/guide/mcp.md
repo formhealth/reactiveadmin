@@ -1,6 +1,6 @@
 # MCP server
 
-reactiveadmin can serve your admin to AI agents over the [Model Context Protocol](https://modelcontextprotocol.io). The endpoint is `{mount}/_mcp`, for example `POST /api/admin/_mcp`. An agent signs in as a person, and it can do only what that person can do in the admin.
+ReactiveAdmin can serve your admin to AI agents over the [Model Context Protocol](https://modelcontextprotocol.io). The endpoint is `{mount}/_mcp`, for example `POST /api/admin/_mcp`. An agent signs in as a person, and it can do only what that person can do in the admin.
 
 The server adds no access of its own. Every tool call is an internal request to the same API the React client uses, sent through your app's whole Rack stack with the caller's `Authorization` header. Your authorization adapter (Pundit or any other), your controller overrides, masking, the declared-filter allowlist, optimistic locking, rate limits and audit events all apply unchanged. No tool reads a model directly.
 

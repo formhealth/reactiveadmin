@@ -1,6 +1,6 @@
 # Custom views
 
-ActiveAdmin lets you write any view, but the API can only type the forms and layouts it understands. A custom view that the API can't type still works. reactiveadmin picks the least-invasive way to show it, and that choice is the fallback ladder.
+ActiveAdmin lets you write any view, but the API can only type the forms and layouts it understands. A custom view that the API can't type still works. ReactiveAdmin picks the least-invasive way to show it, and that choice is the fallback ladder.
 
 ## The fallback ladder
 

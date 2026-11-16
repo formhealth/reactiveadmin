@@ -1,6 +1,6 @@
 # DSL
 
-reactiveadmin reads your ActiveAdmin declarations as they are. Use the DSL only for hints the classic admin doesn't need. You can add four kinds of hints:
+ReactiveAdmin reads your ActiveAdmin declarations as they are. Use the DSL only for hints the classic admin doesn't need. You can add four kinds of hints:
 
 - A `reactive do ... end` block inside a resource, for search, masking, menu placement, exposure, exposed actions and render modes.
 - `api` guards, for what the API must refuse.

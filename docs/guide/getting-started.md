@@ -1,6 +1,6 @@
 # Getting started
 
-reactiveadmin serves the ActiveAdmin resources in your Rails app as a JSON API, and it ships a React client that renders them. Your ActiveAdmin registrations stay the source of truth. This guide walks you through adding the gem to an existing app and running the client against it.
+ReactiveAdmin serves the ActiveAdmin resources in your Rails app as a JSON API, and it ships a React client that renders them. Your ActiveAdmin registrations stay the source of truth. This guide walks you through adding the gem to an existing app and running the client against it.
 
 ## Requirements
 
@@ -65,7 +65,7 @@ To check the mount, sign in to the classic admin at `http://localhost:3003/admin
 
 ## Understand authentication and authorization
 
-reactiveadmin doesn't add its own login. It uses the ActiveAdmin setup you already have:
+ReactiveAdmin doesn't add its own login. It uses the ActiveAdmin setup you already have:
 
 - **Authentication** runs through `config.authentication_method`. A request that fails authentication returns `401` with a JSON body, not a redirect.
 - **Authorization** runs through `config.authorization_adapter`, the same adapter that protects your classic pages. The default adapter and `ActiveAdmin::PunditAdapter` both work. Each endpoint checks the same permission the classic page checks.

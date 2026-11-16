@@ -1,6 +1,6 @@
 # Security
 
-reactiveadmin adds an API on top of your ActiveAdmin resources. It keeps ActiveAdmin's authentication, authorization, and write path, and it adds guards of its own. This page describes what the gem enforces, what your app must still do, and how to handle sensitive data, such as PII or PHI.
+ReactiveAdmin adds an API on top of your ActiveAdmin resources. It keeps ActiveAdmin's authentication, authorization, and write path, and it adds guards of its own. This page describes what the gem enforces, what your app must still do, and how to handle sensitive data, such as PII or PHI.
 
 ## Authentication
 
