@@ -48,6 +48,17 @@ RSpec.describe ReactiveAdmin::OpenApi::ResourceDoc do
     expect(ReactiveAdmin::Degradation).to have_received(:record).with(hash_including(kind: :openapi_degraded, reason: a_string_matching(/\A(?!.*private detail)/))).at_least(:once)
   end
 
+  it "publishes its degradations under the model name, like every other degraded event" do
+    allow(ReactiveAdmin::ResourceMeta).to receive(:new).and_raise(RuntimeError)
+    seen = []
+    subscriber = ActiveSupport::Notifications.subscribe(ReactiveAdmin::Degradation::EVENT) { seen << it.payload[:resource] }
+    build("posts")
+
+    expect(seen.uniq).to eq(["Post"])
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+  end
+
   it "gives member and collection actions the ids the verb and kind imply" do
     ids = build("posts")[:paths].values.flat_map(&:values).pluck(:operationId)
 

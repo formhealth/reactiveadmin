@@ -63,6 +63,9 @@ module ReactiveAdmin
       # URL prefix the built client is served under. A path (the gem serves it when nothing else does) or
       # an absolute URL (a CDN). Builds refer to their own files relatively, so no rebuild is needed for either.
       attr_accessor :asset_prefix
+      # Whether the client reports crashes to `_client_errors`, which hands them to `config.error_reporter`.
+      # Off, the endpoint answers 404 and the client sends nothing.
+      attr_accessor :client_errors
 
       def initialize
         @enabled = true
@@ -70,6 +73,7 @@ module ReactiveAdmin
         @default = :classic
         @client_assets = nil
         @asset_prefix = "/reactiveadmin"
+        @client_errors = true
       end
     end
 
@@ -78,7 +82,7 @@ module ReactiveAdmin
       :after_authorize, :on_background_request, :doctor_user, :doctor_page_params, :masked_attributes, :mask_filter_parameters, :mask_csv, :html_trusted_hosts,
       :require_lock, :retryable_errors, :error_reporter,
       :inline_json_limit, :inline_text_limit, :value_token, :value_token_ttl, :strict_defaults, :exposed_resources, :max_per_page, :max_export_rows, :rate_limits, :sensitive_resources,
-      :ransack_unguarded_actions, :auth, :audit_views
+      :ransack_unguarded_actions, :auth, :audit_views, :event_counts
     attr_reader :mount_path, :authorize_custom_actions, :implicit_defaults, :expose, :openapi, :mcp, :api_guards, :ui
 
     # Callers join and strip this as a prefix, so "/api/" or "api" must mean "/api", and a root mount "".
@@ -177,8 +181,12 @@ module ReactiveAdmin
       @ransack_unguarded_actions = {}
       # Publish an `audit.reactiveadmin` event of kind `view` for every API show and edit read.
       @audit_views = false
+      # ->(event, resource) { Integer or nil }: how many `degraded.reactiveadmin` or `client_error.reactiveadmin`
+      # events the host recorded recently for `resource` as the event publishes it; `rake reactiveadmin:readiness`
+      # reads it. The gem stores nothing, so nil (the default) means "not recorded".
+      @event_counts = nil
       @openapi = OpenApiSettings.new({}, "openapi/admin.yaml", nil)
-      @rate_limits = {options: [30, 10.seconds], lookup: [120, 1.minute], export: [5, 1.minute], value: [60, 1.minute], mcp: [120, 1.minute], default: nil}
+      @rate_limits = {options: [30, 10.seconds], lookup: [120, 1.minute], export: [5, 1.minute], value: [60, 1.minute], mcp: [120, 1.minute], client_error: [10, 1.minute], default: nil}
       # How API requests authenticate: nil is the session (AA's `authentication_method`, CSRF on writes).
       # `ReactiveAdmin::Auth::Bearer.new { |token, request| user }` is for tokens, and
       # `ReactiveAdmin::Auth.any(session, bearer)` accepts both; see Auth.

@@ -43,8 +43,8 @@ RSpec.describe ReactiveAdmin::Ui do
     around { |example| with_ui(default: :new) { example.run } }
 
     it "is what `_session` reports" do
-      expect(described_class.payload(user)).to eq(available: true, default: "new")
-      expect(described_class.payload(nil)).to eq(available: false, default: "new")
+      expect(described_class.payload(user)).to eq(available: true, default: "new", client_errors: true)
+      expect(described_class.payload(nil)).to eq(available: false, default: "new", client_errors: true)
     end
   end
 

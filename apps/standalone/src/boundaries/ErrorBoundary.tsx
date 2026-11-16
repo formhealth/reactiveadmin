@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { reportClientError } from './reportClientError'
 
 type Props = {
@@ -18,8 +18,8 @@ export class ErrorBoundary extends Component<Props, State> {
     return { failed: true }
   }
 
-  componentDidCatch(error: unknown) {
-    reportClientError({ where: this.props.where, kind: 'render', message: error instanceof Error ? error.name : 'unknown' })
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    reportClientError({ where: this.props.where, name: error instanceof Error ? error.name : 'unknown', componentStack: info.componentStack })
   }
 
   componentDidUpdate(prev: Props) {

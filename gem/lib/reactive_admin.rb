@@ -95,6 +95,8 @@ module ReactiveAdmin
   autoload :Sidebars, "reactive_admin/sidebars"
   autoload :RansackGuard, "reactive_admin/ransack_guard"
   autoload :QueryGuard, "reactive_admin/query_guard"
+  autoload :ClientError, "reactive_admin/client_error"
+  autoload :Readiness, "reactive_admin/readiness"
   autoload :RateLimit, "reactive_admin/rate_limit"
   autoload :CsvInjection, "reactive_admin/csv_injection"
   autoload :BackgroundRequests, "reactive_admin/background_requests"

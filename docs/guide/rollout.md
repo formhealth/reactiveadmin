@@ -99,6 +99,8 @@ In the new admin, people switch back from the account menu ("Use classic admin")
 3. To move everyone you've made available, set `config.ui.default = :new`. A person's own choice still wins.
 4. When the classic admin is retired, drop the switch and serve the client alone.
 
+Between steps, [watch the rollout](#watch-the-rollout) to see which resources are ready.
+
 ### How `ui.default` takes effect
 
 The server never writes the cookie, so the default can only apply where script runs before the first page. That is the panel's `uiToggle` script on the classic page: with `default` set to `new`, a browser that has no `reactiveadmin_ui` cookie and no `classic=1` in the URL gets `new` stored and the page reloads into the client. Put `reactiveadmin_ui_toggle` on the pages people land on (the dashboard, or a shared layout partial). A person who never loads a page with the panel stays in classic until they choose.
@@ -131,6 +133,88 @@ The shell links to the classic page for people without JavaScript.
 ## Audit and analytics
 
 There is no server event for a switch: the server doesn't take part in it. The cookie arrives with every request under the admin, so log it with your own request logging (`request.cookies["reactiveadmin_ui"]`), or add it to the tracking you already do for page views. The client has no analytics hook to call.
+
+## Watch the rollout
+
+Three signals tell you whether a resource is ready to leave classic: what the server fell back to (`degraded.reactiveadmin`), what crashed in the browser (`client_error.reactiveadmin`), and what the doctor measures. `rake reactiveadmin:readiness` puts them side by side.
+
+### Report client errors
+
+In production, when an error boundary catches a crash, the client posts a report to `POST {mount_path}/admin/_client_errors`. Set `config.ui.client_errors = false` to turn this off: the endpoint then answers 404, and the client, which reads the setting from `_session`, sends nothing. In development it logs to the console instead. The report holds names and nothing else:
+
+| Field | Holds |
+| --- | --- |
+| `error_name` | The error's class name, such as `TypeError`. Never its message. |
+| `boundary` | Which boundary caught it: `app`, `route`, `frame`, `iframe` or `node:<type>`. |
+| `components` | Component names from React's stack, innermost first, up to 20. |
+| `route` | The matched route pattern, such as `/:resource/:id/edit`. Never the URL, its ids or its query. |
+| `resource` | The resource or page key. |
+| `client_version` | The gem version the client was built with. |
+| `request_id` | The `X-Request-Id` of the last API response the client saw, to find the request before the crash in your logs. |
+
+The server keeps a field only if it has the shape of a name: an identifier, a pattern made of known route words and `:params`, a key of a resource the user may see. It drops anything else, so text or a value in one of them doesn't reach your reporter. A report without a usable `error_name` answers 400. Names are as your build leaves them, so a minified build reports short component names.
+
+The endpoint needs a signed-in session (a bearer token answers 403), the CSRF token like any write, and the user's read access to the admin. It answers 204. It is rate limited per user in the `client_error` bucket (10 a minute by default), before the authorization check, and the client sends each distinct failure once per page load, at most five. The limit counts in `Rails.cache`; with a store that can't count, such as the null store, or one that fails, the endpoint fails open and doesn't limit at all.
+
+The server passes the report to `config.error_reporter` as a `ReactiveAdmin::ClientError`, which is shaped like a `ScrubbedError`: `original_class` is the JavaScript error name, the backtrace lists the component names, and the message names only the error and the route. The context holds `resource`, `action` (`"client"`), `request_id` (the report's own), `client_request_id`, `error_class`, `boundary`, `route` and `client_version`.
+
+It also publishes `client_error.reactiveadmin` with the same keys, `components`, and the signed-in `user_id`:
+
+```ruby
+ActiveSupport::Notifications.subscribe("client_error.reactiveadmin") do |*, payload|
+  StatsD.increment("reactiveadmin.client_error", tags: ["resource:#{payload[:resource]}", "route:#{payload[:route]}", "version:#{payload[:client_version]}"])
+end
+```
+
+A `client_version` that differs from the gem's `ReactiveAdmin::VERSION` means a browser is running an older client build against a newer server, or the other way round.
+
+### Count events for the readiness report
+
+The gem doesn't store events. To show recent `degraded` and `client_error` counts in the readiness report, record them where you already keep metrics, then give the gem a way to read them back. This sketch counts per day in a shared cache (Redis or Memcached, so that every process adds to the same number). Those stores keep `increment` counters raw, so read them with `raw: true`, or a counter can read as a miss and count as zero:
+
+```ruby
+%w[degraded client_error].each do |name|
+  ActiveSupport::Notifications.subscribe("#{name}.reactiveadmin") do |*, payload|
+    next if ReactiveAdmin::Degradation.synthetic?(payload)
+
+    Rails.cache.increment("reactiveadmin:#{name}:#{payload[:resource]}:#{Date.current}", 1, expires_in: 8.days)
+  end
+end
+
+ReactiveAdmin.configure do |config|
+  config.event_counts = lambda do |event, resource|
+    name = event.delete_suffix(".reactiveadmin")
+    (0...7).sum { |days_ago| Rails.cache.read("reactiveadmin:#{name}:#{resource}:#{Date.current - days_ago}", raw: true).to_i }
+  end
+end
+```
+
+`synthetic?` skips events that aren't a user's screen: the doctor's own samples, which the readiness task runs first and which carry `synthetic: true`, and OpenAPI builds (`action: "openapi"`). Without it, running the report counts its own sampling. Store `payload[:resource]` as it comes. The two events name the resource differently (`degraded` by model name, such as `Post`, and `client_error` by route key, such as `posts`), and `event_counts` is called with the same form for each. The window is yours: the lambda decides what "recent" means. A lambda that returns `nil` or raises counts as "not recorded".
+
+### Check readiness
+
+```sh
+bin/rails reactiveadmin:readiness
+```
+
+The task runs the [doctor](doctor.md) and adds a verdict per resource and page. Set `doctor_user` so it can sample. `FORMAT=json` prints the data, and `SAMPLE=0` reads code only.
+
+| Mode | Meaning |
+| --- | --- |
+| `native` | Every view is typed, and nothing was left out. |
+| `degraded` | It renders natively, but has html leaves or filters that couldn't be built. |
+| `fallback` | An action renders through a frame or iframe, or a sample failed to render. |
+
+Each row has a checklist, and a resource is ready when no check fails:
+
+- **Typed views.** No action renders through a frame or iframe.
+- **Samples render.** The doctor's index, show and form samples (or the page) succeeded. `unknown` without a `doctor_user`, or when no sample had anything to inspect (an empty table, no record to show); the detail names the sections it couldn't inspect.
+- **No html leaves.** Everything on the screens is a typed node.
+- **All filters built.** No declared filter was skipped.
+- **No degraded events.** `config.event_counts` reports zero. `unknown` until you set it.
+- **No client errors.** The same, for `client_error.reactiveadmin`.
+
+An `unknown` check doesn't block a resource, and it doesn't pass either: the output counts them next to `ready`. The report also lists what the gem can't see. Who still uses classic, and whether operators can do their work in the new admin, are questions for your request logs (the `reactiveadmin_ui` cookie) and for the people using it.
 
 ## Limits
 

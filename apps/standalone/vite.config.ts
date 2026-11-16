@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -29,6 +30,9 @@ const restoreDeepLink: Plugin = {
   ],
 }
 
+// The client ships with the gem and shares its version, which tells an error report which build crashed.
+const clientVersion = /VERSION = "([^"]+)"/.exec(readFileSync(path.resolve(import.meta.dirname, '../../gem/lib/reactive_admin/version.rb'), 'utf8'))?.[1] ?? 'dev'
+
 // Vendor groups keep the entry small and cacheable; heavy ones (forms, dates, table, purify) are only
 // imported by lazy page/dialog chunks, so they never load with the shell.
 const vendorGroups = Object.entries({
@@ -44,6 +48,7 @@ const vendorGroups = Object.entries({
 
 export default defineConfig({
   base: demo ? demoBase : outDir ? './' : '/',
+  define: { __CLIENT_VERSION__: JSON.stringify(clientVersion) },
   // The host build is for production: none of the dev server's static files (mocks, the MSW worker) ship with it.
   publicDir: outDir ? false : 'public',
   plugins: [react(), tailwindcss(), ...(demo ? [restoreDeepLink] : [])],

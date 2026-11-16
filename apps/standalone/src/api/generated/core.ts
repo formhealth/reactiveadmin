@@ -35,6 +35,7 @@ import type {
   ActionResultResponse,
   BadRequestResponse,
   BatchActionRequest,
+  ClientErrorReport,
   ConflictResponse,
   DryRunResult,
   Error,
@@ -742,6 +743,78 @@ export function useGetSession<TData = Awaited<ReturnType<typeof getSession>>, TE
 
 
 
+
+export const getPostClientErrorUrl = () => {
+
+
+
+
+  return `/admin/_client_errors`
+}
+
+/**
+ * The client reports a crash its error boundary caught, in production. Names only: the error's class name, the component names it unwound through, the route pattern (`/:resource/:id/edit`, never the URL), the resource key, the client build's version and the id of the last API request the client saw. The server keeps only fields shaped like those, passes them to `config.error_reporter` and publishes `client_error.reactiveadmin`. Session only (a bearer token answers 403), and rate limited per user in the `client_error` bucket. Answers 204.
+ */
+export const postClientError = async (clientErrorReport: ClientErrorReport, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+
+  return apiFetch<void>(getPostClientErrorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }, options?.headers),
+    body: JSON.stringify(clientErrorReport)
+  }
+);}
+
+
+
+
+
+export const getPostClientErrorMutationKey = () => ['postClientError'] as const;
+
+export const getPostClientErrorMutationOptions = <TError = BadRequestResponse | ErrorResponse | RateLimitedResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postClientError>>, TError,PostClientErrorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postClientError>>, TError,PostClientErrorMutationVariables, TContext> => {
+
+const mutationKey = getPostClientErrorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postClientError>>, PostClientErrorMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  postClientError(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostClientErrorMutationResult = NonNullable<Awaited<ReturnType<typeof postClientError>>>
+    export type PostClientErrorMutationBody = ClientErrorReport
+    export type PostClientErrorMutationError = BadRequestResponse | ErrorResponse | RateLimitedResponse
+    export type PostClientErrorMutationVariables = {data: ClientErrorReport}
+
+    /** The client reports a crash its error boundary caught, in production. Names only: the error's class name, the component names it unwound through, the route pattern (`/:resource/:id/edit`, never the URL), the resource key, the client build's version and the id of the last API request the client saw. The server keeps only fields shaped like those, passes them to `config.error_reporter` and publishes `client_error.reactiveadmin`. Session only (a bearer token answers 403), and rate limited per user in the `client_error` bucket. Answers 204. */
+export const usePostClientError = <TError = BadRequestResponse | ErrorResponse | RateLimitedResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postClientError>>, TError,PostClientErrorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postClientError>>,
+        TError,
+        PostClientErrorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPostClientErrorMutationOptions(options), queryClient);
+    }
 
 export const getPostMcpUrl = () => {
 

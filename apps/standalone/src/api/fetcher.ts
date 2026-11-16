@@ -54,6 +54,11 @@ const backoffLeft = (bucket: string) => Math.ceil(((backoffUntil.get(bucket) ?? 
 export const errorMessage = (error: unknown) =>
   error instanceof ApiError ? error.body?.base?.join(' ') || error.message : error instanceof Error ? error.message : 'Something went wrong'
 
+let requestId: string | undefined
+
+// The server's id for the last response, so a client error report can be found in the server's logs.
+export const lastRequestId = () => requestId
+
 let session: Promise<Session> | undefined
 
 // Cached for the page's lifetime; dropped when the server rejects it.
@@ -64,6 +69,14 @@ export const fetchSession = () =>
   }))
 
 export const csrfToken = () => fetchSession().then((s) => s.csrf_token)
+
+// For telemetry, which must not disturb the page it reports on: the cached session's token, else one read with a bare
+// fetch that neither clears client storage on a 401 nor toasts a 429, and leaves the shared cache as it was.
+export async function quietSession({ fresh = false } = {}): Promise<Session | undefined> {
+  if (session && !fresh) return session.catch(() => undefined)
+  const res = await fetch(withMount('/admin/_session'), { credentials: 'include', headers: { Accept: 'application/json', ...backgroundRequest } }).catch(() => undefined)
+  return res?.ok ? ((await res.json().catch(() => undefined)) as Session | undefined) : undefined
+}
 
 export const resetCsrf = () => {
   session = undefined
@@ -86,6 +99,7 @@ async function request<T>(url: string, options: RequestInit = {}, retried = fals
   if (write) Object.assign(headers, { 'X-CSRF-Token': await csrfToken() })
 
   const res = await fetch(withMount(url), { credentials: 'include', ...options, headers })
+  requestId = res.headers.get('X-Request-Id') ?? requestId
   // Host-generated export hooks declare a `Blob`.
   if (res.ok && res.headers.get('Content-Type')?.startsWith('text/csv')) return (await res.blob()) as T
   const body = await res.json().catch(() => null)

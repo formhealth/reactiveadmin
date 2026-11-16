@@ -7,6 +7,7 @@ module ReactiveAdmin
       router.get "#{ns}/_manifest", to: "reactive_admin/manifest#show"
       router.get "#{ns}/_session", to: "reactive_admin/session#show"
       router.get "#{ns}/_openapi", to: "reactive_admin/openapi#show"
+      router.post "#{ns}/_client_errors", to: "reactive_admin/client_errors#create"
       router.post "#{ns}/_mcp", to: "reactive_admin/mcp#create"
       router.match "#{ns}/_mcp", to: "reactive_admin/mcp#unsupported", via: %i[get delete]
       # Must precede AA's `/:id` routes, which would otherwise swallow `_options` and `_meta`.

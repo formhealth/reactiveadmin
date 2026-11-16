@@ -102,10 +102,15 @@ module ReactiveAdmin
         tally
       end
 
+      # An `error` node is a cell or value that raised while rendering, inside an otherwise successful response.
       def leaf(type, tally)
         return if %w[empty].include?(type)
+        return tally[:errors] = tally[:errors].to_i + 1 if type == "error"
 
-        %w[html frame iframe].include?(type) ? tally[:html] += 1 : tally[:typed] += 1
+        # A frame or iframe embeds a classic page: that section falls back, not merely leaves an html leaf.
+        return tally[:frames] = tally[:frames].to_i + 1 if %w[frame iframe].include?(type)
+
+        (type == "html") ? tally[:html] += 1 : tally[:typed] += 1
       end
     end
 
@@ -125,7 +130,7 @@ module ReactiveAdmin
     def run
       Rails.application.reload_routes_unless_loaded
       ReactiveAdmin.diagnostics.clear
-      report = ApiGuards.with_channel(:session) { ActiveRecord::Base.while_preventing_writes { silence { StyleSources.trace { build } } } }
+      report = ApiGuards.with_channel(:session) { ActiveRecord::Base.while_preventing_writes { silence { Degradation.synthetic { StyleSources.trace { build } } } } }
       [*Exposure.audit(user: @user), *ApiGuards.audit, *Mcp::Access.audit, *self.class.config_warnings].each { ReactiveAdmin.diagnostics.record(it[:kind], **it.except(:kind)) }
       report.merge(api_guards: ApiGuards.accepted, mcp: mcp_surface, menu_links: MenuOverlay.links, diagnostics: ReactiveAdmin.diagnostics.entries.map { it.transform_values(&:to_s) })
     end
@@ -297,12 +302,13 @@ module ReactiveAdmin
     end
 
     def sample_show(config)
-      record = config.resource_class.first or return {typed: 0, html: 0, rows: 0}
+      record = config.resource_class.first or return {skipped: "no record to show"}
       Tally.nodes(fetch(config, :show, path_params: {id: record.to_param})["layout"]).merge(rows: 1)
     end
 
     def sample_form(config)
-      Tally.fields(fetch(config, :new, path_params: Paths.parent_params(config, config.resource_class.first))["form"]["sections"])
+      payload = fetch(config, :new, path_params: Paths.parent_params(config, config.resource_class.first))
+      Tally.fields(payload["form"]["sections"]).merge((payload["submittable"] == false) ? {submittable: false} : {})
     end
 
     def fetch(config, action, path_params: {}, query: {})

@@ -31,6 +31,7 @@ export * from './batchAction';
 export * from './batchActionRequest';
 export * from './batchActionRequestBatchActionInputs';
 export * from './belongsTo';
+export * from './clientErrorReport';
 export * from './column';
 export * from './columnAlign';
 export * from './columnKind';
