@@ -2,7 +2,7 @@ source "https://rubygems.org"
 
 gemspec
 
-gem "rails", "~> 8.1.0"
+gem "rails", "~> 8.1.4"
 gem "activeadmin", "~> 3.5"
 gem "pundit"
 gem "sprockets-rails"
