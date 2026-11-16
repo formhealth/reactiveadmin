@@ -13,8 +13,15 @@ end
 
 task default: :spec
 
-# Never publishes: pushing the .gem is a separate, manual step (see CONTRIBUTING.md).
+# Never publishes: the release workflow pushes the .gem (see CONTRIBUTING.md).
+PACKAGED_DOCS = %w[README.md LICENSE CHANGELOG.md]
+
 namespace :package do
+  desc "Copy the repository's README, LICENSE and CHANGELOG next to the gemspec"
+  task :docs do
+    PACKAGED_DOCS.each { cp File.expand_path("../#{it}", __dir__), it }
+  end
+
   desc "Build the React client into vendor/client, stamped for this gem version (needs node >= 24 and pnpm)"
   task :client do
     %w[version manifest ui/client_build ui/packaged_client].each { require_relative "lib/reactive_admin/#{it}" }
@@ -25,11 +32,12 @@ namespace :package do
 end
 
 desc "Build pkg/reactiveadmin-<version>.gem with the prebuilt client inside"
-task package: "package:client" do
+task package: %w[package:docs package:client] do
   gem_file = "pkg/reactiveadmin-#{ReactiveAdmin::VERSION}.gem"
   mkdir_p "pkg"
   sh "gem", "build", "reactiveadmin.gemspec", "--output", gem_file
   files = Gem::Package.new(gem_file).spec.files
   abort "#{gem_file} lacks the client build" unless files.include?("vendor/client/manifest.json")
+  abort "#{gem_file} lacks #{PACKAGED_DOCS.join(", ")}" unless (PACKAGED_DOCS - files).empty?
   puts "packaged #{gem_file} (#{files.count { it.start_with?("vendor/client/") }} client files)"
 end

@@ -16,6 +16,7 @@ end
 
 gem_dir = Gem.loaded_specs.fetch("reactiveadmin").full_gem_path
 check.call(!gem_dir.start_with?(File.expand_path("..", __dir__)), "reactiveadmin loads from an installed gem (#{gem_dir})")
+check.call(%w[README.md LICENSE CHANGELOG.md].all? { File.file?(File.join(gem_dir, it)) }, "the README, LICENSE and CHANGELOG ship")
 check.call(ReactiveAdmin::Ui::Assets.root.to_s == File.join(gem_dir, "vendor/client"), "the packaged client is served")
 
 token = DummyTokens.issue(AdminUser.create!(name: "Ada Admin", email: "ada@example.com", role: "admin"))

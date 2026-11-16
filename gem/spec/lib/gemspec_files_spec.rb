@@ -8,6 +8,17 @@ RSpec.describe "reactiveadmin.gemspec" do
     expect(files).to include(*runtime)
   end
 
+  it "packages the README, LICENSE and CHANGELOG once `rake package` has copied them in" do
+    Dir.mktmpdir do |dir|
+      docs = %w[README.md LICENSE CHANGELOG.md]
+      FileUtils.touch(docs.map { File.join(dir, it) })
+      gemspec = File.read(File.join(root, "reactiveadmin.gemspec")).sub(/^require_relative.*\n/, "")
+      File.write(File.join(dir, "reactiveadmin.gemspec"), gemspec)
+
+      expect(Dir.chdir(dir) { Gem::Specification.load(File.join(dir, "reactiveadmin.gemspec")).files }).to include(*docs)
+    end
+  end
+
   it "packages the prebuilt client when it has been built" do
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, "vendor/client"))
