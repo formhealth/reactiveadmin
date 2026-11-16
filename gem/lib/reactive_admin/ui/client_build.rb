@@ -9,9 +9,8 @@ module ReactiveAdmin
 
       def self.source = Pathname(ENV["REACTIVEADMIN_CLIENT_SRC"] || File.expand_path("../../../../apps/standalone", __dir__))
 
-      def initialize(out: Assets.root, prefix: Assets.prefix, source: self.class.source, root: Rails.root, runner: method(:run))
+      def initialize(out: Assets.build_dir, source: self.class.source, root: Rails.root, runner: method(:run))
         @out = Pathname(out).expand_path
-        @prefix = prefix
         @source = Pathname(source).expand_path
         @root = Pathname(root).expand_path
         @runner = runner
@@ -29,7 +28,7 @@ module ReactiveAdmin
         out
       end
 
-      def env = {"RA_OUT_DIR" => out.to_s, "RA_ASSET_PREFIX" => "#{@prefix}/"}
+      def env = {"RA_OUT_DIR" => out.to_s}
 
       private
 

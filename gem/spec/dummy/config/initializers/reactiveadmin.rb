@@ -5,6 +5,8 @@ ReactiveAdmin.configure do |config|
   config.mount_path = "/api"
   config.auth = ReactiveAdmin::Auth.any(ReactiveAdmin::Auth::Session.new, ReactiveAdmin::Auth::Bearer.new { |token, _request| DummyTokens.resolve(token) })
   config.mcp.enabled = true
+  # The packaged-gem smoke test serves the client under another prefix too.
+  config.ui.asset_prefix = ENV["REACTIVEADMIN_ASSET_PREFIX"] if ENV["REACTIVEADMIN_ASSET_PREFIX"].present?
   # Serves a built client (`RA_OUT_DIR=... pnpm build:host`) for trying the UI switch against the dummy app.
   if ENV["REACTIVEADMIN_UI_ASSETS"]
     config.ui.available = ->(_user) { true }

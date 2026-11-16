@@ -40,6 +40,8 @@ A browser can't add a header to a page load, and a request that is a link click 
 
 The client is a Vite build. Build it when you deploy, not at runtime. The host needs no Node.js in production.
 
+The released gem ships a prebuilt client and serves it with no build step, under any `ui.asset_prefix`, as long as you set no `ui.client_assets`. Skip this step then. Run it when you install the gem from a git checkout. A build of your own in `public/reactiveadmin` (this step's default output) is served over the packaged one, and so is `ui.client_assets`.
+
 ```sh
 bin/rails reactiveadmin:client:build
 ```
@@ -48,7 +50,7 @@ The task builds from this repository's `apps/standalone` (it needs Node.js 24 an
 
 - To change the directory, set `config.ui.client_assets`, or pass `OUT=path` (it must be inside the app).
 - To read the sources from somewhere else, set `REACTIVEADMIN_CLIENT_SRC`.
-- To build without Rails, run `RA_OUT_DIR=/path RA_ASSET_PREFIX=/reactiveadmin/ pnpm --filter standalone build:host`.
+- To build without Rails, run `RA_OUT_DIR=/path pnpm --filter standalone build:host`.
 
 The output holds hashed files under `assets/` and a `manifest.json`. The middleware reads the manifest on each request, so a new build takes effect without a restart. Without a build, the middleware does nothing.
 
@@ -107,7 +109,7 @@ The shell loads the build from `ui.asset_prefix`. Three ways to serve it:
 
 - **Your static file server.** Files in `public/reactiveadmin/` are served by Rails (`config.public_file_server.enabled`) or by your proxy, before the gem sees the request.
 - **The gem.** When nothing else answers, the gem serves the directory at the prefix. Hashed files under `assets/` are cached for a year, and `manifest.json` isn't.
-- **A CDN.** Set `ui.asset_prefix` to the absolute URL and build with the same value, then upload the build.
+- **A CDN.** Upload the build (the packaged one is in the gem's `vendor/client`) and set `ui.asset_prefix` to its absolute URL. A build refers to its own files relatively, so it needs no rebuild for the CDN.
 
 The files are public and hold no data or secrets. The shell is never cached (`Cache-Control: no-store`), and carries your app's default response headers (`X-Frame-Options` and the like).
 

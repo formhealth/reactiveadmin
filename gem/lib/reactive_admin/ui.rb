@@ -7,6 +7,7 @@ module ReactiveAdmin
     autoload :Assets, "reactive_admin/ui/assets"
     autoload :ClientBuild, "reactive_admin/ui/client_build"
     autoload :Helper, "reactive_admin/ui/helper"
+    autoload :PackagedClient, "reactive_admin/ui/packaged_client"
     autoload :Shell, "reactive_admin/ui/shell"
     autoload :Switch, "reactive_admin/ui/switch"
 
@@ -33,6 +34,9 @@ module ReactiveAdmin
       Rails.logger.warn("[reactiveadmin] ui.default raised #{e.class}; using classic")
       "classic"
     end
+
+    # Until the host names who may use the new admin, the shell stays out of the way, even though the gem ships a client.
+    def offered? = !settings.available.equal?(Configuration::Ui::NOBODY)
 
     def payload(user) = {available: available?(user), default: default_mode(user)}
   end

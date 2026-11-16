@@ -6,10 +6,10 @@ import { defineConfig, type Plugin } from 'vite'
 
 const target = process.env.RA_API_TARGET ?? 'http://localhost:3003'
 
-// `rake reactiveadmin:client:build` sets these: where the Rails host serves the build from, and the URL prefix of
-// its files. The manifest tells the host's shell which hashed files to load. Left unset, this is the plain build.
+// `rake reactiveadmin:client:build` sets this: where the Rails host serves the build from. The manifest tells the
+// host's shell which hashed files to load, at whatever prefix it serves them from: a host build refers to its own
+// files relatively, so one build works under any `ui.asset_prefix` or CDN. Left unset, this is the plain build.
 const outDir = process.env.RA_OUT_DIR
-const assetPrefix = process.env.RA_ASSET_PREFIX ?? '/'
 
 // `pnpm build:demo`: the mock-backed build the project site serves under /reactiveadmin/demo/. The plain and host
 // builds never set VITE_DEMO.
@@ -43,7 +43,7 @@ const vendorGroups = Object.entries({
 }).map(([name, test], i, all) => ({ name: `vendor-${name}`, test, priority: all.length - i }))
 
 export default defineConfig({
-  base: demo ? demoBase : assetPrefix,
+  base: demo ? demoBase : outDir ? './' : '/',
   // The host build is for production: none of the dev server's static files (mocks, the MSW worker) ship with it.
   publicDir: outDir ? false : 'public',
   plugins: [react(), tailwindcss(), ...(demo ? [restoreDeepLink] : [])],

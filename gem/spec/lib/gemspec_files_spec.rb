@@ -7,4 +7,15 @@ RSpec.describe "reactiveadmin.gemspec" do
 
     expect(files).to include(*runtime)
   end
+
+  it "packages the prebuilt client when it has been built" do
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, "vendor/client"))
+      FileUtils.touch(File.join(dir, "vendor/client/manifest.json"))
+      gemspec = File.read(File.join(root, "reactiveadmin.gemspec")).sub(/^require_relative.*\n/, "")
+      File.write(File.join(dir, "reactiveadmin.gemspec"), gemspec)
+
+      expect(Dir.chdir(dir) { Gem::Specification.load(File.join(dir, "reactiveadmin.gemspec")).files }).to include("vendor/client/manifest.json")
+    end
+  end
 end

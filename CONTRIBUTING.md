@@ -34,7 +34,7 @@ Run client scripts from the repository root with `pnpm --filter standalone <scri
 | Types | `pnpm --filter standalone typecheck` |
 | Lint | `pnpm --filter standalone lint` |
 | Build | `pnpm build` |
-| Hosted build | `RA_OUT_DIR=/tmp/host-build RA_ASSET_PREFIX=/reactiveadmin/ pnpm --filter standalone build:host` |
+| Hosted build | `RA_OUT_DIR=/tmp/host-build pnpm --filter standalone build:host` |
 | Storybook | `pnpm --filter standalone storybook` (static build: `build-storybook`) |
 | Accessibility (axe over every story) | `pnpm --filter standalone a11y` |
 | End-to-end crawl against the dummy app | `pnpm crawl:dummy` |
@@ -55,6 +55,18 @@ CI runs the same commands; see `.github/workflows/`. To run the client against a
 - **Sensitive data.** Don't put record data, search terms or user input in log lines, error messages, analytics or audit events. See the [security guide](docs/guide/security.md).
 - **Comments.** Keep them sparse. Explain why, not what.
 - **Commits.** Write concise messages, one logical change per commit.
+
+## Release the gem
+
+The published gem carries the prebuilt React client in `gem/vendor/client`, so a host needs no checkout and no Node.js. The directory is gitignored: it only exists in a gem you built. The client is stamped (`reactiveadmin-client.json`) with the gem version and the manifest `schema_version`, and the gem serves it only while both match. A host's `config.ui.client_assets`, then a build of its own in `public/reactiveadmin`, win over it. The build refers to its own files relatively, so it works under any `ui.asset_prefix` or CDN without a rebuild.
+
+1. Bump `ReactiveAdmin::VERSION` in `gem/lib/reactive_admin/version.rb`, and move the `CHANGELOG.md` entries from Unreleased to the new version.
+2. Make sure the checks above pass. Packaging fails when the client's `SCHEMA_VERSION` (`apps/standalone/src/lib/manifestCache.ts`) differs from `ReactiveAdmin::Manifest::SCHEMA_VERSION`.
+3. Build the client and the gem, from `gem/`: `bundle exec rake package`. It writes `gem/pkg/reactiveadmin-<version>.gem` and fails if the client is missing from it. `rake package:client` rebuilds only the client.
+4. Inspect it: `gem spec pkg/reactiveadmin-<version>.gem files | grep vendor/client`. The `packaged gem` CI job does the same build, installs it into a Gemfile that has no path to the repository, and checks `GET /api/admin/_manifest` and the client's page.
+5. Tag the release, then push the gem by hand: `gem push pkg/reactiveadmin-<version>.gem` (the gem requires MFA).
+
+Never build a release with a plain `gem build`: it would ship without the client.
 
 ## Report a problem
 
