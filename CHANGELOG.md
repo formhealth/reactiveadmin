@@ -20,6 +20,7 @@ First public release. The gem and the client are early: interfaces may change be
 - Serving the client at the classic admin's URLs, chosen per person by a cookie (`config.ui`, `reactiveadmin_ui_toggle`, `rake reactiveadmin:client:build`).
 - An end-to-end crawl (`pnpm crawl`, `pnpm crawl:dummy`) that visits every screen the manifest describes.
 - CI for the gem (Standard Ruby, an RSpec matrix over the default, custom and Pundit authorization adapters on SQLite and PostgreSQL) and for the client (contract drift, types, lint, tests, builds, Storybook, accessibility, crawl).
+- A statement that the client needs React 19.2 or later. A React 18 install fails because React Router 8 and the client use React 19 APIs.
 
 ### Naming
 

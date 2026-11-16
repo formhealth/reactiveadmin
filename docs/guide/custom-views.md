@@ -188,6 +188,8 @@ registerCustomPage('team-board', ({ id, onClose }) => (
 
 Without a registered component, the client opens the classic page in a frame.
 
+The client bundles React and your component runs in that bundle, so write it for React 19.2 or later. React 18 isn't supported. React Router 8 peers on `react >= 19.2.7`, and an install with React 18 overrides fails: its modules import `useOptimistic`, so tests and the app fail on load, and `typecheck` reports 57 errors from React 19 features the client uses (`useEffectEvent`, `<Context>` as a provider).
+
 ## Embed bridge messages
 
 The bridge runs only when the page is inside an iframe, and it posts only to the same origin. Listen for these messages in the parent:
