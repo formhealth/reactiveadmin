@@ -43,7 +43,7 @@ export function ScopeTabs({ scopes, current, onChange }: ScopeTabsProps) {
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
       {runsOf(scopes).map(({ group, scopes: run }, i) => (
         <div key={`${group}-${i}`} className="flex items-center gap-2">
-          {group && <span className="text-sm text-muted-foreground">{humanize(group)}</span>}
+          {group && <span aria-hidden className="text-sm text-muted-foreground">{humanize(group)}</span>}
           <Tabs value={run.some((scope) => scope.id === current) ? current : ''} onValueChange={onChange}>
             <TabsList aria-label={group ? humanize(group) : 'Scopes'} className="h-auto flex-wrap">
               {run.map((scope) => (
