@@ -110,6 +110,14 @@ render_as :iframe
 
 Forces how a custom view is shown. Modes are `native`, `frame`, `iframe`, and `custom`. The `custom` mode requires `custom_key:`. Without `action:`, the override applies to every custom action of the resource, or to the page content for a page. See [Custom views](custom-views.md) for what each mode means.
 
+### `safe_gets`
+
+```ruby
+safe_gets :download_receipt
+```
+
+Marks GET custom actions that only read although they render no page, such as an action that sends a file. The API treats any other GET custom action without a template as a write, because it redirects or sends data after it acted: a bearer token needs the write scope for it, the write audit records it, `api :read_only` refuses it, and MCP's `run_action` asks for confirmation. `rake reactiveadmin:doctor` lists those actions under `get_action_write`.
+
 ## `api`
 
 ```ruby
@@ -136,7 +144,7 @@ The first argument is the guard:
 | Guard | The API refuses |
 | --- | --- |
 | `false` or `:deny` | The named actions, or everything without `only:` and `except:`. |
-| `:read_only` | Everything but GET and HEAD: writes, and member, collection, page and batch actions that aren't GETs. The forms of the writes it refuses (`new`, `edit`) go too, because they can't be submitted. |
+| `:read_only` | Everything but reads: writes, batch actions, and member, collection and page actions that aren't GETs or are GETs that render no page (see [`safe_gets`](#safe_gets)). The forms of the writes it refuses (`new`, `edit`) go too, because they can't be submitted. |
 | `:session_only` | Requests that authenticate with a token (a bearer header, as MCP does). A signed-in session, the React client, is let through. |
 | a registered name | Whatever your guard says. See below. |
 

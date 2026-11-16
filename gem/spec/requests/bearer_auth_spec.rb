@@ -136,6 +136,22 @@ RSpec.describe "bearer authentication", type: :request do
       expect(response.headers["WWW-Authenticate"]).to eq('Bearer error="insufficient_scope", scope="admin:write"')
     end
 
+    it "holds a GET action that renders no page to the write scope" do
+      path = "/api/admin/posts/#{first_post.id}/bump"
+      expect { api_get(path, headers: bearer(token_for(admin, scopes: ["admin:read"]))) }.not_to(change { first_post.reload.views_count })
+      expect(json).to include("code" => "insufficient_scope")
+
+      expect { api_get(path, headers: bearer(token_for(admin, scopes: ["admin:write"]))) }.to change { first_post.reload.views_count }.by(1)
+    end
+
+    it "reads a GET action that renders a page, or that the host lists in safe_gets, with the read scope" do
+      %w[preview download].each do |action|
+        get "/api/admin/posts/#{first_post.id}/#{action}", headers: {"ACCEPT" => "application/json"}.merge(bearer(token_for(admin, scopes: ["admin:read"])))
+
+        expect(response).to have_http_status(:ok), action
+      end
+    end
+
     it "refuses a read without the read scope" do
       api_get("/api/admin/posts", headers: bearer(token_for(admin, scopes: ["admin:write"])))
 

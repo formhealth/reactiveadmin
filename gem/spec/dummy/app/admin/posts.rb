@@ -86,6 +86,19 @@ ActiveAdmin.register Post do
 
   member_action :note, method: :get
 
+  # A GET that acts: it renders no page, so the API treats it as a write.
+  member_action :bump, method: :get do
+    resource.increment!(:views_count)
+    redirect_to resource_path, notice: "Counted"
+  end
+
+  # A GET without a page that only reads, vouched for with safe_gets.
+  member_action :download, method: :get do
+    send_data resource.title, filename: "post.txt"
+  end
+
+  reactive { safe_gets :download }
+
   member_action :publish, method: :put do
     resource.published!
     redirect_to resource_path, notice: "Published #{resource.title}"

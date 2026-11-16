@@ -187,11 +187,10 @@ RSpec.describe "MCP endpoint", type: :request do
       expect(names).to eq(%w[list_resources describe_resource list_records get_record get_page get_form field_options reveal_value])
     end
 
-    it "refuses a write with a clear message and changes nothing" do
-      expect { call_tool("create_record", {resource: "posts", values: {title: "No", author_id: alice.id.to_s}}, token: read_only) }.not_to change(Post, :count)
+    it "answers a write tool it doesn't offer as unknown, and changes nothing" do
+      reply = rpc("tools/call", {name: "delete_record", arguments: {resource: "posts", id: first_post.id.to_s, confirm: true}}, token: read_only)
 
-      expect(tool_error?).to be(true)
-      expect(call_tool("delete_record", {resource: "posts", id: first_post.id.to_s, confirm: true}, token: read_only)).to include("admin:write")
+      expect(reply["error"]).to include("code" => -32602, "message" => "Unknown tool: delete_record")
       expect(Post.exists?(first_post.id)).to be(true)
     end
 
@@ -469,6 +468,27 @@ RSpec.describe "MCP endpoint", type: :request do
 
       expect(tool_error?).to be(false)
       expect(result["fields"].first).to include("param" => "post[title]")
+    end
+
+    it "asks to confirm a GET action that renders no page" do
+      message = nil
+      expect { message = call_tool("run_action", {resource: "posts", id: first_post.id.to_s, action: "bump", kind: "member"}, token:) }.not_to(change { first_post.reload.views_count })
+
+      expect(message).to include("Ask the user to confirm", "GET /api/admin/posts/#{first_post.id}/bump")
+    end
+
+    it "sends an action with the method it declares, whatever the caller asks" do
+      message = call_tool("run_action", {resource: "posts", id: first_post.id.to_s, action: "archive", kind: "member", method: "get"}, token:)
+
+      expect(message).to include("POST /api/admin/posts/#{first_post.id}/archive")
+      expect(first_post.reload.status).to eq("published")
+    end
+
+    it "runs only declared actions" do
+      expect(call_tool("run_action", {resource: "posts", id: first_post.id.to_s, action: "edit", kind: "member", method: "get"}, token:)).to include("No member action \"edit\"")
+      expect(call_tool("run_action", {resource: "posts", action: "archive", kind: "collection", confirm: true}, token:)).to include("No collection action")
+      expect(call_tool("run_action", {resource: "posts", action: "nope", kind: "batch", ids: ["1"], confirm: true}, token:)).to include("No batch action")
+      expect(first_post.reload.status).to eq("published")
     end
 
     it "takes the body of an action with a form exactly as given" do

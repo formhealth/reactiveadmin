@@ -188,7 +188,7 @@ A host that sets `config.auth` can accept bearer tokens on the same API, for age
 - The session and its cookies are never consulted, and the cookies are dropped before the host sees them. A bad token is `401`, even when the request also carries a valid session.
 - CSRF is skipped for these requests only. A browser can't attach an `Authorization` header to a cross-site request, so there is nothing to forge.
 - The token's user is the current user for the authorization adapter and for host code, so a Pundit policy sees the same user it would for a session.
-- A resolver that returns `scopes:` limits the token: reads need `mcp.read_scope`, writes need `mcp.write_scope`. A missing scope is `403` with code `insufficient_scope`.
+- A resolver that returns `scopes:` limits the token: reads need `mcp.read_scope`, writes need `mcp.write_scope`. A GET custom action that renders no page is a write, unless it is listed in `reactive { safe_gets ... }`. A missing scope is `403` with code `insufficient_scope`.
 
 ## Writes
 

@@ -57,6 +57,7 @@ module ReactiveAdmin
   autoload :FormLock, "reactive_admin/form_lock"
   autoload :ScrubbedError, "reactive_admin/scrubbed_error"
   autoload :WriteAudit, "reactive_admin/write_audit"
+  autoload :ActionSafety, "reactive_admin/action_safety"
   autoload :WriteGuards, "reactive_admin/write_guards"
   autoload :MaskedJson, "reactive_admin/masked_json"
   autoload :ValueToken, "reactive_admin/value_token"

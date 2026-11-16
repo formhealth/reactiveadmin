@@ -49,7 +49,7 @@ module ReactiveAdmin
 
       def required_scope
         mcp = ReactiveAdmin.config.mcp
-        (request.get? || request.head?) ? mcp.read_scope : mcp.write_scope
+        ActionSafety.read?(AA.config_of(self), action_name, request.request_method) ? mcp.read_scope : mcp.write_scope
       end
 
       def install(identity)

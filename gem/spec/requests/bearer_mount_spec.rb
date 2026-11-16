@@ -126,11 +126,11 @@ RSpec.describe "bearer tokens and the classic admin", type: :request do
       expect(code).to eq("api_denied")
     end
 
-    it "checks a GET against the read scope" do
-      api_get(path, headers: bearer(token_for(admin, scopes: ["admin:write"])))
+    it "checks a GET that renders no page against the write scope" do
+      api_get(path, headers: bearer(token_for(admin, scopes: ["admin:read"])))
       expect(code).to eq("insufficient_scope")
 
-      api_get(path, headers: bearer(token_for(admin, scopes: ["admin:read"])))
+      api_get(path, headers: bearer(token_for(admin, scopes: ["admin:write"])))
       expect(code).to eq("api_denied")
     end
 

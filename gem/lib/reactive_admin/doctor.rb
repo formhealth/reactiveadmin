@@ -126,7 +126,7 @@ module ReactiveAdmin
       Rails.application.reload_routes_unless_loaded
       ReactiveAdmin.diagnostics.clear
       report = ApiGuards.with_channel(:session) { ActiveRecord::Base.while_preventing_writes { silence { StyleSources.trace { build } } } }
-      [*Exposure.audit(user: @user), *ApiGuards.audit, *self.class.config_warnings].each { ReactiveAdmin.diagnostics.record(it[:kind], **it.except(:kind)) }
+      [*Exposure.audit(user: @user), *ApiGuards.audit, *ActionSafety.audit, *self.class.config_warnings].each { ReactiveAdmin.diagnostics.record(it[:kind], **it.except(:kind)) }
       report.merge(api_guards: ApiGuards.accepted, menu_links: MenuOverlay.links, diagnostics: ReactiveAdmin.diagnostics.entries.map { it.transform_values(&:to_s) })
     end
 

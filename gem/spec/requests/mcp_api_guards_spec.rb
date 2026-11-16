@@ -141,12 +141,11 @@ RSpec.describe "MCP and the api guards", type: :request do
   end
 
   describe "ahead of the guard" do
-    it "answers a write the token's scopes don't cover with the scope, not the reservation" do
+    it "doesn't offer a token without the write scope the action tool, so nothing reveals the reservation" do
       read_only = token_for(admin, scopes: ["admin:read"])
-      @result = call_tool("run_action", {resource: "admin_users", action: "impersonate", kind: "member", id: other.id.to_s, confirm: true}, token: read_only)
+      reply = rpc("tools/call", {name: "run_action", arguments: {resource: "admin_users", action: "impersonate", kind: "member", id: other.id.to_s, confirm: true}}, token: read_only)
 
-      expect(tool_error?).to be(true)
-      expect(@result).to include("admin:write").and(satisfy { !it.include?("classic") })
+      expect(reply["error"]).to include("message" => "Unknown tool: run_action")
     end
 
     it "answers a token that can't read 403 insufficient_scope before any tool runs" do

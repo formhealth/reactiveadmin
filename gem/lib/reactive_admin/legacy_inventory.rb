@@ -31,7 +31,7 @@ module ReactiveAdmin
     }.freeze
 
     DEGRADATION_WP = {"sidebar_dropped" => "S5", "sidebar_failed" => "S5"}.freeze
-    IGNORED_DIAGNOSTICS = %w[implicit_view form_unsupported form_partial html_unmapped_tag unknown_layout_class inline_style_ignored].freeze
+    IGNORED_DIAGNOSTICS = %w[implicit_view get_action_write form_unsupported form_partial html_unmapped_tag unknown_layout_class inline_style_ignored].freeze
     DEGRADATION_IMPACT = {"page_iframe_fallback" => "low", "form_field_html" => "high"}.freeze
     # Already reported as a view or a form that cannot be submitted.
     COVERED_KINDS = %w[page_frame form_partial form_unsupported].freeze
