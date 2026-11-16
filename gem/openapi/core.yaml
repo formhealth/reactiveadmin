@@ -59,13 +59,20 @@ paths:
       description: "An AA register_page rendered through the fallback ladder (content walked into nodes; forms native when Formtastic, otherwise frame/iframe nodes). A page whose content has a GET form (a `form` node with `action.method` get) reads that form's fields from the query string, named as the form's field `params`; the response is the page with those results."
       parameters:
         - { name: page, in: path, required: true, schema: { type: string, description: "Page key, e.g. batch_operations" } }
+        - { name: context, in: query, description: "page_form asks for a page form field's options (its `options_path` carries context, form and field)", schema: { type: string, enum: [page_form] } }
+        - { name: form, in: query, description: "With context=page_form: the form's position on the page", schema: { type: string } }
+        - { name: field, in: query, description: "With context=page_form", schema: { type: string } }
+        - { name: term, in: query, description: "With context=page_form", schema: { type: string } }
       responses:
         "200":
           headers: { X-Reactiveadmin-Degraded: { $ref: "#/components/headers/Degraded" } }
-          description: Page
+          description: The page, or with context=page_form the field's options
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/PageResponse" }
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/PageResponse"
+                  - $ref: "#/components/schemas/OptionsResponse"
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
   /admin/{resource}/{id}/_value:
@@ -1128,10 +1135,11 @@ components:
         disabled_reason: { type: string, nullable: true }
     ResourceMeta:
       type: object
-      required: [key, label, plural_label, actions, permissions, filters, scopes, per_page_options, default_per_page]
+      required: [key, label, plural_label, actions, permissions, meta_path, filters, scopes, per_page_options, default_per_page]
       description: Full metadata (superset of ResourceSummary) returned by getResourceMeta.
       properties:
         key: { type: string, description: "AA route key, e.g. posts" }
+        meta_path: { type: string, description: "API path of getResourceMeta, e.g. /api/admin/posts/_meta" }
         action_items:
           type: array
           description: Index page action items and collection actions (header buttons), evaluated for the current user.

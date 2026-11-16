@@ -27,6 +27,8 @@ import type { Scope } from './scope';
 export interface ResourceMeta {
   /** AA route key, e.g. posts */
   key: string;
+  /** API path of getResourceMeta, e.g. /api/admin/posts/_meta */
+  meta_path: string;
   /** Index page action items and collection actions (header buttons), evaluated for the current user. */
   action_items?: Action[];
   /** AA download_links, e.g. [csv]; export with GET {api index path}.{format} keeping current q/scope/order */

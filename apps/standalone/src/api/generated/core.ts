@@ -43,6 +43,7 @@ import type {
   GetLabelsParams,
   GetOpenApi200,
   GetOptionsParams,
+  GetPageParams,
   GetRecordValueParams,
   IndexResponse,
   InvalidResponse,
@@ -375,20 +376,29 @@ export function useGetResourceMeta<TData = Awaited<ReturnType<typeof getResource
 
 
 
-export const getGetPageUrl = (page: string,) => {
+export const getGetPageUrl = (page: string,
+    params?: GetPageParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/admin/_pages/${page}`
+  return stringifiedParams.length > 0 ? `/admin/_pages/${page}?${stringifiedParams}` : `/admin/_pages/${page}`
 }
 
 /**
  * An AA register_page rendered through the fallback ladder (content walked into nodes; forms native when Formtastic, otherwise frame/iframe nodes). A page whose content has a GET form (a `form` node with `action.method` get) reads that form's fields from the query string, named as the form's field `params`; the response is the page with those results.
  */
-export const getPage = async (page: string, options?: Parameters<typeof apiFetch>[1]): Promise<PageResponse> => {
+export const getPage = async (page: string,
+    params?: GetPageParams, options?: Parameters<typeof apiFetch>[1]): Promise<PageResponse | OptionsResponse> => {
 
-  return apiFetch<PageResponse>(getGetPageUrl(page),
+  return apiFetch<PageResponse | OptionsResponse>(getGetPageUrl(page,params),
   {
     ...options,
     method: 'GET'
@@ -401,23 +411,25 @@ export const getPage = async (page: string, options?: Parameters<typeof apiFetch
 
 
 
-export const getGetPageQueryKey = (page: string,) => {
+export const getGetPageQueryKey = (page: string,
+    params?: GetPageParams,) => {
     return [
-    `/admin/_pages/${page}`
+    `/admin/_pages/${page}`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetPageQueryOptions = <TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(page: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetPageQueryOptions = <TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(page: string,
+    params?: GetPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetPageQueryKey(page);
+  const queryKey =  queryOptions?.queryKey ?? getGetPageQueryKey(page,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPage>>> = ({ signal }) => getPage(page, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPage>>> = ({ signal }) => getPage(page,params, { signal, ...requestOptions });
 
 
 
@@ -431,7 +443,8 @@ export type GetPageQueryError = ErrorResponse
 
 
 export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(
- page: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>> & Pick<
+ page: string,
+    params: undefined |  GetPageParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPage>>,
           TError,
@@ -441,7 +454,8 @@ export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError =
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(
- page: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>> & Pick<
+ page: string,
+    params?: GetPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPage>>,
           TError,
@@ -451,16 +465,18 @@ export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError =
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(
- page: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ page: string,
+    params?: GetPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useGetPage<TData = Awaited<ReturnType<typeof getPage>>, TError = ErrorResponse>(
- page: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ page: string,
+    params?: GetPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetPageQueryOptions(page,options)
+  const queryOptions = getGetPageQueryOptions(page,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
