@@ -43,8 +43,16 @@ RSpec.describe "write audit and error scrubbing", type: :request do
 
     it "stays quiet for reads" do
       api_get("/api/admin/posts")
+      api_get("/api/admin/posts/#{first_post.id}/permalink")
+      get "/api/admin/posts/#{first_post.id}/download", headers: {"ACCEPT" => "application/json"}
 
       expect(events).to be_empty
+    end
+
+    it "covers a GET action listed in unsafe_gets" do
+      api_get("/api/admin/posts/#{first_post.id}/bump")
+
+      expect(written).to eq([{resource: "posts", action: "bump", id: first_post.id.to_s, user_id: admin.id}])
     end
   end
 

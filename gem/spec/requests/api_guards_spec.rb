@@ -400,6 +400,17 @@ RSpec.describe "api guards", type: :request do
       expect(denial("batch_action")).to be_nil
     end
 
+    it "counts a GET action as a write only when the host lists it in unsafe_gets" do
+      posts = ReactiveAdmin::Registry.find("posts")
+
+      expect(described_class.unsafe?(posts, %w[bump], "GET")).to be(true)
+      expect(described_class.unsafe?(posts, %w[permalink], "GET")).to be(false)
+      expect(described_class.unsafe?(posts, %w[download], "GET")).to be(false)
+      expect(described_class.unsafe?(posts, %w[rename], nil)).to be(true)
+      expect(described_class.unsafe?(posts, %w[rename], "GET")).to be(false)
+      expect(described_class.unsafe?(posts, %w[rename], "POST")).to be(true)
+    end
+
     it "uses each declaration's reason and falls back to the guard's message" do
       declare :deny, only: [:archive], reason: "No"
       declare :read_only

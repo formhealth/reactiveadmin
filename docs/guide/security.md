@@ -188,7 +188,7 @@ A host that sets `config.auth` can accept bearer tokens on the same API, for age
 - The session and its cookies are never consulted, and the cookies are dropped before the host sees them. A bad token is `401`, even when the request also carries a valid session.
 - CSRF is skipped for these requests only. A browser can't attach an `Authorization` header to a cross-site request, so there is nothing to forge.
 - The token's user is the current user for the authorization adapter and for host code, so a Pundit policy sees the same user it would for a session.
-- A resolver that returns `scopes:` limits the token: reads need `mcp.read_scope`, writes need `mcp.write_scope`. A missing scope is `403` with code `insufficient_scope`.
+- A resolver that returns `scopes:` limits the token: reads need `mcp.read_scope`, writes need `mcp.write_scope`. GET and HEAD are reads, except for a GET custom action listed in `reactive { unsafe_gets ... }`. A missing scope is `403` with code `insufficient_scope`.
 
 ## Writes
 
@@ -198,6 +198,10 @@ Writes run through ActiveAdmin's own controller, as HTML. Validations, callbacks
 - A validation failure becomes a `422` with code `invalid`, and field errors under `errors`.
 
 Every successful write and every rejected write from a signed-in user publishes an event. See [Write audit](#write-audit).
+
+### GET actions that change data
+
+GET and HEAD are reads, by verb. A GET action that redirects, downloads or previews stays available to read-scope tokens and `api :read_only`, is not write-audited, and needs no MCP confirmation. If a GET action mutates data, list it in `reactive { unsafe_gets :name }` to hold it to what a write is. See [`unsafe_gets`](dsl.md#unsafe_gets).
 
 ## Optimistic locking
 

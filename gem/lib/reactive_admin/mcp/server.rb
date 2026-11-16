@@ -72,7 +72,7 @@ module ReactiveAdmin
       end
 
       def call_tool(params)
-        tool = Tools.find(params["name"]) or raise Rpc.new(-32602, "Unknown tool: #{params["name"].to_s.first(60)}")
+        tool = Tools.visible(@identity).find { it.name == params["name"].to_s } or raise Rpc.new(-32602, "Unknown tool: #{params["name"].to_s.first(60)}")
         args = params.fetch("arguments", {})
         api = Api.new(@request)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)

@@ -222,22 +222,25 @@ module ReactiveAdmin
           raise ToolError, "action must be a plain key like \"archive\"." unless ACTION_NAME.match?(name)
 
           kind = args["kind"]
+          config = ctx.config_for(args)
+          verbs = declared_verbs(config, name, kind)
           base = ctx.collection_path(args)
           known = action_info(ctx, args, base, name, kind)
-          verb = (args["method"] || known["method"] || "post").upcase
+          asked = (args["method"] || known["method"])&.upcase
+          verb = verbs.include?(asked) ? asked : verbs.first
           path = action_path(ctx, args, base, name, kind)
           body = args["inputs"]
           query = args["query"]
           raise ToolError, "query is for GET actions; pass inputs for the others." if query && verb != "GET"
           raise ToolError, "Pass query or inputs, not both." if query && body
+          raise ToolError, "A GET action that writes can't take a query: reading its form would run it twice." if query && !ActionSafety.read?(config, name, verb)
           if kind == "batch"
             ids = args["ids"]&.map(&:to_s) || raise(ToolError, "kind batch needs ids.")
             raise ToolError, "A batch takes at most 100 ids." if ids.size > 100
 
             body = {batch_action: name, collection_selection: ids, batch_action_inputs: args["inputs"]}.compact
-            verb = "POST"
           end
-          unless verb == "GET" || reserved?(ctx, args, kind, name)
+          unless ActionSafety.read?(config, name, verb) || reserved?(ctx, args, kind, name)
             ask = known["confirm"] ? " The app asks: #{known["confirm"].to_s.first(200).inspect}" : ""
             unconfirmed!(args, "run #{kind} action #{name} on #{args["resource"]}#{" (#{args["ids"].size} records)" if kind == "batch"} (#{verb} #{path}).#{ask}")
           end
@@ -270,6 +273,18 @@ module ReactiveAdmin
           raise ToolError, "A query takes at most #{QUERY_LIMIT} fields." if pairs.size > QUERY_LIMIT
 
           pairs.to_h
+        end
+
+        # The methods the action declares, which a caller can choose among but not add to. Only declared actions
+        # run: any other path under the resource is the API's own, which the other tools cover.
+        def declared_verbs(config, name, kind)
+          if kind == "batch"
+            return ["POST"] if AA.batch_actions(config).any? { it.sym.to_s == name }
+          else
+            declaration = ((kind == "member") ? config.member_actions : config.collection_actions).find { it.name.to_s == name }
+            return Array.wrap(declaration.http_verb).map { it.to_s.upcase } if declaration
+          end
+          raise ToolError.new("No #{kind} action #{name.inspect} on #{Registry.route_key(config)}. Action keys come from get_record, get_page or describe_resource.", code: "unknown_action")
         end
 
         # Not asked to confirm what can't run: the call goes on to the API, which refuses it with a pointer to the classic admin.

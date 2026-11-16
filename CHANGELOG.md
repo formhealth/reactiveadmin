@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow [Semantic Versioning](https://semver.org/) from 1.0.
 
+## Unreleased
+
+### Security
+
+These close gaps in the API and change what some clients get. Review them before you upgrade.
+
+- **Mutating GET actions.** GET and HEAD actions stay reads. Declare a GET action that changes data with `reactive { unsafe_gets :name }`: it then needs the write scope, is write-audited, is refused by `api :read_only`, and needs MCP confirmation in `run_action`.
+- **MCP.** `tools/call` answers a tool the token's scopes hide as an unknown tool. `run_action` runs only the member, collection and batch actions the resource declares, and uses a method the action declares rather than the one the caller asks for.
+
 ## 0.1.0
 
 First public release. The gem and the client are early: interfaces may change before 1.0.
