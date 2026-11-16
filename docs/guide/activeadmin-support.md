@@ -35,7 +35,7 @@ Index, show, form and page responses list what they fell back to in a `degraded`
 | `download_links` and `csv do` | Supported | `GET /api/admin/<resource>.csv` streams ActiveAdmin's CSV. The client's export UI: check. |
 | Filters: string, numeric, date range, boolean, select | Supported | Typed controls in the manifest. |
 | Filters: `as: :datalist` or `:typeahead` with `source:` | Supported | Searchable typeahead through `_options`. |
-| Filters: `check_boxes` with `multiple` | Degraded (check) | Sends an `_in` param. Check that the client renders multiple selection. |
+| Filters: `check_boxes` with `multiple` | Supported | Toggle buttons, one per option, filtering with `q[attr_in][]`; the active choices show as one removable chip. Association and numeric columns too. A relation-backed collection becomes a multiple typeahead. |
 | Filter `if:` and `unless:` | Supported (check) | Evaluated per request. |
 | Filter options that depend on other values | Supported (check) | `_options` evaluates the collection with the request's view context. |
 | Filters disabled with `filters = false` | Supported | No filter controls are sent. |

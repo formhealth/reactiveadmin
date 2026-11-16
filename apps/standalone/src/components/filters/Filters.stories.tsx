@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, within } from 'storybook/test'
 import type { Filter } from '@/api/generated/model'
+import type { Query } from '@/lib/list'
 import { filters as postFilters } from '@/mocks/fixtures'
 import { FilterBar } from './FilterBar'
 
@@ -19,7 +20,7 @@ const numberFilter: Filter = {
 
 const booleanFilter: Filter = { name: 'seo_checked', label: 'SEO Checked', control: 'boolean', param: 'seo_checked_eq' }
 
-type Q = Record<string, string>
+type Q = Query
 
 function Bar({ filters, initial = {} }: { filters: Filter[]; initial?: Q }) {
   const [q, setQ] = useState<Q>(initial)
@@ -27,7 +28,7 @@ function Bar({ filters, initial = {} }: { filters: Filter[]; initial?: Q }) {
     <FilterBar
       filters={filters}
       q={q}
-      setQ={(changes) => setQ((prev) => Object.fromEntries(Object.entries({ ...prev, ...changes }).filter(([, v]) => v)) as Q)}
+      setQ={(changes) => setQ((prev) => Object.fromEntries(Object.entries({ ...prev, ...changes }).filter(([, v]) => v?.length)) as Q)}
       clearAll={() => setQ({})}
     />
   )
@@ -90,6 +91,32 @@ export const ActiveFilterChips: Story = {
     },
   },
   parameters: { viewportSize: { width: 960, height: 220 } },
+}
+
+const weightFilter: Filter = {
+  name: 'weight',
+  label: 'Weight',
+  control: 'checkboxes',
+  multiple: true,
+  param: 'weight_in',
+  options: [1, 2, 3].map((n) => ({ label: `Weight ${n}`, value: String(n) })),
+}
+
+export const CheckboxesMultiple: Story = {
+  args: { filters: [weightFilter], initial: { weight_in: ['1', '2'] } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Weight 1' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(canvas.getByRole('button', { name: 'Weight 3' })).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(canvas.getByRole('button', { name: 'Weight 3' }))
+    await expect(canvas.getByRole('button', { name: 'Remove Weight: Weight 1, Weight 2, Weight 3' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Weight 1' }))
+    await expect(canvas.getByRole('button', { name: 'Weight 1' })).toHaveAttribute('aria-pressed', 'false')
+    await expect(canvas.getByRole('button', { name: 'Remove Weight: Weight 2, Weight 3' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Remove Weight: Weight 2, Weight 3' }))
+    await expect(canvas.queryByRole('button', { name: /^Remove/ })).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Weight 2' })).toHaveAttribute('aria-pressed', 'false')
+  },
 }
 
 export const AllControls: Story = {
