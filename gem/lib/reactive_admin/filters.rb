@@ -18,9 +18,14 @@ module ReactiveAdmin
       @with_options = options
     end
 
+    # A filter's `if:`/`unless:` hides it from this user, so its params and options are refused too.
+    def self.skip?(view, opts)
+      (opts.key?(:if) && !AA.call_on(view, view, opts[:if])) || (opts.key?(:unless) && AA.call_on(view, view, opts[:unless]))
+    end
+
     def call
       AA.filters(@config).filter_map do |attr, opts|
-        next if skip?(opts)
+        next if Filters.skip?(@view, opts)
 
         build(attr.to_s, opts)
       rescue => e
@@ -32,17 +37,12 @@ module ReactiveAdmin
 
     def choices(name)
       declared = AA.filters(@config).find { |attr, _| attr.to_s == name }
-      raise ActiveRecord::RecordNotFound, "No filter #{name}" unless declared
+      raise ActiveRecord::RecordNotFound, "No filter #{name}" unless declared && !Filters.skip?(@view, declared.last)
 
       choices_for(name, declared.last)
     end
 
     private
-
-    def skip?(opts)
-      (opts.key?(:if) && !AA.call_on(@view, @view, opts[:if])) ||
-        (opts.key?(:unless) && AA.call_on(@view, @view, opts[:unless]))
-    end
 
     def build(name, opts)
       type = (opts[:as] || default_type(name))&.to_sym or return
@@ -145,7 +145,7 @@ module ReactiveAdmin
       return Choices.for(opts[:collection], @view, value:, cache:, policy: true) if opts[:collection]
       return Choices.for(ref.klass, @view, value:, policy: true) if ref && !ref.polymorphic?
 
-      @klass.columns_hash.key?(name) ? Choices.column(@klass, name, @view) : Choices.for([], @view)
+      @klass.columns_hash.key?(name) ? Choices.column(AA.scoped_collection(@view.controller), name, @view) : Choices.for([], @view)
     end
 
     def reflection(name) = @klass.reflect_on_association(name)

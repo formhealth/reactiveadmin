@@ -32,6 +32,9 @@ module ReactiveAdmin
 
         def collection_before_scope(controller) = controller.send(:collection_before_scope)
 
+        # The resource's base relation before authorization, filters and scopes, under its parent when nested.
+        def scoped_collection(controller) = controller.send(:scoped_collection).all
+
         def scope_chain(controller, scope, chain) = controller.send(:scope_chain, scope, chain)
 
         # A record found, decorated and authorized for reading the way AA's `resource` does.

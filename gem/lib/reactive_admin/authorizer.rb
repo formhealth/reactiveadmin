@@ -27,7 +27,12 @@ module ReactiveAdmin
       return adapter.scope_collection(relation, AA::Auth::READ) if relation.limit_value
 
       # Pundit inspects the relation when it has no policy of its own, which would load rows.
-      adapter.scope_collection(relation.limit(0), AA::Auth::READ).unscope(:limit)
+      scoped = adapter.scope_collection(relation.limit(0), AA::Auth::READ)
+      return scoped unless scoped.limit_value&.zero?
+
+      # A zero that survives a second probe is the policy's own deny-all. That probe is `none` so
+      # a policy-less Pundit has no rows to load for its error message.
+      adapter.scope_collection(relation.limit(1).none, AA::Auth::READ).limit_value&.zero? ? scoped : scoped.unscope(:limit)
     end
   end
 

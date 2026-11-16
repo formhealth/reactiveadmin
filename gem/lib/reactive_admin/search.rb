@@ -19,10 +19,11 @@ module ReactiveAdmin
       AA.resource_for(Registry.namespace, klass)&.reactive_options&.[](:search)
     end
 
-    def initialize(scope, columns:, value_column: nil)
+    def initialize(scope, columns:, value_column: nil, by_primary_key: true)
       @scope = scope
       @columns = columns
       @value_column = value_column
+      @by_primary_key = by_primary_key
       @klass = scope.klass
     end
 
@@ -51,7 +52,7 @@ module ReactiveAdmin
 
     # Pasting an id finds its record, whichever column the label comes from.
     def id_match(term)
-      [@value_column, (@klass.primary_key if @klass.primary_key.is_a?(String))].compact.uniq.filter_map do |key|
+      [@value_column, (@klass.primary_key if @by_primary_key && @klass.primary_key.is_a?(String))].compact.uniq.filter_map do |key|
         type = @klass.type_for_attribute(key)
         column(key).eq(type.cast(term)) if (type.type == :uuid && term.match?(UUID)) || (type.type == :integer && term.match?(/\A\d+\z/))
       end.reduce(:or)

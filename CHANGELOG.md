@@ -20,6 +20,7 @@ These close gaps in the API and change what some clients get. Review them before
 - **CSV exports without a `csv` block.** An API export of such a resource takes the attribute columns of its `index` block, or the secure default columns when it has no table index, instead of ActiveAdmin's id and every content column. Columns that an index block computes are no longer exported. The secure default columns leave out encrypted, filtered, masked and binary columns; columns an index block names are the host's choice and aren't filtered, and masked values are exported raw when `mask_csv` is off. Under `strict_defaults` such an export answers `422` unless a table index block supplies the columns. The table index decides the columns whatever `as` view is requested. Classic exports keep their columns. Declare a `csv` block to choose the columns.
 - With `mask_csv` on, a masked key nested inside a json column is masked in any export, classic included.
 - The CSV formula escaping flag is per request, so concurrent classic and API exports no longer share it.
+- **Filter options and conditions.** The options of a filter on a plain column list only values from rows the user may read. A filter hidden by `if:` or `unless:` answers `404` for its options, and the API refuses its `q` keys with `400`. Option cache keys include the user id. A bounded `distinct` scope that doesn't project the column or its primary key offers no options.
 
 ### Added
 

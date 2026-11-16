@@ -6,6 +6,14 @@ RSpec.describe ReactiveAdmin::Filters do
 
   def filters(**) = described_class.new(config, view, **).call.index_by { it[:name] }
 
+  it "leaves out a filter whose if: hides it, and refuses its options" do
+    expect(filters).to have_key("created_at")
+
+    editor_view = ReactiveAdmin::Doctor::Sample.new(config, editor).view
+    expect(described_class.new(config, editor_view).call.pluck(:name)).not_to include("created_at")
+    expect { described_class.new(config, editor_view).choices("created_at") }.to raise_error(ActiveRecord::RecordNotFound)
+  end
+
   it "carries option lists by default" do
     expect(filters["status"]).to include(control: "select", options: a_collection_including(a_hash_including(:label, :value)))
   end

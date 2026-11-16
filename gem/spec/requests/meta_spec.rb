@@ -58,7 +58,7 @@ RSpec.describe "resource _meta", type: :request do
       end
 
       it "keeps filters in their declared order" do
-        expect(meta["filters"].pluck("name")).to eq(%w[title views_count published_at status featured category author_id_eq tags])
+        expect(meta["filters"].pluck("name")).to eq(%w[title views_count published_at status featured category author_id_eq tags created_at])
       end
 
       it "does not let one request's selected filter values leak into the cached payload" do
