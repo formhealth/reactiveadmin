@@ -1,6 +1,7 @@
 import { setProjectAnnotations } from '@storybook/react-vite'
 import axe from 'axe-core'
 import { toast } from 'sonner'
+import { configure, prettyDOM } from 'storybook/test'
 import type { AfterEach, BeforeEach } from 'storybook/internal/types'
 import { commands, page } from 'vitest/browser'
 import { violations } from '@/api/contract'
@@ -29,10 +30,34 @@ const settle = (quietMs = 200, maxMs = 4000) =>
     }
   })
 
+// A failed query prints the story and its portals (dialogs, popovers, toasts), not Storybook's own docs markup, which
+// otherwise fills the print limit before the story starts.
+configure({
+  getElementError: (message) => {
+    const own = [...document.body.children].filter((el) => !el.matches('.sb-wrapper, #storybook-docs, #storybook-highlights-root, script'))
+    const focused = document.activeElement?.outerHTML.slice(0, 200)
+    const error = new Error([message, `Focused: ${focused}`, ...own.map((el) => prettyDOM(el, 20000) || '')].join('\n\n'))
+    error.name = 'TestingLibraryElementError'
+    return error
+  },
+})
+
 // Responsive stories declare their size in `parameters.viewportSize`; match it so layout-dependent plays find their controls.
+// Every viewport change (Storybook sets its default just before this) dispatches a window `resize` a frame or more
+// after `page.viewport` resolves. Radix Select closes on resize, so one landing mid-play closed a select the
+// play had just opened. The story starts only once the resize to its own size has fired.
 const viewport: BeforeEach = async ({ parameters }) => {
   const { width, height } = parameters.viewportSize
+  const settled = new Promise<void>((resolve) => {
+    const onResize = () => {
+      if (innerWidth !== width || innerHeight !== height) return
+      removeEventListener('resize', onResize)
+      resolve()
+    }
+    addEventListener('resize', onResize)
+  })
   await page.viewport(width, height)
+  await settled
 }
 
 // Entrance animations start transparent, which fails `toBeVisible` in plays.
