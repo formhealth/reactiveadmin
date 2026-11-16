@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type Ref } from 'react'
+import { flushSync } from 'react-dom'
 import { useWatch } from 'react-hook-form'
 import { Pencil, Plus, Trash2, Undo2 } from 'lucide-react'
 import type { FormField, FormSection, Option } from '@/api/generated/model'
@@ -95,12 +96,12 @@ function CompactRow({ index, row, position, duplicate, onEmptied }: RowProps) {
   const unchanged = value === String(initialValue(field))
   const [editing, setEditing] = useState(false)
   const rowRef = useRef<HTMLLIElement>(null)
-  const focus = (selector: string, open = false) =>
-    requestAnimationFrame(() => {
-      const target = rowRef.current?.querySelector<HTMLElement>(selector)
-      target?.focus()
-      if (open) target?.click()
-    })
+  // Callers commit first (flushSync or an effect), so the target is already in the DOM.
+  const focus = (selector: string, open = false) => {
+    const target = rowRef.current?.querySelector<HTMLElement>(selector)
+    target?.focus()
+    if (open) target?.click()
+  }
 
   // A saved row's control mounts only after the server rejects it, too late for the form's own focus.
   const firstRejected = errors[key]?.type === 'server' && Object.keys(errors)[0] === key
@@ -144,7 +145,10 @@ function CompactRow({ index, row, position, duplicate, onEmptied }: RowProps) {
         <button
           type="button"
           data-edit
-          onClick={() => (setEditing(true), focus(CONTROL, true))}
+          onClick={() => {
+            flushSync(() => setEditing(true))
+            focus(CONTROL, true)
+          }}
           className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="sr-only">
@@ -164,9 +168,11 @@ function CompactRow({ index, row, position, duplicate, onEmptied }: RowProps) {
     )
 
   const keep = () => {
-    form.methods.setValue(key, initialValue(field), { shouldDirty: true })
-    form.methods.clearErrors(key)
-    setEditing(false)
+    flushSync(() => {
+      form.methods.setValue(key, initialValue(field), { shouldDirty: true })
+      form.methods.clearErrors(key)
+      setEditing(false)
+    })
     focus('[data-edit]')
   }
 
