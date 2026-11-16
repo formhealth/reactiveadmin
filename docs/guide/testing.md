@@ -135,7 +135,7 @@ Seed at least one record per resource to cover the show pages. The same file def
 
 ## CI
 
-GitHub Actions runs two workflows on pull requests and on `main`: `gem` (standardrb; `STRICT_GAPS=1 rake adapters` on Ruby 3.4 and 4.0 with sqlite and on Postgres; an ActiveAdmin 4 probe that is allowed to fail) and `client` (contract drift, types, lint, unit tests, build, Storybook build, a11y, the dummy-app crawl). `actionlint` checks the workflow files themselves.
+GitHub Actions runs two workflows on pull requests and on `main`: `gem` (standardrb; `STRICT_GAPS=1` specs for every auth adapter on Ruby 4.0 with sqlite, and the default adapter on Ruby 3.4 and on Postgres; an ActiveAdmin 4 probe that is allowed to fail) and `client` (contract drift, types, lint, unit tests, build, Storybook build, a11y sharded by theme, the dummy-app crawl). `actionlint` checks the workflow files themselves.
 
 The contract check runs `pnpm gen` and fails if the generated client differs from what is committed, so commit the output of `pnpm gen` with every change to `openapi/core.yaml`. `gem/Gemfile.lock` is committed so the gem jobs resolve the same versions every run. Dependabot updates it weekly.
 

@@ -31,15 +31,19 @@ jobs:
           working-directory: gem
       - run: bundle exec standardrb
 
-  # One run per authorization adapter (default, custom, pundit) against sqlite.
-  adapters:
-    name: rspec adapters (ruby ${{ matrix.ruby }})
+  # Every authorization adapter on the newest Ruby; older Ruby runs the default adapter only.
+  rspec:
+    name: rspec adapters (ruby ${{ matrix.ruby }}${{ matrix.adapter != 'default' && format(', {0}', matrix.adapter) || '' }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        ruby: ["3.4", "4.0"]
+        include:
+          - {ruby: "4.0", adapter: default}
+          - {ruby: "4.0", adapter: custom}
+          - {ruby: "4.0", adapter: pundit}
+          - {ruby: "3.4", adapter: default}
     steps:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
@@ -47,9 +51,10 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
           working-directory: gem
-      - run: bundle exec rake adapters
+      - run: bundle exec rspec
         env:
           STRICT_GAPS: "1"
+          AUTH_ADAPTER: ${{ matrix.adapter }}
 
   # Specs tagged :postgres skip themselves on sqlite, so this job is the only one that runs them.
   postgres:
@@ -75,9 +80,10 @@ jobs:
           ruby-version: "4.0"
           bundler-cache: true
           working-directory: gem
-      - run: bundle exec rake adapters
+      - run: bundle exec rspec
         env:
           STRICT_GAPS: "1"
+          AUTH_ADAPTER: default
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/reactiveadmin_test
 
   # Not a gate: boots the dummy app against ActiveAdmin 4 beta and lists what still breaks, so the
