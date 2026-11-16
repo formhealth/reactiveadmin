@@ -14,13 +14,9 @@
 import type { LookupOptionsContext } from './lookupOptionsContext';
 
 export type LookupOptionsParams = {
-/**
- * Comma-separated values per field name, as `fields[<field>]=v1,v2`. Field names are those of `_options` (`<assoc>.<name>` inside has_many).
- */
-fields: {[key: string]: string};
-context: LookupOptionsContext;
-/**
- * Record id when context=form for an edit form
- */
-id?: string;
+  /** Comma-separated values per field name, as `fields[<field>]=v1,v2`. Field names are those of `_options` (`<assoc>.<name>` inside has_many). */
+  fields: {[key: string]: string};
+  context: LookupOptionsContext;
+  /** Record id when context=form for an edit form */
+  id?: string;
 };

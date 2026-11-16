@@ -14,16 +14,10 @@
 import type { RunMemberActionGetContext } from './runMemberActionGetContext';
 
 export type RunMemberActionGetParams = {
-/**
- * template asks for a template form field's options (its `options_path` carries context and field)
- */
-context?: RunMemberActionGetContext;
-/**
- * With context=template
- */
-field?: string;
-/**
- * With context=template
- */
-term?: string;
+  /** template asks for a template form field's options (its `options_path` carries context and field) */
+  context?: RunMemberActionGetContext;
+  /** With context=template */
+  field?: string;
+  /** With context=template */
+  term?: string;
 };

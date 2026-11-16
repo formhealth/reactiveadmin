@@ -13,8 +13,6 @@
  */
 
 export type GetResourceMetaParams = {
-/**
- * The index's current scope, as the index request sends it
- */
-scope?: string;
+  /** The index's current scope, as the index request sends it */
+  scope?: string;
 };
