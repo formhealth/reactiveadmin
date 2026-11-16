@@ -8,6 +8,7 @@ Thanks for helping. This repository has two halves that meet at one file:
 | `apps/standalone/` | The React client (Vite, TypeScript, shadcn/ui, Tailwind CSS, TanStack, React Query), its Storybook and the end-to-end crawl |
 | `gem/openapi/core.yaml` | The contract between the gem and the client, packaged with the gem (`openapi/core.yaml` links to it) |
 | `docs/guide/` | User documentation |
+| `apps/site/` | The project website ([VitePress](https://vitepress.dev)): a landing page, the guides and changelog (rendered from `docs/guide` and `CHANGELOG.md`), the mock-backed demo, and the client's Storybook |
 
 ## Set up
 
@@ -37,6 +38,8 @@ Run client scripts from the repository root with `pnpm --filter standalone <scri
 | Storybook | `pnpm --filter standalone storybook` (static build: `build-storybook`) |
 | Accessibility (axe over every story) | `pnpm --filter standalone a11y` |
 | End-to-end crawl against the dummy app | `pnpm crawl:dummy` |
+| Website, with live reload | `pnpm --filter site dev` |
+| Website, demo, and Storybook, as Pages serves them | `pnpm --filter site build:full && pnpm --filter site preview` (http://localhost:4173/reactiveadmin/) |
 
 CI runs the same commands; see `.github/workflows/`. To run the client against a Rails app, see [Getting started](docs/guide/getting-started.md). Without a backend, `pnpm dev:mocks` serves fixtures from `apps/standalone/src/mocks`.
 

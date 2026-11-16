@@ -28,7 +28,8 @@ const shared = globalThis as { raMswWorker?: Promise<SetupWorker> }
 const startWorker = () =>
   (shared.raMswWorker ??= (async () => {
     const worker = setupWorker(...handlers)
-    await worker.start({ quiet: true, onUnhandledRequest: 'bypass' })
+    // BASE_URL keeps the worker's URL and scope under the hosted Storybook's subpath.
+    await worker.start({ quiet: true, onUnhandledRequest: 'bypass', serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` } })
     return worker
   })())
 

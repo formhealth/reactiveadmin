@@ -1,4 +1,5 @@
 import type { FormField, FormResponse, FormSection, Option } from '@/api/generated/model'
+import { API } from './paths'
 
 const titleCase = (name: string) => name.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 
@@ -46,7 +47,7 @@ const hasMany = (resource: string, spec: Spec): FormSection => {
       param,
       value,
       hint: spec.hint,
-      ...(control === 'typeahead' && { options: pool.filter((o) => o.value === value), options_path: `/api/admin/${resource}/_options?field=${assoc}.${attr}&context=form`, placeholder: `Search ${label.toLowerCase()}s…` }),
+      ...(control === 'typeahead' && { options: pool.filter((o) => o.value === value), options_path: `${API}/${resource}/_options?field=${assoc}.${attr}&context=form`, placeholder: `Search ${label.toLowerCase()}s…` }),
     },
   ]
   const note = (param: string, value?: string): FormField[] => (spec.withNote ? [{ name: 'note', label: 'Note', control: 'text', required: false, param, value: value ?? null }] : [])
@@ -81,7 +82,7 @@ const form = (resource: string, id: string, name: string, spec: Spec): FormRespo
   id,
   title: `Edit ${name}`,
   display_name: name,
-  action: { method: 'patch', path: `/api/admin/${resource}/${id}` },
+  action: { method: 'patch', path: `${API}/${resource}/${id}` },
   permissions: { show: true, update: true },
   form: { sections: [nameField(resource, name), hasMany(resource, spec)] },
 })

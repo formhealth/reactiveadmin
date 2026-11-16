@@ -13,6 +13,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:host": "tsc -b && vite build",
+    "build:demo": "tsc -b && VITE_DEMO=1 VITE_MOCKS=1 VITE_ROUTER_BASE=/reactiveadmin/demo VITE_ADMIN_PATH=/reactiveadmin/demo/admin vite build",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview",

@@ -21,6 +21,7 @@ import {
   type Post,
 } from './fixtures'
 import { writeHandlers } from './writeHandlers'
+import { API } from './paths'
 
 export const apiError = (status: number, code: string, message: string) => HttpResponse.json({ code, message }, { status })
 
@@ -57,32 +58,32 @@ const csv = (rows: string[][]) => rows.map((row) => row.join(',')).join('\n')
 
 export const handlers = [
   // Ahead of writeHandlers, whose `/:resource/:id/:action` would otherwise answer this path with a 404.
-  http.post('/api/admin/_pages/batch_operations/refresh', async () => {
+  http.post(`${API}/_pages/batch_operations/refresh`, async () => {
     await delay(200)
     return HttpResponse.json({ ok: true, message: 'Batch history refreshed' })
   }),
   ...writeHandlers,
   ...classicHandlers,
 
-  http.get('/api/admin/_manifest', async () => {
+  http.get(`${API}/_manifest`, async () => {
     await delay(150)
     return HttpResponse.json(manifestBody)
   }),
 
-  http.get('/api/admin/_pages/:page', async ({ params }) => {
+  http.get(`${API}/_pages/:page`, async ({ params }) => {
     await delay(150)
     const page = pages[String(params.page)]
     return page ? HttpResponse.json(page) : notFound()
   }),
 
-  http.get('/api/admin/:resource/_meta', async ({ params }) => {
+  http.get(`${API}/:resource/_meta`, async ({ params }) => {
     await delay(100)
     const meta = resourceMetas.find((r) => r.key === params.resource)
     return meta ? HttpResponse.json(meta) : notFound()
   }),
 
   // Names only, for ids the user can read: the palette's recents never fetch whole records.
-  http.get('/api/admin/:resource/_labels', async ({ params, request }) => {
+  http.get(`${API}/:resource/_labels`, async ({ params, request }) => {
     await delay(100)
     const resource = String(params.resource)
     if (!resourceMetas.some((r) => r.key === resource)) return notFound()
@@ -99,13 +100,13 @@ export const handlers = [
   }),
 
   // The index of any resource as a download: rows and filters match the JSON list, as the gem streams them.
-  http.get(/\/api\/admin\/[^/]+\.csv$/, ({ request }) => {
+  http.get(new RegExp(`${API}/[^/]+\\.csv$`), ({ request }) => {
     const resource = new URL(request.url).pathname.split('/').at(-1)!.replace(/\.csv$/, '')
     const body = csv([['id', 'author', 'published_on'], ...posts.slice(0, 20).map((e) => [String(e.id), e.author, e.published_on])])
     return new HttpResponse(body, { headers: { 'Content-Type': 'text/csv', 'Content-Disposition': `attachment; filename="${resource}.csv"` } })
   }),
 
-  http.get('/api/admin/:resource', async ({ params, request }) => {
+  http.get(`${API}/:resource`, async ({ params, request }) => {
     await delay(300)
     const url = new URL(request.url)
     const sp = url.searchParams
@@ -164,7 +165,7 @@ export const handlers = [
     return HttpResponse.json(body)
   }),
 
-  http.get('/api/admin/:resource/:id', async ({ params }) => {
+  http.get(`${API}/:resource/:id`, async ({ params }) => {
     await delay(200)
     const { resource, id } = params as Record<string, string>
     const meta = resourceMetas.find((r) => r.key === resource)

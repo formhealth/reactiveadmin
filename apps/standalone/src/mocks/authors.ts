@@ -1,5 +1,6 @@
 import type { Action, Column, Row } from '@/api/generated/model'
 import { day, uuid } from './fixtures'
+import { adminPath as ADMIN } from '@/lib/base'
 
 const authorNames = ['Alex Nguyen', 'Jordan Patel', 'Sam Garcia', 'Taylor Johnson', 'Morgan Kim', 'Casey Rossi', 'Riley Haddad', 'Jamie Murphy']
 
@@ -14,7 +15,7 @@ export const authorColumns: Column[] = [
 
 // Frame (page and dialog), iframe and external ladder rungs, all on one record.
 export const authorActions = (id: string, placement: Action['placement']): Action[] => {
-  const base = `/admin/authors/${id}`
+  const base = `${ADMIN}/authors/${id}`
   return [
     {
       key: 'team_history',
@@ -43,7 +44,7 @@ export const authorActions = (id: string, placement: Action['placement']): Actio
       placement,
       method: 'get',
       href: `${base}/preview_schedule`,
-      view: { mode: 'iframe', path: '/admin/preview_schedule.html?embed=1', presentation: 'page' },
+      view: { mode: 'iframe', path: `${ADMIN}/preview_schedule.html?embed=1`, presentation: 'page' },
       enabled: true,
     },
     { key: 'open_in_cms', label: 'Open in CMS', kind: 'link', placement, method: 'get', external: true, href: 'https://cms.example.com/authors/48210', enabled: true },

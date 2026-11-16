@@ -2,6 +2,8 @@ import type { Action, Column, FormResponse, Node, PageResponse, Row, ShowRespons
 import { batchForm, teamHistory } from './classic'
 import { day, uuid } from './fixtures'
 import { authorActions } from './authors'
+import { adminPath as ADMIN } from '@/lib/base'
+import { API } from './paths'
 
 const text = (value: string): Node => ({ type: 'text', text: value })
 const table = (headers: string[], rows: Node[][]): Node => ({ type: 'table', headers, rows })
@@ -17,8 +19,8 @@ export const authorShowLayout = (row: Row): Node[] => {
     kind: 'member',
     placement: 'inline',
     method: 'post',
-    href: `/admin/authors/${id}/resend_welcome`,
-    api_path: `/api/admin/authors/${id}/resend_welcome`,
+    href: `${ADMIN}/authors/${id}/resend_welcome`,
+    api_path: `${API}/authors/${id}/resend_welcome`,
     confirm: `Send the welcome email to ${name} again?`,
     enabled: true,
   }
@@ -88,7 +90,7 @@ export const authorShowLayout = (row: Row): Node[] => {
                           type: 'toolbar',
                           align: 'end',
                           children: [
-                            { type: 'link', label: 'Edit contact', href: `/admin/authors/${id}/edit` },
+                            { type: 'link', label: 'Edit contact', href: `${ADMIN}/authors/${id}/edit` },
                             { type: 'action', action: { ...welcome, key: 'resend_welcome_toolbar' } },
                           ],
                         },
@@ -116,8 +118,8 @@ export const authorShowLayout = (row: Row): Node[] => {
                         {
                           type: 'toolbar',
                           children: [
-                            { type: 'link', label: 'Team history', href: `/admin/authors/${id}/team_history` },
-                            { type: 'link', label: 'New member', href: `/admin/authors/${id}/team_members/new` },
+                            { type: 'link', label: 'Team history', href: `${ADMIN}/authors/${id}/team_history` },
+                            { type: 'link', label: 'New member', href: `${ADMIN}/authors/${id}/team_members/new` },
                           ],
                         },
                       ],
@@ -128,7 +130,7 @@ export const authorShowLayout = (row: Row): Node[] => {
             },
           ],
         },
-        { type: 'tab', title: 'Team', children: [{ type: 'frame', src: `/admin/authors/${id}/team_history`, html: teamHistory(id), title: 'Team history' }] },
+        { type: 'tab', title: 'Team', children: [{ type: 'frame', src: `${ADMIN}/authors/${id}/team_history`, html: teamHistory(id), title: 'Team history' }] },
         {
           type: 'tab',
           title: 'Activity',
@@ -178,8 +180,8 @@ const approve = (pa: Approval, placement: Action['placement']): Action => ({
   kind: 'member',
   placement,
   method: 'get',
-  href: `/admin/content_approvals/${pa.id}/approve`,
-  view: { mode: 'native', path: `/api/admin/content_approvals/${pa.id}/approve`, presentation: 'dialog' },
+  href: `${ADMIN}/content_approvals/${pa.id}/approve`,
+  view: { mode: 'native', path: `${API}/content_approvals/${pa.id}/approve`, presentation: 'dialog' },
   enabled: pa.status === 'pending',
   disabled_reason: pa.status === 'pending' ? null : `Already ${pa.status}`,
 })
@@ -190,7 +192,7 @@ const printLetter = (pa: Approval): Action => ({
   kind: 'custom',
   placement: 'header',
   method: 'get',
-  href: `/admin/content_approvals/${pa.id}/print_proof`,
+  href: `${ADMIN}/content_approvals/${pa.id}/print_proof`,
   supported: false,
   disabled_reason: 'Opens a print dialog from custom JavaScript',
   enabled: true,
@@ -240,7 +242,7 @@ export const approveForm = (pa: Approval): FormResponse => ({
   resource: 'content_approvals',
   id: pa.id,
   title: `Approve ${paName(pa)}`,
-  action: { method: 'post', path: `/api/admin/content_approvals/${pa.id}/approve` },
+  action: { method: 'post', path: `${API}/content_approvals/${pa.id}/approve` },
   permissions: { update: true },
   form: {
     sections: [
@@ -287,7 +289,7 @@ export const pages: Record<string, PageResponse> = {
   batch_operations: {
     key: 'batch_operations',
     title: 'Batch Operations',
-    actions: [{ key: 'refresh', label: 'Refresh history', kind: 'custom', placement: 'header', method: 'post', api_path: '/api/admin/_pages/batch_operations/refresh', enabled: true }],
+    actions: [{ key: 'refresh', label: 'Refresh history', kind: 'custom', placement: 'header', method: 'post', api_path: `${API}/_pages/batch_operations/refresh`, enabled: true }],
     layout: [
       {
         type: 'panel',
@@ -303,7 +305,7 @@ export const pages: Record<string, PageResponse> = {
           ),
         ],
       },
-      { type: 'panel', title: 'Start a batch', children: [{ type: 'frame', src: '/admin/batch_operations', html: batchForm(), title: 'Start a batch' }] },
+      { type: 'panel', title: 'Start a batch', children: [{ type: 'frame', src: `${ADMIN}/batch_operations`, html: batchForm(), title: 'Start a batch' }] },
     ],
   },
 }

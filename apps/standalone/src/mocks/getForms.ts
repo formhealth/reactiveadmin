@@ -1,10 +1,11 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { FormField, FormResponse, Node as NodeData, OptionsResponse, PageResponse } from '@/api/generated/model'
+import { API } from './paths'
 
 // A filter-and-results view as the gem serves it: a form whose method is get, and the results below it. The
 // handlers read the query like the host action does, so the stories show what the client sent.
-export const SIMULATOR_PAGE = '/api/admin/_pages/schedule_preview'
-export const SIMULATOR_ACTION = '/api/admin/users/u-1/preview_schedule'
+export const SIMULATOR_PAGE = `${API}/_pages/schedule_preview`
+export const SIMULATOR_ACTION = `${API}/users/u-1/preview_schedule`
 
 const channels = [
   { value: 'web', label: 'Web' },

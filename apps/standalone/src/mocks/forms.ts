@@ -1,6 +1,8 @@
 import type { Column, FormField, FormResponse, Option, Row, Session } from '@/api/generated/model'
 import { postName, editors, type Post } from './fixtures'
 import { permissionPool, policyPool } from './nested'
+import { adminPath as ADMIN } from '@/lib/base'
+import { API } from './paths'
 
 export const CSRF_TOKEN = 'mock-csrf-token'
 
@@ -64,8 +66,8 @@ export const postForm = (e?: Post): FormResponse => {
     id: e && String(e.id),
     title: e ? `Edit Post #${e.id}` : 'New Post',
     display_name: e && postName(e),
-    actions: e ? [{ key: 'view', label: 'View', kind: 'link', placement: 'header', method: 'get', href: `/admin/posts/${e.id}`, enabled: true }] : [],
-    action: { method: e ? 'patch' : 'post', path: `/api/admin/posts${e ? `/${e.id}` : ''}` },
+    actions: e ? [{ key: 'view', label: 'View', kind: 'link', placement: 'header', method: 'get', href: `${ADMIN}/posts/${e.id}`, enabled: true }] : [],
+    action: { method: e ? 'patch' : 'post', path: `${API}/posts${e ? `/${e.id}` : ''}` },
     permissions: e ? { show: true, update: true } : { create: true },
     form: {
       sections: [
@@ -81,7 +83,7 @@ export const postForm = (e?: Post): FormResponse => {
                 required: true,
                 value: e && String(e.editor_id),
                 options: e ? [{ label: editorPool[e.editor_id - 1], value: String(e.editor_id) }] : [],
-                options_path: `/api/admin/posts/_options?field=editor&context=form${e ? `&id=${e.id}` : ''}`,
+                options_path: `${API}/posts/_options?field=editor&context=form${e ? `&id=${e.id}` : ''}`,
                 placeholder: 'Search editors…',
               },
               param('editor_id'),
@@ -93,7 +95,7 @@ export const postForm = (e?: Post): FormResponse => {
                 control: 'typeahead',
                 value: e && String(e.author_id),
                 options: [],
-                options_path: `/api/admin/posts/_options?field=author&context=form${e ? `&id=${e.id}` : ''}`,
+                options_path: `${API}/posts/_options?field=author&context=form${e ? `&id=${e.id}` : ''}`,
                 placeholder: 'Search authors…',
                 hint: 'Search by name, or paste an author id',
               },
@@ -132,7 +134,7 @@ export const rescheduleForm = (e: Post): FormResponse => ({
   resource: 'posts',
   id: String(e.id),
   title: `Reschedule embargo for #${e.id}`,
-  action: { method: 'post', path: `/api/admin/posts/${e.id}/reschedule_embargo` },
+  action: { method: 'post', path: `${API}/posts/${e.id}/reschedule_embargo` },
   permissions: { update: true },
   form: {
     sections: [
@@ -165,7 +167,7 @@ export const deskForm = (desk?: Desk): FormResponse => {
         free_text: true,
         value,
         options: staff.filter((o) => o.value === value),
-        options_path: '/api/admin/desks/_options?field=desk_members.user_email&context=form',
+        options_path: `${API}/desks/_options?field=desk_members.user_email&context=form`,
       },
       param,
     )
@@ -173,7 +175,7 @@ export const deskForm = (desk?: Desk): FormResponse => {
     resource: 'desks',
     id: desk?.id,
     title: desk ? `Edit desk: ${desk.name}` : 'New desk',
-    action: { method: desk ? 'patch' : 'post', path: `/api/admin/desks${desk ? `/${desk.id}` : ''}` },
+    action: { method: desk ? 'patch' : 'post', path: `${API}/desks${desk ? `/${desk.id}` : ''}` },
     permissions: { create: true, update: true },
     form: {
       sections: [
@@ -190,7 +192,7 @@ export const deskForm = (desk?: Desk): FormResponse => {
                 free_text: true,
                 value: desk?.lead_editor_email,
                 options: staff.filter((o) => o.value === desk?.lead_editor_email),
-                options_path: '/api/admin/desks/_options?field=lead_editor_email&context=form',
+                options_path: `${API}/desks/_options?field=lead_editor_email&context=form`,
               },
               'desk[lead_editor_email]',
             ),

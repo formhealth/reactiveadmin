@@ -4,6 +4,7 @@ import { Menu, PanelLeftOpen } from 'lucide-react'
 import { Outlet, useLocation } from 'react-router'
 import { ApiError } from '@/api/fetcher'
 import { getGetManifestQueryKey } from '@/api/generated/core'
+import { DemoBanner, isDemo } from '@/components/DemoBanner'
 import { SignInRequired } from '@/components/ErrorState'
 import { Brand } from '@/components/menu/Brand'
 import { LazyCommandPalette, LazyMobileMenu } from '@/components/menu/lazy'
@@ -109,6 +110,7 @@ export function Layout() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {isDemo && <DemoBanner />}
         {!showRail && (
           <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-3">
             <Button variant="ghost" size="icon" aria-label="Open menu" onClick={() => (desktop ? setRailOpen(true) : setSheetOpen(true))}>
