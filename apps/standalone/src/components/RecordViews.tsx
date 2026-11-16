@@ -40,12 +40,10 @@ export function RecordViews({ resource, view, rows, gridColumns = 3, stale, sele
       {rows.map((row) => (
         <li key={row.id} data-row-id={row.id} {...cursor?.rowProps(row.id)} className={cn(cursorClass, 'flex min-w-0 rounded-xl data-cursor:outline-offset-2')}>
           <Card className={cn('h-full w-full', row.tone && rowTone[row.tone], selection?.ids.has(row.id) && 'border-primary/50 bg-info-soft')}>
-            {selection && (
-              <div className="px-(--card-spacing)">
-                <Checkbox aria-label={`Select record ${row.id}`} checked={selection.ids.has(row.id)} onCheckedChange={() => selection.toggle(row.id)} />
-              </div>
-            )}
             <CardContent className={cn('flex flex-1 flex-col gap-3', view === 'blog' && 'gap-4')}>
+              {selection && (
+                <Checkbox aria-label={`Select record ${row.id}`} checked={selection.ids.has(row.id)} onCheckedChange={() => selection.toggle(row.id)} />
+              )}
               <NodeContext value={{ resource, id: row.id, name: row.display_name }}>
                 <NodeList nodes={row.layout} />
               </NodeContext>

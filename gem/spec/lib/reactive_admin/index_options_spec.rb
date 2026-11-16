@@ -28,7 +28,7 @@ RSpec.describe ReactiveAdmin::IndexOptions do
     end
 
     it "tallies the options across resources" do
-      expect(report[:summary][:index_options]).to include(extra_views: 1, custom_index_as: 1, default_actions_off: 2)
+      expect(report[:summary][:index_options]).to include(extra_views: 3, custom_index_as: 2, default_actions_off: 3)
       expect(ReactiveAdmin::Doctor::Table.new(report).to_s).to include("index options (resources using each)")
     end
   end
