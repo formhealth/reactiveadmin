@@ -111,7 +111,9 @@ The API honors only the Ransack predicates that a declared filter can produce. A
 { "code": "invalid", "message": "Unsupported filter: npi_null" }
 ```
 
-This keeps `q` from probing columns the page never shows. Classic pages aren't affected by this guard.
+This keeps `q` from probing columns the page never shows. A filter whose `if:` or `unless:` hides it from the user doesn't count, and its options answer `404`. Classic pages aren't affected by this guard.
+
+The options of a filter on a plain column are the distinct values of the rows the user may read: the resource's scoped collection under its authorization scope.
 
 Typeahead searches cover only the source's `search` columns. The search matches the start of words, and pasting an id returns that record. Choose the `label` of an option source with care, because anyone who can read the source can see its labels.
 
@@ -121,6 +123,7 @@ ActiveAdmin accepts any `per_page` and sorts by any column. The API bounds both,
 
 - **`per_page`** is clamped, not rejected, to `max_per_page` (default `100`). A resource's own `max_per_page` still applies, and the sizes it offers (`per_page: [25, 250]`) raise the cap for it. A value that isn't a positive integer uses the resource's default page size. A resource with pagination turned off keeps its own `max_per_page`.
 - **`order`** must name a column the index shows and marks sortable (by its `sort_key`, so `order_by` clauses work), or be the resource's default `sort_order`. Anything else returns `400` with code `invalid` and the message `Unsupported sort: <key>`. Sorting by a hidden column would reveal how its values compare, so the allowlist applies to exports too. The message carries the key only.
+- **Export columns.** A resource without a `csv` block exports the attribute columns of its `index` block (columns that a block computes are left out), or the [implicit default](#implicit-defaults) columns when it has no table index. Under `strict_defaults`, such an export returns `422`. Classic exports keep ActiveAdmin's behavior.
 - **Exports** stop at `max_export_rows` (default `10_000`). A larger export returns `422` with code `invalid` and "Narrow your filters to export fewer than N rows". The check is a `LIMIT n+1` count before streaming. Set it to `nil` to remove the limit.
 - **Rate limits** give each user a budget per bucket and window, counted on `Rails.cache`. Over budget returns `429` with code `rate_limited` and a `Retry-After` header in seconds. The buckets are `options` (typeahead search), `lookup` (labels for selected values, batched per form), `export`, `value` (full json values), and `default` (every other API request):
 
@@ -196,6 +199,8 @@ Writes run through ActiveAdmin's own controller, as HTML. Validations, callbacks
 
 - A redirect becomes a `200` or `201` response with `ok`, `id`, `message`, and `location`.
 - A validation failure becomes a `422` with code `invalid`, and field errors under `errors`.
+
+A create or update carries only what its form offers. Params of disabled fields are dropped, as a browser drops them, in nested rows too. A param that no field of the form accounts for returns `422` with code `invalid`, empty `errors`, and the param names (never their values) in `base`, so a write can't reach attributes `permit_params` allows but the form doesn't show. Nested rows may also send `id`, and `_destroy` where the `has_many` allows it. Set `config.reject_unknown_params = false` to leave such params to `permit_params` instead. A form that didn't record completely isn't held to this.
 
 Every successful write and every rejected write from a signed-in user publishes an event. See [Write audit](#write-audit).
 
@@ -533,6 +538,7 @@ Before you expose a resource that holds sensitive data:
 - [ ] `masked_attributes` or `reactive { mask }` covers every credential and secret.
 - [ ] `implicit_defaults` is `:secure`, and `strict_defaults` is on if a section must never show defaults.
 - [ ] `require_lock` is `true` unless a client predates locking.
+- [ ] `reject_unknown_params` is `true`.
 - [ ] `html_trusted_hosts` lists only hosts you control.
 - [ ] Option sources declare `search:` columns and a safe `label`.
 - [ ] Actions and attributes that grant privileges or act as another user are behind an `api` guard (`:deny`, or `:session_only` where the React client may use them), and your own code doesn't authenticate bearer tokens on classic routes (the gem doesn't).

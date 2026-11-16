@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow [Semantic Versioning](https://semver.org/) from 1.0.
 
+## Unreleased
+
+### Security
+
+These close gaps in the API and change what some clients get. Review them before you upgrade.
+
+- **CSV exports without a `csv` block.** An API export of such a resource takes the attribute columns of its `index` block, or the secure default columns when it has no table index, instead of ActiveAdmin's id and every content column. Encrypted, filtered, masked and binary columns, and columns that an index block computes, are no longer exported. Under `strict_defaults` such an export answers `422`. Classic exports are unchanged. Declare a `csv` block to choose the columns.
+- **GET actions that act.** A GET member, collection or page action that renders no page (it redirects or sends data) is now treated as a write: a bearer token needs the write scope, the write audit records it, `api :read_only` refuses it, and MCP's `run_action` asks for confirmation. Read-scope tokens lose these actions. List an action that only reads in `reactive { safe_gets :name }`. `rake reactiveadmin:doctor` reports them as `get_action_write`.
+- **MCP.** `tools/call` answers a tool the token's scopes hide as an unknown tool. `run_action` runs only the member, collection and batch actions the resource declares, and uses a method the action declares rather than the one the caller asks for.
+- **Filter options and conditions.** The options of a filter on a plain column list only values from rows the user may read. A filter hidden by `if:` or `unless:` answers `404` for its options, and the API refuses its `q` keys with `400`. Option cache keys include the user id.
+- **Writes carry only their form.** A create or update with params that no field of the form accounts for answers `422` with code `invalid` and the param names in `base`. Disabled fields are dropped in nested rows too. Set `config.reject_unknown_params = false` to leave unknown params to `permit_params`.
+- **Frames.** A frame form or `data-method` link that isn't a GET is sent, with the session's CSRF token, only to an admin page; anything else is refused.
+- The CSV formula escaping flag is per request, so concurrent classic and API exports no longer share it.
+
 ## 0.1.0
 
 First public release. The gem and the client are early: interfaces may change before 1.0.
