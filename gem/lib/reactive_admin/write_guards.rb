@@ -80,12 +80,29 @@ module ReactiveAdmin
 
     # Browsers don't post disabled inputs, so a client that does is submitting what the form withheld.
     def drop_disabled_params(schema)
-      schema.sections.flat_map { it[:fields] || [] }.each do |field|
-        next unless field[:disabled] && field[:param]
-
-        *path, leaf = field[:param].delete_suffix("[]").scan(/[^\[\]]+/)
-        path.inject(params) { |memo, key| memo.try(:[], key) }.try(:delete, leaf)
+      schema.sections.each do |section|
+        if section[:kind] == "has_many" then drop_disabled_rows(section)
+        else (section[:fields] || []).each { drop_disabled_param(params, it) }
+        end
       end
+    end
+
+    # A row is held to the saved row its `id` names, or to a new row's fields, whatever index it was sent at.
+    def drop_disabled_rows(section)
+      rows = params.dig(*section[:param].scan(/[^\[\]]+/))
+      rows = rows.key?(:id) ? [rows] : rows.values if rows.is_a?(ActionController::Parameters)
+      Array(rows).grep(ActionController::Parameters).each do |row|
+        id = row[:id].to_s.presence
+        fields = id ? section[:records].to_a.find { it[:id] == id }&.dig(:fields) : section[:template_fields]
+        fields.to_a.each { drop_disabled_param(row, it, nested: true) }
+      end
+    end
+
+    def drop_disabled_param(root, field, nested: false)
+      return unless field[:disabled] && field[:param]
+
+      *path, leaf = field[:param].delete_suffix("[]").scan(/[^\[\]]+/)
+      (nested ? root : path.inject(root) { |memo, key| memo.try(:[], key) }).try(:delete, leaf)
     end
 
     # A custom create may build a different class than the resource's (AdhocPlan for AppointmentPlan),
