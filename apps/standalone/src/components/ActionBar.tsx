@@ -9,7 +9,9 @@ import { ClassicLink as ApiDeniedLink } from '@/components/ApiDenied'
 import { useMapClassic } from '@/hooks/useManifest'
 import { useIsWide } from '@/hooks/useMediaQuery'
 import { useRecordAction, type ActionContext } from '@/hooks/useRecordAction'
+import { isDemo } from '@/components/DemoBanner'
 import { withClassic } from '@/lib/classic'
+import { fetchDownload } from '@/lib/download'
 import { cn } from '@/lib/utils'
 
 // `download` marks links that stream a file (the CSV export) rather than navigate.
@@ -107,7 +109,7 @@ export function ActionButton({ action, run, editTo, size }: RunProps) {
         {link.to ? (
           <Link to={link.to}>{action.label}</Link>
         ) : (
-          <a href={link.href} download={action.download || undefined} {...(link.external && { target: '_blank', rel: 'noopener noreferrer' })}>
+          <a href={link.href} download={action.download || undefined} onClick={isDemo && action.download ? fetchDownload(link.href) : undefined} {...(link.external && { target: '_blank', rel: 'noopener noreferrer' })}>
             {action.label}
             {link.external && <ExternalLink />}
           </a>
@@ -163,7 +165,7 @@ export function ActionMenuItem({ action, run }: Omit<RunProps, 'editTo' | 'size'
         {link.to ? (
           <Link to={link.to}>{action.label}</Link>
         ) : (
-          <a href={link.href} download={action.download || undefined} {...(link.external && { target: '_blank', rel: 'noopener noreferrer' })}>
+          <a href={link.href} download={action.download || undefined} onClick={isDemo && action.download ? fetchDownload(link.href) : undefined} {...(link.external && { target: '_blank', rel: 'noopener noreferrer' })}>
             {action.label}
             {link.external && <ExternalLink className="ml-auto" />}
           </a>

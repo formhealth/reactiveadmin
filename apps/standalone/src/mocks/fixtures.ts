@@ -1,5 +1,7 @@
 import type { Action, BatchAction, Column, Filter, MenuItem, Node, Permissions, ResourceMeta, ResourceSummary, Scope, Site } from '@/api/generated/model'
 import { formatDay, parseDay } from '@/lib/datetime'
+import { adminPath as ADMIN } from '@/lib/base'
+import { API } from './paths'
 
 const ref = (resource: string, id: string | number, label: string): Node => ({
   type: 'ref',
@@ -203,19 +205,19 @@ const postActionItems: Action[] = [
     kind: 'collection',
     placement: 'header',
     method: 'post',
-    href: '/admin/posts/publish_pending',
-    api_path: '/api/admin/posts/publish_pending',
+    href: `${ADMIN}/posts/publish_pending`,
+    api_path: `${API}/posts/publish_pending`,
     confirm: 'Publish every pending post to the publisher now?',
     enabled: true,
   },
-  { key: 'sync_publisher', label: 'Sync from publisher', kind: 'collection', placement: 'header', method: 'post', href: '/admin/posts/sync_publisher', api_path: '/api/admin/posts/sync_publisher', enabled: true },
+  { key: 'sync_publisher', label: 'Sync from publisher', kind: 'collection', placement: 'header', method: 'post', href: `${ADMIN}/posts/sync_publisher`, api_path: `${API}/posts/sync_publisher`, enabled: true },
   {
     key: 'legacy_import',
     label: 'Legacy import',
     kind: 'custom',
     placement: 'header',
     method: 'get',
-    href: '/admin/posts/legacy_import',
+    href: `${ADMIN}/posts/legacy_import`,
     supported: false,
     disabled_reason: "Uses a custom upload widget that isn't supported here yet",
     enabled: true,
@@ -229,7 +231,7 @@ const resource = (key: string, label: string, plural_label: string, extra: Parti
   key,
   label,
   plural_label,
-  meta_path: `/api/admin/${key}/_meta`,
+  meta_path: `${API}/${key}/_meta`,
   actions: ['index', 'show'],
   permissions: { index: true, show: true },
   filters: [],
@@ -276,7 +278,7 @@ export const resourceSummaries: ResourceSummary[] = resourceMetas.map(
 const leaf = (id: string, label: string): MenuItem => ({ id, label, resource: id, children: [] })
 
 export const menu: MenuItem[] = [
-  { id: 'dashboard', label: 'Dashboard', url: '/admin', priority: 1, children: [] },
+  { id: 'dashboard', label: 'Dashboard', url: ADMIN, priority: 1, children: [] },
   {
     id: 'publishing',
     label: 'Publishing',
@@ -337,18 +339,21 @@ export const menu: MenuItem[] = [
   },
 ]
 
+const DEMO = import.meta.env.VITE_DEMO === '1'
+
 export const utilityMenu: MenuItem[] = [
-  { id: 'current_user', label: 'Dana Whitfield', url: '/admin/users/u-1', children: [] },
+  { id: 'current_user', label: 'Dana Whitfield', url: `${ADMIN}/users/u-1`, children: [] },
   { id: 'docs', label: 'Admin docs', url: 'https://docs.example.com/admin', children: [] },
-  { id: 'logout', label: 'Logout', url: '/admin/logout', children: [] },
+  // A static demo host can't take the logout POST, so it offers no sign-out.
+  ...(DEMO ? [] : [{ id: 'logout', label: 'Logout', url: `${ADMIN}/logout`, children: [] }]),
 ]
 
 export const site: Site = {
   title: 'Acme Admin',
-  title_link: '/admin',
-  favicon: '/favicon.svg',
+  title_link: ADMIN,
+  favicon: `${import.meta.env.BASE_URL}favicon.svg`,
   home: null,
-  logout: { url: '/admin/logout', method: 'delete' },
+  logout: DEMO ? null : { url: `${ADMIN}/logout`, method: 'delete' },
   utility_menu: utilityMenu,
   current_user: { id: 'u-1', display_name: 'Dana Whitfield' },
   locale: 'en',
@@ -366,7 +371,7 @@ export const rowPermissions = (e: Post): Permissions =>
   e.id === 5004 ? { show: false, update: false, destroy: false } : { show: true, update: true, destroy: true }
 
 const liftEmbargo = (e: Post, placement: Action['placement']): Action => {
-  const base = `/admin/posts/${e.id}`
+  const base = `${ADMIN}/posts/${e.id}`
   return {
     key: 'lift_embargo',
     label: 'Lift embargo',
@@ -374,23 +379,23 @@ const liftEmbargo = (e: Post, placement: Action['placement']): Action => {
     placement,
     method: 'post',
     href: `${base}/lift_embargo`,
-    api_path: `/api${base}/lift_embargo`,
+    api_path: `${API}/posts/${e.id}/lift_embargo`,
     enabled: isEmbargoed(e),
     disabled_reason: isEmbargoed(e) ? null : "This post isn't embargoed",
   }
 }
 
 const retryPublication = (e: Post, placement: Action['placement']): Action => {
-  const base = `/admin/posts/${e.id}`
-  return { key: 'retry_publication', label: 'Retry publication', kind: 'member', placement, method: 'post', href: `${base}/retry_publication`, api_path: `/api${base}/retry_publication`, enabled: true }
+  const base = `${ADMIN}/posts/${e.id}`
+  return { key: 'retry_publication', label: 'Retry publication', kind: 'member', placement, method: 'post', href: `${base}/retry_publication`, api_path: `${API}/posts/${e.id}/retry_publication`, enabled: true }
 }
 
 export const postActions = (e: Post): Action[] => {
-  const base = `/admin/posts/${e.id}`
+  const base = `${ADMIN}/posts/${e.id}`
   return [
-    { key: 'edit', label: 'Edit', kind: 'edit', placement: 'header', method: 'get', href: `${base}/edit`, api_path: `/api${base}/edit`, enabled: true },
+    { key: 'edit', label: 'Edit', kind: 'edit', placement: 'header', method: 'get', href: `${base}/edit`, api_path: `${API}/posts/${e.id}/edit`, enabled: true },
     retryPublication(e, 'header'),
-    { key: 'reschedule_embargo', label: 'Reschedule embargo', kind: 'member', placement: 'header', method: 'get', href: `${base}/reschedule_embargo`, api_path: `/api${base}/reschedule_embargo`, form_path: `/api${base}/reschedule_embargo`, enabled: true },
+    { key: 'reschedule_embargo', label: 'Reschedule embargo', kind: 'member', placement: 'header', method: 'get', href: `${base}/reschedule_embargo`, api_path: `${API}/posts/${e.id}/reschedule_embargo`, form_path: `${API}/posts/${e.id}/reschedule_embargo`, enabled: true },
     liftEmbargo(e, 'header'),
     {
       key: 'destroy',
@@ -399,7 +404,7 @@ export const postActions = (e: Post): Action[] => {
       placement: 'header',
       method: 'delete',
       href: base,
-      api_path: `/api${base}`,
+      api_path: `${API}/posts/${e.id}`,
       confirm: `Delete post #${e.id}? This can't be undone.`,
       enabled: true,
     },

@@ -8,7 +8,8 @@ import { verifyCachedManifest } from './lib/manifestCache'
 async function enableMocks() {
   if (import.meta.env.VITE_MOCKS !== '1') return
   const { worker } = await import('./mocks/browser')
-  await worker.start({ onUnhandledFrame: 'bypass', quiet: true })
+  // BASE_URL keeps the worker's URL and scope under the demo's subpath.
+  await worker.start({ onUnhandledFrame: 'bypass', quiet: true, serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` } })
 }
 
 const session = boundedSession()

@@ -2,6 +2,8 @@
 
 reactiveadmin serves your existing [ActiveAdmin](https://activeadmin.info) registrations as a JSON API with an OpenAPI description and an MCP server, and it ships a React admin client that renders them. Your ActiveAdmin resources stay the source of truth: reactiveadmin reuses their controllers, filters, scopes, forms, actions and authorization, and adds the API and the UI on top.
 
+Website and docs: <https://formhealth.github.io/reactiveadmin/>, with a [demo](https://formhealth.github.io/reactiveadmin/demo/) that runs on sample data and a [Storybook](https://formhealth.github.io/reactiveadmin/storybook/) of the client's components.
+
 ## Status
 
 Version 0.1.0. This is early software: the gem and the client aren't published to RubyGems or npm, and their interfaces may change before 1.0. See the [changelog](CHANGELOG.md).

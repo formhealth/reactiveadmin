@@ -2,7 +2,7 @@
 import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
 const target = process.env.RA_API_TARGET ?? 'http://localhost:3003'
 
@@ -10,6 +10,24 @@ const target = process.env.RA_API_TARGET ?? 'http://localhost:3003'
 // its files. The manifest tells the host's shell which hashed files to load. Left unset, this is the plain build.
 const outDir = process.env.RA_OUT_DIR
 const assetPrefix = process.env.RA_ASSET_PREFIX ?? '/'
+
+// `pnpm build:demo`: the mock-backed build the project site serves under /reactiveadmin/demo/. The plain and host
+// builds never set VITE_DEMO.
+const demo = process.env.VITE_DEMO === '1'
+const demoBase = '/reactiveadmin/demo/'
+
+// GitHub Pages answers a deep link with the site's 404.html, which sends the browser to `?p=<path>`; this puts the
+// real path back before the router reads it.
+const restoreDeepLink: Plugin = {
+  name: 'restore-deep-link',
+  transformIndexHtml: () => [
+    {
+      tag: 'script',
+      injectTo: 'head-prepend',
+      children: `var p=new URLSearchParams(location.search).get('p');if(p)history.replaceState(null,'','${demoBase.slice(0, -1)}'+p)`,
+    },
+  ],
+}
 
 // Vendor groups keep the entry small and cacheable; heavy ones (forms, dates, table, purify) are only
 // imported by lazy page/dialog chunks, so they never load with the shell.
@@ -25,13 +43,13 @@ const vendorGroups = Object.entries({
 }).map(([name, test], i, all) => ({ name: `vendor-${name}`, test, priority: all.length - i }))
 
 export default defineConfig({
-  base: assetPrefix,
+  base: demo ? demoBase : assetPrefix,
   // The host build is for production: none of the dev server's static files (mocks, the MSW worker) ship with it.
   publicDir: outDir ? false : 'public',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), ...(demo ? [restoreDeepLink] : [])],
   resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') } },
   build: {
-    outDir: outDir ?? 'dist',
+    outDir: outDir ?? (demo ? 'dist-demo' : 'dist'),
     emptyOutDir: true,
     manifest: 'manifest.json',
     // The second entry is the script the classic dashboard loads for its switch; the manifest names its hashed file.

@@ -27,4 +27,4 @@ This page describes where reactiveadmin is heading. It's a statement of directio
 
 ## Suggest a change
 
-[Open an issue](https://github.com/formhealth/reactiveadmin/issues/new) to propose or discuss an item. See [Contributing](CONTRIBUTING.md).
+[Open an issue](https://github.com/formhealth/reactiveadmin/issues/new) to propose or discuss an item. See [Contributing](https://github.com/formhealth/reactiveadmin/blob/main/CONTRIBUTING.md).

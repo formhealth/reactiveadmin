@@ -1,0 +1,49 @@
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/site/**", "apps/standalone/**", "docs/**", "CHANGELOG.md", "ROADMAP.md", "package.json", "pnpm-*.yaml", ".github/actions/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+  pull_request:
+    paths: ["apps/site/**", "apps/standalone/**", "docs/**", "CHANGELOG.md", "ROADMAP.md", "package.json", "pnpm-*.yaml", ".github/actions/**", ".github/workflows/pages.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: pages-build-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-client
+      - name: Build the site and the demo
+        run: pnpm --filter site build:full
+      - if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v6
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/site/.vitepress/dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

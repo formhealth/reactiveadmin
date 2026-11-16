@@ -1,0 +1,23 @@
+{
+  "name": "site",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/formhealth/reactiveadmin.git",
+    "directory": "apps/site"
+  },
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "build:full": "pnpm --filter standalone build:demo && vitepress build && cp -R ../standalone/dist-demo .vitepress/dist/demo && pnpm --filter standalone build-storybook --quiet -o ../site/.vitepress/dist/storybook",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitepress": "^1.6.4",
+    "vue": "^3.5.45"
+  }
+}

@@ -3,6 +3,8 @@ import type { ActionResult, FormResponse, ValidationError, WriteResult } from '@
 import { approveForm, approvals } from './domain'
 import { posts, type Post } from './fixtures'
 import { CSRF_TOKEN, postForm, optionPools, deskForm, desks, rescheduleForm, session } from './forms'
+import { adminPath as ADMIN } from '@/lib/base'
+import { API } from './paths'
 
 const error = (status: number, code: string, message: string) => HttpResponse.json({ code, message }, { status })
 
@@ -31,13 +33,13 @@ const written = (resource: string, id: string, message: string, view: 'show' | '
   ok: true,
   id,
   message,
-  location: { url: `/admin/${resource}${view === 'show' ? `/${id}` : ''}`, resource, id, view },
+  location: { url: `${ADMIN}/${resource}${view === 'show' ? `/${id}` : ''}`, resource, id, view },
 })
 
 const memberAction = (e: Post, action: string): ActionResult | undefined =>
   ({
     retry_publication: { ok: true as const, message: `Retry queued for post #${e.id}` },
-    lift_embargo: { ok: true as const, message: `Embargo lifted for post #${e.id}`, location: { url: `/admin/posts/${e.id}`, resource: 'posts', id: String(e.id), view: 'show' as const } },
+    lift_embargo: { ok: true as const, message: `Embargo lifted for post #${e.id}`, location: { url: `${ADMIN}/posts/${e.id}`, resource: 'posts', id: String(e.id), view: 'show' as const } },
   })[action]
 
 const batchMessages: Record<string, (n: number) => string> = {
@@ -47,15 +49,15 @@ const batchMessages: Record<string, (n: number) => string> = {
 }
 
 export const writeHandlers = [
-  http.get('/api/admin/_session', () => HttpResponse.json(session)),
+  http.get(`${API}/_session`, () => HttpResponse.json(session)),
 
-  http.get('/api/admin/:resource/new', async ({ params }) => {
+  http.get(`${API}/:resource/new`, async ({ params }) => {
     await delay(200)
     const body: FormResponse | undefined = params.resource === 'posts' ? postForm() : params.resource === 'desks' ? deskForm() : undefined
     return body ? HttpResponse.json(body) : error(404, 'not_found', 'Form not found')
   }),
 
-  http.get('/api/admin/:resource/_options', async ({ request }) => {
+  http.get(`${API}/:resource/_options`, async ({ request }) => {
     await delay(250)
     const sp = new URL(request.url).searchParams
     const pool = optionPools[sp.get('field') ?? '']
@@ -72,7 +74,7 @@ export const writeHandlers = [
   }),
 
   // Batched labels for selected values; without it a saved id shows as its raw number.
-  http.get('/api/admin/:resource/_options/lookup', async ({ request }) => {
+  http.get(`${API}/:resource/_options/lookup`, async ({ request }) => {
     await delay(250)
     const lookups = Object.fromEntries(
       [...new URL(request.url).searchParams]
@@ -85,7 +87,7 @@ export const writeHandlers = [
     return HttpResponse.json({ lookups })
   }),
 
-  http.get('/api/admin/:resource/:id/:action', async ({ params }) => {
+  http.get(`${API}/:resource/:id/:action`, async ({ params }) => {
     await delay(200)
     const { resource, id, action } = params as Record<string, string>
     const post = find(id)
@@ -100,7 +102,7 @@ export const writeHandlers = [
     return error(404, 'not_found', 'Record not found')
   }),
 
-  http.post('/api/admin/:resource/batch_action', async ({ request }) => {
+  http.post(`${API}/:resource/batch_action`, async ({ request }) => {
     await delay(300)
     const rejected = badToken(request)
     if (rejected) return rejected
@@ -114,7 +116,7 @@ export const writeHandlers = [
   }),
 
   // Collection actions: `POST /admin/{resource}/{action}` with no record.
-  http.post('/api/admin/:resource/:action', async ({ params, request }) => {
+  http.post(`${API}/:resource/:action`, async ({ params, request }) => {
     await delay(300)
     const rejected = badToken(request)
     if (rejected) return rejected
@@ -122,7 +124,7 @@ export const writeHandlers = [
     return message ? HttpResponse.json({ ok: true, message } satisfies ActionResult) : error(404, 'not_found', 'Unknown action')
   }),
 
-  http.post('/api/admin/:resource/:id/:action', async ({ params, request }) => {
+  http.post(`${API}/:resource/:id/:action`, async ({ params, request }) => {
     await delay(300)
     const rejected = badToken(request)
     if (rejected) return rejected
@@ -131,7 +133,7 @@ export const writeHandlers = [
     if (resource === 'content_approvals' && action === 'approve') {
       const body = (await request.json()) as Record<string, Params>
       if (!body.approval?.reference_number) return invalid({ reference_number: ["can't be blank"] })
-      const location = { url: `/admin/${resource}/${id}`, resource, id, view: 'show' as const }
+      const location = { url: `${ADMIN}/${resource}/${id}`, resource, id, view: 'show' as const }
       return HttpResponse.json({ ok: true, message: `Prior authorization #${id} approved`, location } satisfies ActionResult)
     }
     const post = find(id)
@@ -144,7 +146,7 @@ export const writeHandlers = [
     return result ? HttpResponse.json(result) : error(404, 'not_found', 'Unknown action')
   }),
 
-  http.post('/api/admin/:resource', async ({ params, request }) => {
+  http.post(`${API}/:resource`, async ({ params, request }) => {
     await delay(400)
     const rejected = badToken(request)
     if (rejected) return rejected
@@ -160,7 +162,7 @@ export const writeHandlers = [
     return HttpResponse.json(written('posts', String(posts[0].id), 'post was successfully created.'), { status: 201 })
   }),
 
-  http.patch('/api/admin/:resource/:id', async ({ params, request }) => {
+  http.patch(`${API}/:resource/:id`, async ({ params, request }) => {
     await delay(400)
     const rejected = badToken(request)
     if (rejected) return rejected
@@ -173,7 +175,7 @@ export const writeHandlers = [
     return HttpResponse.json(written('posts', id, 'post was successfully updated.'))
   }),
 
-  http.delete('/api/admin/:resource/:id', async ({ params, request }) => {
+  http.delete(`${API}/:resource/:id`, async ({ params, request }) => {
     await delay(300)
     const rejected = badToken(request)
     if (rejected) return rejected

@@ -41,7 +41,7 @@
         post({ type: 'reactiveadmin:flash', message: 'Schedule applied for the week of Oct 19' })
         resize()
       })
-      document.getElementById('open').addEventListener('click', () => post({ type: 'reactiveadmin:navigate', url: '/admin/authors' }))
+      document.getElementById('open').addEventListener('click', () => post({ type: 'reactiveadmin:navigate', url: new URL('authors', window.location.href).pathname }))
       new ResizeObserver(resize).observe(document.body)
       window.addEventListener('load', resize)
     </script>
