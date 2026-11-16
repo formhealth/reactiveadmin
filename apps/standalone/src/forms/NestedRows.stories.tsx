@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { http, HttpResponse } from 'msw'
-import { expect, screen, userEvent, within } from 'storybook/test'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { FormResponse } from '@/api/generated/model'
 import { cardsPolicyForm, POLICY_ID, policyForm, ROLE_ID, roleForm, STALE_ROW_ID, textPolicyForm } from '@/mocks/nested'
 import { ResourceForm } from '@/pages/ResourceForm'
@@ -70,6 +70,7 @@ export const PermissionsReviewMobileDark: Story = { ...PermissionsReviewMobile, 
 
 const changeRow2 = async (canvas: ReturnType<typeof within>) => {
   await userEvent.click(await canvas.findByRole('button', { name: /Change permission, row 2/ }))
+  await waitFor(() => expect(canvas.getByRole('combobox', { name: 'Permission, row 2' })).toHaveAttribute('aria-expanded', 'true'))
   await userEvent.keyboard('{Escape}')
 }
 
@@ -95,7 +96,7 @@ export const ChangeSavedRow: Story = {
 
     // Escape with the picker closed leaves the row as it was.
     await userEvent.keyboard('{Escape}')
-    await expect(await canvas.findByRole('button', { name: /Change permission, row 2/ })).toHaveFocus()
+    await waitFor(() => expect(canvas.getByRole('button', { name: /Change permission, row 2/ })).toHaveFocus())
     await expect(canvas.queryByText(/Unsaved/)).toBeNull()
   },
 }
