@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Action, FormResponse } from '@/api/generated/model'
-import { safeAction, safeEmbedSrc, safeFormAction, safeHref } from './safeUrl'
+import { safeAction, safeEmbedSrc, safeFormAction, safeFrameWrite, safeHref } from './safeUrl'
 
 const from = 'https://app.test/admin'
 
@@ -135,8 +135,15 @@ describe('safeAction for a navigating POST', () => {
     '/auth/%2e%2e/admin',
     '/auth%2f..%2fadmin',
     '/auth\\..\\admin',
+    '/auth/%2\nfadmin',
+    '/auth/.\t./admin',
     '',
-  ])('rejects %s', (href) => expect(safeAction(connect({ href }), from)).toBe(false))
+  ])('rejects %j', (href) => expect(safeAction(connect({ href }), from)).toBe(false))
+
+  it('rejects an encoded separator inherited from the base path', () => {
+    expect(safeAction(connect({ href: 'provider' }), 'https://app.test/auth%2fx/page')).toBe(false)
+    expect(safeAction(connect({ href: 'provider' }), 'https://app.test/auth/page')).toBe(true)
+  })
 
   it('is a post that reaches no API of ours', () => {
     expect(safeAction(connect({ method: 'get' }), from)).toBe(false)
@@ -145,4 +152,50 @@ describe('safeAction for a navigating POST', () => {
   })
 
   it('is not an external link', () => expect(safeAction(connect({ external: true, href: 'https://evil.example/x' }), from)).toBe(false))
+})
+
+describe('safeFrameWrite', () => {
+  const page = 'https://app.test/admin/posts/1'
+
+  it.each(['/admin/posts/1', 'https://app.test/admin/posts/1/publish?x=1#y', '/admin', 'publish', '  /admin/posts/1', '/admin/a%20b'])('accepts %j', (url) =>
+    expect(safeFrameWrite(url, page)).toBe(true),
+  )
+
+  it.each([
+    '/auth/sign_out',
+    '/administrator/x',
+    '/api/admin/posts',
+    'https://evil.test/admin/x',
+    '//evil.test/admin/x',
+    'https://app.test@evil.test/admin/x',
+    'https://evil.test\\@app.test/admin/x',
+    '/\\evil.test/admin/x',
+    'http://app.test:8080/admin/x',
+    'javascript:alert(1)',
+    'data:text/html,x',
+    'blob:https://app.test/admin/x',
+    '/auth/../admin/x',
+    '/admin/../auth/x',
+    '/admin/./x',
+    '/admin/..',
+    '/admin/%2e%2e/auth',
+    '/admin/..%2fauth',
+    '/admin%2f..%2fauth',
+    '/admin/a%2fb',
+    '/admin/a%2Fb',
+    '/admin/a%5cb',
+    '/admin\\x',
+  ])('rejects %j', (url) => expect(safeFrameWrite(url, page)).toBe(false))
+
+  it.each(['/admin/%2\nfsecret', '/admin/%2\tf', '/admin/%\r2f', '/admin/%2\r\nf', '/admin/.\n./auth', '/admin/.\t./auth', '/admin/\u0000x', '/admin/\u0001x', '/admin/\u007fx', 'https://app.test/admin/%2\nf'])(
+    'rejects %j, whose control characters the URL parser strips',
+    (url) => expect(safeFrameWrite(url, page)).toBe(false),
+  )
+
+  it.each(['https://app.test/admin/a%2fb/page', 'https://app.test/admin/a%2Fb/page', 'https://app.test/admin/a%5cb/page', 'https://app.test/admin/%2e%2e/page'])(
+    'rejects a relative reference resolved against %s',
+    (base) => {
+      for (const url of ['save', './save', '?x=1', '#frag', '']) expect(safeFrameWrite(url, base), url).toBe(false)
+    },
+  )
 })

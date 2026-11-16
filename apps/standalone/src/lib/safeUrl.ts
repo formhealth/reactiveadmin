@@ -32,18 +32,31 @@ export function safeHref(href: string | null | undefined, external?: boolean, fr
 }
 
 const escape = (path: string) => path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-const RESERVED = new RegExp(`^(${[...new Set(['/admin', '/api', adminPath, mountPath])].filter(Boolean).map(escape).join('|')})(/|$)`, 'i')
 
 // A POST that navigates the window needs a URL this origin serves outside the admin and the API: never a
-// request the page could forge for either, and never another site. The raw string is checked because URL parsing
-// resolves dot segments, which would turn `/auth/../admin/x` into an admin path unseen.
+// request the page could forge for either, and never another site.
+const RESERVED = new RegExp(`^(${[...new Set(['/admin', '/api', adminPath, mountPath])].filter(Boolean).map(escape).join('|')})(/|$)`, 'i')
+
+// URL parsing resolves dot segments and drops tabs and newlines, which would let `/auth/../admin/x` or `/admin/%2\nf`
+// pass as something else. So the raw path must be free of both, and the resolved path (which also carries any
+// encoded separator inherited from the base) must have no encoded separators either.
 const UNRESOLVED_PATH = /(^|\/)\.\.?(\/|$)|%2e|%2f|%5c|\\/i
+const CONTROL_CHARS = /\p{Cc}/u
+
+const plainPath = (url: string, target: URL) => {
+  const raw = url.trim().split(/[?#]/, 1)[0]
+  return !CONTROL_CHARS.test(raw) && !UNRESOLVED_PATH.test(raw) && !UNRESOLVED_PATH.test(target.pathname)
+}
+
+// A frame's write carries this session's CSRF token, so it only goes to an admin page of this origin.
+export function safeFrameWrite(url: string, from = globalThis.location?.href): boolean {
+  const target = sameOrigin(url, from)
+  return !!target && isAdminPath(target.pathname) && plainPath(url, target)
+}
 
 export function safeNavigation(action: Action, from = globalThis.location?.href): boolean {
   const target = action.href ? sameOrigin(action.href, from) : undefined
-  const reserved = RESERVED.test(target?.pathname ?? '')
-  const rawPath = action.href?.trim().split(/[?#]/, 1)[0] ?? ''
-  return !!target && !reserved && !UNRESOLVED_PATH.test(rawPath) && action.method === 'post' && !action.api_path && !action.form_path && !action.view
+  return !!target && !RESERVED.test(target.pathname) && plainPath(action.href!, target) && action.method === 'post' && !action.api_path && !action.form_path && !action.view
 }
 
 // Actions run against our own API, or open a classic page or an external site.
