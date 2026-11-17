@@ -64,8 +64,12 @@ const request = `GET /api/admin/posts?scope=embargoed
     { "id": "5005",
       "cells": {
         "publication_status":
-          { "type": "status", "label": "Pending" }
-      } }
+          { "type": "status", "label": "Pending",
+            "variant": "neutral" },
+        …
+      },
+      …
+    }
   ],
   "meta": { "current_scope": "embargoed",
             "total_count": 18 }
@@ -94,7 +98,7 @@ const kept = [
 const added = [
   { text: "A React admin that works on a phone", link: "/demo/", external: true },
   { text: "A JSON API with an OpenAPI 3.1 document", link: "/guide/openapi" },
-  { text: "An MCP server for agents, read-only until a resource opts in", link: "/guide/mcp" },
+  { text: "An MCP server for agents: off until you turn it on, read-only until a resource opts in", link: "/guide/mcp" },
   { text: "Masking, rate limits, and audit events", link: "/guide/security" },
   { text: "A per-person switch between classic and new", link: "/guide/rollout" },
   { text: "A doctor task that reports what renders natively", link: "/guide/doctor" },
@@ -106,8 +110,8 @@ const added = [
     <header class="intro">
       <h1>Add an API, MCP, and responsive React frontend to <em>your</em> ActiveAdmin.</h1>
       <p class="lede">
-        Keep your app/admin files as they are. ReactiveAdmin reuses their controllers, filters, scopes, forms, and authorization, so there's nothing to
-        rewrite per resource.
+        Keep your app/admin files as they are. ReactiveAdmin reuses their controllers, filters, scopes, forms, and authorization, so you don't write
+        serializers, API controllers, or pages per resource.
       </p>
       <p class="actions">
         <a class="primary" :href="withBase('/guide/getting-started')">Get started</a>
@@ -177,7 +181,7 @@ const added = [
         </div>
         <figcaption>
           A registration like this renders as a table on a wide screen and as cards on a phone.
-          <span class="wide-only">Choose a part of the file to find it in the table.</span>
+          <span class="wide-only">Choose a part of the file to find it in the screenshot.</span>
         </figcaption>
       </figure>
     </section>
@@ -193,7 +197,7 @@ const added = [
         <div>
           <h3>MCP server</h3>
           <pre><code>{{ tool }}</code></pre>
-          <p>Agents call the same API as a signed-in admin. Each resource is <a :href="withBase('/guide/mcp')">read-only until you opt it in</a>.</p>
+          <p>Agents call the same API as the admin their token belongs to. MCP is off until you turn it on, and each resource is <a :href="withBase('/guide/mcp')">read-only until you opt it in</a>.</p>
         </div>
       </div>
     </section>
@@ -218,8 +222,8 @@ const added = [
 
     <section class="setup" aria-labelledby="install-title">
       <h2 id="install-title">Install</h2>
-      <p>ReactiveAdmin isn't on RubyGems yet. Until it is, install the gem from GitHub:</p>
-      <pre><code>gem "reactiveadmin", github: "formhealth/reactiveadmin", glob: "gem/*.gemspec"</code></pre>
+      <pre><code>bundle add reactiveadmin
+bin/rails generate reactiveadmin:install</code></pre>
       <p><a :href="withBase('/guide/getting-started')">Getting started</a> covers configuration, routes, and the client.</p>
     </section>
   </div>

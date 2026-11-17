@@ -36,11 +36,11 @@ A browser can't add a header to a page load, and a request that is a link click 
 
 ## Steps
 
-### 1. Build the client
+### 1. Build the client (source checkouts only)
 
-The client is a Vite build. Build it when you deploy, not at runtime. The host needs no Node.js in production.
+The gem from RubyGems ships a prebuilt client and serves it with no build step, under any `ui.asset_prefix`, as long as you set no `ui.client_assets`. Skip to step 2.
 
-The released gem ships a prebuilt client and serves it with no build step, under any `ui.asset_prefix`, as long as you set no `ui.client_assets`. Skip this step then. Run it when you install the gem from a git checkout. A build of your own in `public/reactiveadmin` (this step's default output) is served over the packaged one, and so is `ui.client_assets`.
+From a git checkout, build the client when you deploy, not at runtime; the host still needs no Node.js in production. A build of your own in `public/reactiveadmin` (this step's default output) is served over the packaged one, and so is `ui.client_assets`.
 
 ```sh
 bin/rails reactiveadmin:client:build
