@@ -143,7 +143,7 @@ module ReactiveAdmin
     # check_boxes input_name is already the whole param, brackets included, and its hidden input posts
     # under the method name even for an association (`category`, not `category_id`).
     def param(input, multiple)
-      kind = AA.input_kind(input)
+      kind = input.kind
       return plain(input.input_name) if kind == :check_boxes
 
       name = (kind == :hidden) ? input.method : input.input_name
@@ -172,7 +172,7 @@ module ReactiveAdmin
 
     # Limits Formtastic derives from validations/columns, plus whatever the form block set explicitly.
     def input_html(input, control)
-      derived = input.input_html_options.slice(*DERIVED_HTML.fetch(control, []))
+      derived = input.html_options.slice(*DERIVED_HTML.fetch(control, []))
       html = derived.merge(input.options[:input_html].to_h.slice(*DERIVED_HTML.values.flatten, :rows))
       html = html.merge(day_limits(input, html, control)) if DAY_CONTROLS.include?(control)
       html.compact_blank.presence
@@ -231,7 +231,7 @@ module ReactiveAdmin
 
     def current(input)
       object = @builder.object
-      names = [(input.association_primary_key if input.respond_to?(:association_primary_key)), input.input_name, input.method]
+      names = [input.association_primary_key, input.input_name, input.method]
       name = names.find { (it.is_a?(Symbol) || it.is_a?(String)) && object.respond_to?(it) }
       object.public_send(name) if name
     end

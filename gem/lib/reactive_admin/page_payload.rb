@@ -3,9 +3,7 @@ module ReactiveAdmin
   # and the GET page actions that render something. Sidebars are not carried.
   class PagePayload
     # Arbre context that runs the content block the way ActiveAdmin::Views::Pages::Page does.
-    class Content < AA.arbre_element
-      include PageForms::ArbreForms
-    end
+    class Content < AA.page_element_base; end
 
     def initialize(controller)
       @controller = controller
@@ -92,14 +90,14 @@ module ReactiveAdmin
     def render_content(forms: true, controls_only: false)
       return "" unless presenter&.block
 
-      context = AA.arbre_context(@controller.view_assigns, @view)
-      render = -> { context.insert_tag(Content).instance_exec(&presenter.block) }
+      content = Content.build_in(@controller.view_assigns, @view)
+      render = -> { content.instance_exec(&presenter.block) }
       if forms
         @forms = PageForms.recording(@view, @controller, controls_only:, &render)
       else
         render.call
       end
-      context.to_s
+      content.document_html
     end
 
     # Only GETs: a page action that writes is the target of a form in the content.

@@ -32,14 +32,33 @@ module ReactiveAdmin
 
         def plural_many_count = ::ActiveAdmin::Helpers::I18n::PLURAL_MANY_COUNT
 
-        def arbre_element = ::Arbre::Element
+        # The elements the index block and a show or page block run in, to subclass.
+        def index_recorder_base = Recorders::Index
+
+        def page_element_base = Recorders::Page
 
         def arbre_context(assigns, view) = ::Arbre::Context.new(assigns, view)
 
         def arbre_element?(object) = object.is_a?(::Arbre::Element)
 
+        # The view helpers an Arbre tag was built with.
+        def arbre_helpers(tag) = tag.arbre_context.helpers
+
         # Has `tracer` see every tag's `build`, once.
         def trace_arbre_tags(tracer) = (::Arbre::HTML::Tag.prepend(tracer) unless ::Arbre::HTML::Tag.include?(tracer))
+
+        # Class names of the classic pages' components that HtmlNodes walks into typed nodes.
+        MARKUP = {
+          status_tag: "status_tag", empty: "empty", attributes_table: "attributes_table", panel: "panel",
+          panel_contents: "panel_contents", tabs: "tabs", nav_tabs: "nav-tabs", tab_content: "tab-content",
+          columns: "columns", column: "column", header_action: "header_action"
+        }.freeze
+        STRUCTURAL = MARKUP.values_at(:panel, :attributes_table, :tabs, :columns, :status_tag, :empty).freeze
+
+        def markup = MARKUP
+
+        # Containers whose children HtmlNodes must not flatten into a toolbar or pass through.
+        def structural_classes = STRUCTURAL
 
         # Where a classic page keeps its content, and the chrome the embed hides.
         def frame_content_selector = "#main_content"

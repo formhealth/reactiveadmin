@@ -9,32 +9,6 @@ module ReactiveAdmin
 
     METHODS = %w[get post put patch delete].freeze
 
-    # Mixed into the view that renders the template.
-    module Recording
-      def semantic_form_for(*args, &block)
-        state = @_reactiveadmin_template
-        return super unless state
-        return state.extra_form(self) { semantic_form_for(*args, &block) } if state.extra_form?
-
-        items = nil
-        markup = super do |builder|
-          state.objects << builder.object
-          items = state.expand(state.capture(self, Recorder.new(builder, state, self), &block))
-          "".html_safe
-        end
-        state.mark([:form, {items:, **Form.target(markup)}])
-      end
-
-      # AA's version builds an Arbre form around a real builder, which the recorder can't stand in for.
-      def active_admin_form_for(resource, options = {}, &block)
-        state = @_reactiveadmin_template
-        return super unless state
-        return state.extra_form(self) { active_admin_form_for(resource, options, &block) } if state.extra_form?
-
-        state.arbre { semantic_form_for(resource, {builder: AA.form_builder}.merge(options), &block) }
-      end
-    end
-
     # Reads the form tag Rails built: its action and verb, whichever way `url:` and `method:` were given.
     module Form
       module_function
@@ -99,6 +73,17 @@ module ReactiveAdmin
       def extra_form(view, &block)
         @extras = true
         forms.node(view, &block) || forms.suspended { printing(view, &block) }
+      end
+
+      # Records the form the view's helper builds: the block gets the builder, and its items become the form's.
+      def record_form(view, block)
+        items = nil
+        markup = yield proc { |builder|
+          objects << builder.object
+          items = expand(capture(view, Recorder.new(builder, self, view), &block))
+          "".html_safe
+        }
+        mark([:form, {items:, **Form.target(markup)}])
       end
 
       def mark(entry)
@@ -371,7 +356,7 @@ module ReactiveAdmin
     # Runs the block (a render) on a view whose Formtastic forms record; returns the state and the html.
     def self.recording(schema, view, controller: nil)
       state = State.new(schema, controller:)
-      view.extend(Recording)
+      view.extend(AA.template_form_hooks)
       view.instance_variable_set(:@_reactiveadmin_template, state)
       [state, yield]
     ensure
