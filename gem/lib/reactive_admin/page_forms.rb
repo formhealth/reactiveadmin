@@ -6,35 +6,12 @@ module ReactiveAdmin
   class PageForms
     Recorded = Struct.new(:response, :choices)
 
-    # Mixed into the view that renders the content, ahead of TemplateForm::Recording.
-    module Recording
-      def semantic_form_for(*args, &block)
-        forms = reactiveadmin_page_forms or return super
-        forms.node(self) { super(*args, &block) } || forms.suspended { super(*args, &block) }
-      end
-
-      def active_admin_form_for(*args, &block)
-        forms = reactiveadmin_page_forms or return super
-        forms.node(self) { super(*args, &block) } || forms.suspended { super(*args, &block) }
-      end
-
-      def reactiveadmin_page_forms = @_reactiveadmin_page_forms
-    end
-
-    # For Arbre content: `active_admin_form_for` there is an Arbre component, not the view helper.
-    module ArbreForms
-      def active_admin_form_for(*args, &block)
-        forms = helpers.try(:reactiveadmin_page_forms) or return super
-        marker = forms.node(helpers) { helpers.active_admin_form_for(*args, &block) }
-        marker ? text_node(marker) : forms.suspended { super(*args, &block) }
-      end
-    end
-
     # Runs the block with the view's forms recording, and returns what was recorded.
     def self.recording(view, controller, controls_only: false)
       forms = new(controller, controls_only:)
-      view.extend(TemplateForm::Recording)
-      view.extend(Recording)
+      # Page hooks go on last so they run ahead of the template's.
+      view.extend(AA.template_form_hooks)
+      view.extend(AA.page_form_hooks)
       view.instance_variable_set(:@_reactiveadmin_page_forms, forms)
       yield
       forms

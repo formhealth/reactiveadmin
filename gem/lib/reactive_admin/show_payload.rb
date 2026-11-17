@@ -1,9 +1,7 @@
 module ReactiveAdmin
   class ShowPayload
     # Arbre context mirroring ActiveAdmin::Views::Pages::Show#attributes_table.
-    class Page < AA.arbre_element
-      include PageForms::ArbreForms
-
+    class Page < AA.page_element_base
       def attributes_table(*args, &block)
         options = args.extract_options!
         title = if options.key?(:title)
@@ -74,15 +72,15 @@ module ReactiveAdmin
       page = new_page
       run = -> { presenter&.block ? page.instance_exec(record, &presenter.block) : page.default_main_content }
       forms ? PageForms.recording(@view, @controller, &run) : run.call
-      page.arbre_context.to_s
+      page.document_html
     rescue => e
       Rails.logger.warn("[reactiveadmin] #{@config.resource_name} show block fell back to defaults: #{e.class} at #{e.backtrace&.first}")
       Degradation.record(kind: :show_block_failed, where: "show", reason: "Show block raised #{e.class}; showing default attributes")
       page = new_page
       page.default_main_content
-      page.arbre_context.to_s
+      page.document_html
     end
 
-    def new_page = AA.arbre_context(@controller.view_assigns, @view).insert_tag(Page)
+    def new_page = Page.build_in(@controller.view_assigns, @view)
   end
 end

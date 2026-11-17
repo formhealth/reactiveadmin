@@ -1,15 +1,13 @@
 module ReactiveAdmin
   # Stands in for AA's IndexAsTable while the `index do ... end` block runs, capturing columns
-  # and rendering cells the way TableFor#build_table_cell does. An Element (not a Context):
-  # Contexts forward unknown methods to their html string, which would swallow helpers like
-  # `truncate` that column blocks call.
-  class IndexRecorder < AA.arbre_element
+  # and rendering cells the way TableFor#build_table_cell does.
+  class IndexRecorder < AA.index_recorder_base
     Column = AA.table_column_class
 
     attr_reader :columns, :row_options
 
     def self.build(resource_class, assigns, helpers)
-      AA.arbre_context(assigns, helpers).insert_tag(self, resource_class)
+      build_in(assigns, helpers, resource_class)
     end
 
     def build(resource_class)
@@ -79,21 +77,21 @@ module ReactiveAdmin
 
     # Renders a row's custom `item`s the way IndexTableFor#actions does.
     def render_row_items(record)
-      items = table_actions do
+      items = action_links do
         result = instance_exec(record, &@row_items)
         text_node result unless AA.arbre_element?(result)
       end
-      items.to_s.tap { items.parent&.remove_child(items) }
+      items.to_s.tap { detach(items) }
     end
 
     # A grid or block view's item, or a blog or custom view's whole output for one record.
     def render_item(record, views)
       item = if views.custom? || views.kind == "blog"
-        insert_tag(views.renderer, views.presenter, [record])
+        add_tag(views.renderer, views.presenter, [record])
       else
         div { instance_exec(record, &views.presenter.block) }
       end
-      html = item.to_s.tap { item.parent&.remove_child(item) }
+      html = item.to_s.tap { detach(item) }
       strip_selection(html)
     end
 
@@ -107,9 +105,9 @@ module ReactiveAdmin
     def render_cell(record, col)
       cell = td do
         html = AA.format_attribute(helpers, record, col.data)
-        current_arbre_element << html unless current_arbre_element.children.include?(html)
+        open_element << html unless open_element.children.include?(html)
       end
-      cell.children.to_s.tap { cell.parent&.remove_child(cell) }
+      cell.children.to_s.tap { detach(cell) }
     end
   end
 end

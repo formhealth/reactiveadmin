@@ -5,7 +5,7 @@ module ReactiveAdmin
   # and view methods, inherited_resources ivars, Arbre and Formtastic classes. Everything else calls
   # intention-revealing methods here (`AA.scopes(config)`, `AA.resource_ivar(controller)`), so an AA
   # upgrade is a new implementation module, not a hunt through the gem. `aa_boundary_spec` fails when
-  # an AA constant appears elsewhere in `lib` or `app`.
+  # an AA constant, Arbre or Formtastic method, or AA markup class name appears elsewhere in `lib` or `app`.
   #
   # `V3` implements AA 3.5; `V4` documents what changes for AA 4. The module is picked by
   # `ActiveAdmin::VERSION` when this file loads.
@@ -20,6 +20,7 @@ module ReactiveAdmin
   module AA
     autoload :V3, "reactive_admin/aa/v3"
     autoload :V4, "reactive_admin/aa/v4"
+    autoload :Input, "reactive_admin/aa/input"
 
     class << self
       def version = Gem::Version.new(::ActiveAdmin::VERSION)

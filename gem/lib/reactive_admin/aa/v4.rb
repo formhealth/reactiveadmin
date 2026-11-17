@@ -51,6 +51,16 @@ module ReactiveAdmin
       # Private in AA 4.
       def find_value(view, record, attr) = view.send(:find_value, record, attr)
 
+      # AA 4 renames these and drops the tabs and columns components; the V3 names left for them never match.
+      MARKUP = V3::Views::MARKUP.merge(
+        status_tag: "status-tag", empty: "attributes-table-empty-value", attributes_table: "attributes-table", panel_contents: "panel-body"
+      ).freeze
+      STRUCTURAL = MARKUP.values_at(:panel, :attributes_table, :tabs, :columns, :status_tag, :empty).freeze
+
+      def markup = MARKUP
+
+      def structural_classes = STRUCTURAL
+
       def frame_content_selector = "[data-test-page-content]"
 
       def chrome_selectors = "[data-test-page-header], #main-menu, header"
