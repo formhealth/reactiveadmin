@@ -98,7 +98,14 @@ RSpec.describe "openapi/core.yaml" do
     end
 
     it "is nil where the contract declares nothing" do
-      expect(Contract.response_schema("GET", "/api/admin/posts/1/publish", 200)).to be_nil
+      expect(Contract.response_schema("PUT", "/api/admin/posts/new", 200)).to be_nil
+    end
+
+    it "finds an operation by id" do
+      expect(Contract.operation_schema("runMemberActionGet", 200)).to eq("ActionGetResponse")
+      expect(Contract.operation_schema("runMemberActionPost", 200)).to eq("ActionWriteResponse")
+      expect(Contract.operation_schema("runMemberActionPost", 501)).to eq("Error")
+      expect(Contract.operation_schema("noSuchOperation", 200)).to be_nil
     end
   end
 end

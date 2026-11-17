@@ -69,6 +69,15 @@ RSpec.describe "GET /api/admin/_openapi", type: :request do
       expect(doc.dig("components", "schemas", "DryRunResult", "required")).to include("changes")
     end
 
+    it "documents what a custom action answers, with the schemas it names" do
+      get_schema = doc.dig("components", "responses", doc.dig("paths", "/api/admin/posts/{id}/rename", "get", "responses", "200", "$ref").split("/").last, "content", "application/json", "schema")
+      union = doc.dig("components", "schemas", get_schema["$ref"].split("/").last, "oneOf").pluck("$ref")
+
+      expect(union).to eq(%w[FormResponse PageResponse OptionsResponse ActionResult].map { "#/components/schemas/#{it}" })
+      expect(doc.dig("components", "schemas")).to include("ActionWriteResponse")
+      expect(doc.dig("paths", "/api/admin/posts/{id}/rename", "post", "responses")).to include("501")
+    end
+
     it "counts against the default rate bucket", :frozen_time do
       old = ReactiveAdmin.config.rate_limits
       ReactiveAdmin.config.rate_limits = {default: [1, 1.minute]}

@@ -45,7 +45,7 @@ RSpec.describe "ransack guard on custom actions", type: :request do
   end
 
   it "leaves an action the resource declares as owning q alone" do
-    api_get("/api/admin/tickets/#{ticket.id}/find", q: {term: "printer"})
+    api_get("/api/admin/tickets/#{ticket.id}/find", schema: false, q: {term: "printer"})
 
     expect(response).to have_http_status(:ok)
     expect(json).to eq("term" => "printer")
