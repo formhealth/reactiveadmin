@@ -6,7 +6,7 @@ Website and docs: <https://formhealth.github.io/reactiveadmin/>, with a [demo](h
 
 ## Status
 
-Version 0.1.0. This is early software: the gem and the client aren't published to RubyGems or npm, and their interfaces may change before 1.0. See the [changelog](CHANGELOG.md).
+Version 0.2.0. This is early software: interfaces may change before 1.0. See the [changelog](CHANGELOG.md).
 
 ## Requirements
 
@@ -15,20 +15,20 @@ Version 0.1.0. This is early software: the gem and the client aren't published t
 | Ruby | 3.4 or later |
 | Rails | 8.1 or later |
 | ActiveAdmin | 3.5 or later in the 3.x line (ActiveAdmin 4 isn't supported yet) |
-| Node.js | 24, to build the client (`.nvmrc`) |
-| pnpm | 8.14.1 (`corepack enable`) |
+| Node.js | 24, only to build the client from a source checkout (`.nvmrc`) |
+| pnpm | 8.14.1, likewise (`corepack enable`) |
 
-The host app doesn't need Node.js at runtime. Build the client once at deploy time.
+The released gem ships the client prebuilt, so a host installed from RubyGems needs no Node.js. Only a source checkout builds it.
 
 The client bundles its own React 19.2 or later, so a host that runs React 18 elsewhere is unaffected. React 18 isn't supported: see [Custom components](docs/guide/custom-views.md#register-a-custom-component).
 
 ## Install
 
-The gem installs from GitHub. Point Bundler at the gemspec in the `gem/` directory:
-
-```ruby
-gem "reactiveadmin", github: "formhealth/reactiveadmin", glob: "gem/*.gemspec"
+```sh
+bundle add reactiveadmin
 ```
+
+The gem ships a prebuilt client, so the host needs no Node.js.
 
 ## Quick start
 
@@ -49,13 +49,11 @@ pnpm install
 pnpm dev   # http://localhost:5174, proxying to localhost:3003
 ```
 
-For production, build the client and let the gem serve it at your classic admin's URLs, switched per person by a cookie:
+In production the gem serves the prebuilt client at your classic admin's URLs, switched per person by a cookie, once you set `config.ui.available`. [Roll out the new admin](docs/guide/rollout.md) covers the configuration and ramp-up. From a source checkout, build the client first:
 
 ```sh
 bin/rails reactiveadmin:client:build
 ```
-
-[Roll out the new admin](docs/guide/rollout.md) covers the build, configuration and ramp-up.
 
 ## Documentation
 

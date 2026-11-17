@@ -6,12 +6,18 @@ ReactiveAdmin serves the ActiveAdmin resources in your Rails app as a JSON API, 
 
 - Ruby 3.4 or later.
 - Rails 8.1 or later.
-- ActiveAdmin 3.5, or any 3.x release. The gem doesn't support ActiveAdmin 4 yet.
-- Node.js and pnpm, for the client.
+- ActiveAdmin 3.5. ActiveAdmin 4 isn't supported yet.
+- Node.js 24 and pnpm only to build the client from source; the released gem ships it prebuilt.
 
 ## Install the gem
 
-Add the gem to your app's `Gemfile`. Use a path while you develop against a local checkout:
+Add the gem from RubyGems:
+
+```sh
+bundle add reactiveadmin
+```
+
+To work against a local checkout instead, use a path:
 
 ```ruby
 gem "reactiveadmin", path: "../reactiveadmin/gem"

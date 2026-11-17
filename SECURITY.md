@@ -8,7 +8,7 @@ Include what you found, the version or commit, and steps to reproduce it. We aim
 
 ## Supported versions
 
-reactiveadmin is early (0.1.0). Only the latest release on the default branch gets security fixes.
+reactiveadmin is early (0.x). Only the latest release on the default branch gets security fixes.
 
 ## Scope
 
