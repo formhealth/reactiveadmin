@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow [Semantic Versioning](https://semver.org/) from 1.0.
 
+## Unreleased
+
+### Fixed
+
+- The client's files (`ui.asset_prefix`) are answered by a Rack middleware placed before the cookie and session middleware. They were served from the router, behind the session, so a host whose stack loads the session sent `Set-Cookie` on public, immutable responses, which a CDN could cache and hand to other visitors. Files that aren't hashed now say `Cache-Control: no-cache` themselves instead of relying on later middleware.
+
 ## 0.2.0
 
 ### Added
