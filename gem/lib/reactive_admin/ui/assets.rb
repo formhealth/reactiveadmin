@@ -71,6 +71,7 @@ module ReactiveAdmin
       # Hashed files never change, so they cache for good; everything else revalidates.
       class Server
         IMMUTABLE = {"cache-control" => "public, max-age=31536000, immutable"}.freeze
+        REVALIDATE = {"cache-control" => "no-cache"}.freeze
 
         # The packaged build's stamp names the exact gem version, which is nobody's business. Judged on the path as
         # Rack::Files will read it, decoded and cleaned, so an encoded name can't slip past.
@@ -79,12 +80,29 @@ module ReactiveAdmin
           return not_found unless Rack::Utils.valid_path?(path)
           return not_found if File.basename(Rack::Utils.clean_path_info(path)) == PackagedClient::INFO
 
-          Rack::Files.new(Assets.root.to_s, env["PATH_INFO"].start_with?("/assets/") ? IMMUTABLE : {}).call(env)
+          Rack::Files.new(Assets.root.to_s, env["PATH_INFO"].start_with?("/assets/") ? IMMUTABLE : REVALIDATE).call(env)
         end
 
         private
 
         def not_found = [404, {"content-type" => "text/plain"}, ["Not Found"]]
+      end
+
+      # Answers the client's files ahead of the session middleware. These responses are public and cacheable, so
+      # they must never carry a session cookie: a shared cache (a CDN) would hand it to other visitors.
+      class Middleware
+        def initialize(app)
+          @app = app
+          @server = Server.new
+        end
+
+        def call(env)
+          prefix = Assets.prefix
+          path = env["PATH_INFO"].to_s
+          return @app.call(env) unless prefix.start_with?("/") && %w[GET HEAD].include?(env["REQUEST_METHOD"]) && path.start_with?("#{prefix}/")
+
+          @server.call(env.merge("SCRIPT_NAME" => env["SCRIPT_NAME"].to_s + prefix, "PATH_INFO" => path.delete_prefix(prefix)))
+        end
       end
     end
   end

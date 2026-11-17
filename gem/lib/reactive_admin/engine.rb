@@ -16,6 +16,12 @@ module ReactiveAdmin
       ActiveSupport.on_load(:action_view) { prepend Provenance::Helpers }
     end
 
+    # Before the cookie and session middleware: the client's files are public and cacheable, so they must not set a
+    # cookie. A host static file server placed earlier still wins for files it has.
+    initializer "reactiveadmin.ui_assets" do |app|
+      app.middleware.insert_before ActionDispatch::Cookies, Ui::Assets::Middleware
+    end
+
     # Innermost, so the host's own middleware (CSP headers, host authorization) wraps the shell as it does any page.
     initializer "reactiveadmin.ui_shell" do |app|
       app.middleware.use Ui::Shell
