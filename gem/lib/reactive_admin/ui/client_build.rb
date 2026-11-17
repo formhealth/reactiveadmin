@@ -34,7 +34,7 @@ module ReactiveAdmin
 
       # The build empties its output directory, so it only ever writes inside the app.
       def check!
-        raise Error, "No client source at #{source}. It ships with the reactiveadmin repository; set REACTIVEADMIN_CLIENT_SRC." unless source.join("package.json").exist?
+        raise Error, "No client source at #{source}. It ships with the ReactiveAdmin repository; set REACTIVEADMIN_CLIENT_SRC." unless source.join("package.json").exist?
         raise Error, "Refusing to build into #{out}: it must be a directory inside #{@root}." unless out.to_s.start_with?("#{@root}/")
       end
 
