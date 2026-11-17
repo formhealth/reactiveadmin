@@ -74,7 +74,7 @@ Never build a release with a plain `gem build`: it would ship without the client
 Publishing uses [RubyGems trusted publishing](https://guides.rubygems.org/trusted-publishing/), so the repository holds no API key.
 
 1. On the GitHub repository, create an environment named `release` (Settings, Environments). Add the maintainers who may approve a publish as required reviewers, turn on **Prevent self-review**, and limit deployment to tags matching `v*`. Do this before step 2: until the environment exists, GitHub creates it unprotected on the first run, and any `v*` tag would publish with no approval.
-2. On rubygems.org, open the gem's page, then Settings, Trusted publishers, and add a GitHub Actions publisher: repository owner `formhealth`, repository `reactiveadmin`, workflow `release.yml`, environment `release`. Before the first release, create it as a pending publisher (Account, Trusted publishers) for the gem name `reactiveadmin`.
+2. On rubygems.org, open the gem's page, then Settings, Trusted publishers, and add a GitHub Actions publisher: repository owner `formhealth`, repository `reactiveadmin`, workflow `release.yml`, environment `release`. Before the first release, create it as a pending publisher (Account, Trusted publishers) for the gem name `reactiveadmin`, then set the repository variable `RUBYGEMS_OWNER` (Settings, Secrets and variables, Actions, Variables) to your RubyGems handle or the account ID shown on that page. RubyGems only lets a trusted publisher create a new gem when the workflow names its owner.
 3. Keep `rubygems_mfa_required` in the gemspec. Trusted publishing satisfies it.
 
 ## Report a problem
