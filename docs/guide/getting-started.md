@@ -48,7 +48,7 @@ The presets decide what the API serves:
 
 - **guided** sets `config.expose = :listed` and writes `app/admin/menu.rb`, a `ReactiveAdmin.menu` that lists every registration in `app/admin`. The API serves only what stays in it, so you prune it. The initializer lists every setting with its default and a `TODO(setup)` note on each one to decide, so you can work through it yourself or hand it to an agent.
 - **quick** sets `config.expose = :all`: everything ActiveAdmin registers is served, with the secure defaults. The initializer is short and there's no menu.
-- **strict** is guided with nothing served yet (the menu's lines are commented out) and `config.strict_defaults = true`, so a section without a block shows no columns.
+- **strict** is guided with the menu's lines commented out and `config.strict_defaults = true`, so a section without a block shows no columns. Until you uncomment lines, the API serves only the namespace's root page (the dashboard) and anything marked `reactive { expose true }` or placed by a menu hint.
 
 The rest of the generator:
 

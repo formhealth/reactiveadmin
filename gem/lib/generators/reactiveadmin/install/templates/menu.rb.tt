@@ -1,6 +1,7 @@
 <% if @preset == "strict" -%>
 # What the API serves under `config.expose = :listed`, and where the new admin's menu places it.
-# Nothing is served yet: uncomment what should be. Groups, links and hiding: <%= docs %>/dsl.md#menu-overlay
+# Only the dashboard and anything marked `reactive { expose true }` or placed by a menu hint is served yet:
+# uncomment what else should be. Groups, links and hiding: <%= docs %>/dsl.md#menu-overlay
 ReactiveAdmin.menu do
 <% menu_resources.each do |key| -%>
   # resources :<%= key %>

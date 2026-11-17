@@ -28,7 +28,7 @@ module ReactiveAdmin
         "the API routes, and optionally the new-admin switch. Prompts in a terminal; every answer is also a flag."
 
       class_option :preset, type: :string, enum: PRESETS,
-        desc: "quick: serve everything ActiveAdmin registers. guided (default): serve what app/admin/menu.rb lists, generated with every registration to prune. strict: serve nothing until listed"
+        desc: "quick: serve everything ActiveAdmin registers. guided (default): serve what app/admin/menu.rb lists, generated with every registration to prune. strict: serve only what you list, plus the dashboard and anything marked `reactive { expose true }`"
       class_option :namespace, type: :string, desc: "The ActiveAdmin namespace to serve. Defaults to the one config/initializers/active_admin.rb sets, else admin."
       class_option :mask, type: :string, banner: "a,b",
         desc: "Attributes to mask everywhere in the API, or --no-mask for none. Defaults to the secrets found in db/schema.rb"
@@ -52,7 +52,7 @@ module ReactiveAdmin
         @preset = pick(:preset, "How should ReactiveAdmin start?", PRESETS, "guided", <<~HELP)
           quick   serve everything ActiveAdmin registers, with the secure defaults
           guided  serve what app/admin/menu.rb lists; it's generated with every registration, to prune
-          strict  serve nothing until you list it, and no columns that a block doesn't name
+          strict  serve only what you list (plus the dashboard), and no columns that a block doesn't name
         HELP
         @masked = masked_attributes_choice
         @mcp = pick(:mcp, "Turn on the MCP endpoint for AI agents?", MCP_MODES, "off", <<~HELP)
@@ -326,8 +326,9 @@ module ReactiveAdmin
              `:listed` and place resources in `ReactiveAdmin.menu` (app/admin/menu.rb).
         TEXT
         when "strict" then <<~TEXT.chomp
-          1. Expose resources: nothing is served yet. Uncomment what the API should serve in #{MENU}, then work
-             through the TODO(setup) notes in the initializer, yourself or with an agent.
+          1. Expose resources: only the dashboard (the namespace's root page) and anything marked
+             `reactive { expose true }` or placed by a menu hint is served yet. Uncomment what else the API should
+             serve in #{MENU}, then work through the TODO(setup) notes in the initializer, yourself or with an agent.
         TEXT
         else <<~TEXT.chomp
           1. Prune #{MENU}: it lists every registration, and the API serves only what stays. Then work through
