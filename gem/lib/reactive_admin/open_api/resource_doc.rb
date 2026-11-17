@@ -279,16 +279,9 @@ module ReactiveAdmin
       end
 
       def action_note(get)
-        return "Answers the action's template as a form, or 501 `unsupported` when it renders an html page (use the classic admin)." if get
+        return "Answers the action's template as a form or as its content, its redirect as the result, or 501 `unsupported` when it renders an html page (use the classic admin)." if get
 
         "The action's redirect and flash become the result; an alert or errors answer 422."
-      end
-
-      def action_responses(get)
-        return {200 => ref("responses", "ActionResult")} unless get
-
-        {200 => shared("FormOk"),
-         501 => {description: "The action renders an html page the API can't describe (`unsupported`).", content: json(schema_ref("Error"))}}
       end
 
       def action_errors(get, verb, member) = [403, *(404 if member), *(422 unless get), *(409 if %w[put patch].include?(verb))]

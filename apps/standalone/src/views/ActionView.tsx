@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ApiError, apiFetch, errorMessage } from '@/api/fetcher'
-import type { Action, ActionResult, FormResponse, PageResponse } from '@/api/generated/model'
+import type { Action, ActionResult, ActionWriteResponse, FormResponse, PageResponse } from '@/api/generated/model'
 import { FormSkeleton } from '@/components/FormSkeleton'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -32,23 +32,21 @@ type BodyProps = {
 }
 
 // A write that renders its template again (a search) answers with the page as a FormResponse, not an ActionResult.
-type Sent = ActionResult | FormResponse
-
-const isPage = (result: Sent): result is FormResponse => 'form' in result && 'action' in result
+const isPage = (result: ActionWriteResponse): result is FormResponse => 'form' in result && 'action' in result
 
 // A template with a form answers a FormResponse; a read-only one answers its content as a PageResponse.
 type Answer = FormResponse | PageResponse
 
 const isForm = (answer: Answer): answer is FormResponse => 'form' in answer
 
-const send = (response: FormResponse) => (entries: Parameters<typeof saveRecord>[1]) => saveRecord(response, entries) as Promise<Sent>
+const send = (response: FormResponse) => (entries: Parameters<typeof saveRecord>[1]) => saveRecord<ActionWriteResponse>(response, entries)
 
 type PageFormProps = {
   response: FormResponse
   label: string
   classicHref?: string
   ctx: { resource?: string; id?: string }
-  onResult: (result: Sent) => void
+  onResult: (result: ActionWriteResponse) => void
   onClose: () => void
 }
 
@@ -125,7 +123,7 @@ function NativeView({ action, path, container, resource, id, onResult, onClose, 
   const current = answer?.at === dataUpdatedAt ? answer : undefined
   const shown = current?.response ?? data
   const key = `${dataUpdatedAt}-${current?.count ?? 0}`
-  const sent = (result: Sent) => (isPage(result) ? setAnswer({ response: result, at: dataUpdatedAt, count: (current?.count ?? 0) + 1 }) : onResult(result))
+  const sent = (result: ActionWriteResponse) => (isPage(result) ? setAnswer({ response: result, at: dataUpdatedAt, count: (current?.count ?? 0) + 1 }) : onResult(result))
   const classicHref = action.href ?? undefined
   const ctx = { resource, id }
   const label = (shown && isForm(shown) && shown.submit_label) || action.label

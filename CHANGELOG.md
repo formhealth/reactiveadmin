@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## Unreleased
 
+### Changed
+
+- **Custom actions in the contract.** `core.yaml` declares GET member actions (`runMemberActionGet`, answering `ActionGetResponse`: a form, page content, options or a redirect's result), lets action writes answer `ActionWriteResponse` (a result or a re-rendered form), and declares their `501 unsupported`. The OpenAPI document gives member, collection and page actions the same responses.
+
 ### Fixed
 
 - The client's files (`ui.asset_prefix`) are answered by a Rack middleware placed before the cookie and session middleware. They were served from the router, behind the session, so a host whose stack loads the session sent `Set-Cookie` on public, immutable responses, which a CDN could cache and hand to other visitors. Files that aren't hashed now say `Cache-Control: no-cache` themselves instead of relying on later middleware.

@@ -31,8 +31,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActionGetResponse,
   ActionParamsBody,
   ActionResultResponse,
+  ActionWriteResponse,
   BadRequestResponse,
   BatchActionRequest,
   ClientErrorReport,
@@ -61,8 +63,10 @@ import type {
   RateLimitedResponse,
   RecordParams,
   ResourceMeta,
+  RunMemberActionGetParams,
   Session,
   ShowResponse,
+  UnsupportedResponse,
   ValueResponse,
   WriteResult
 } from './model';
@@ -1597,6 +1601,171 @@ export function useGetEditForm<TData = Awaited<ReturnType<typeof getEditForm>>, 
 
 
 
+export const getRunMemberActionGetUrl = (resource: string,
+    id: string,
+    action: string,
+    params?: RunMemberActionGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/admin/${resource}/${id}/${action}?${stringifiedParams}` : `/admin/${resource}/${id}/${action}`
+}
+
+/**
+ * A GET member action. Its template answers as a FormResponse (a form) or a PageResponse (read-only
+ * content), as `Action.view` says; with `context=template` and `field`, that template form field's options
+ * (OptionsResponse); a redirect answers an ActionResult; an html page the API can't describe answers 501
+ * `unsupported`. Collection actions are served the same way at `/admin/{resource}/{action}`, and page actions
+ * at `/admin/{page}/{action}`: those paths can't be declared apart from `/admin/{resource}/{id}` and
+ * `/admin/{resource}`, so this operation stands for them too.
+ */
+export const runMemberActionGet = async (resource: string,
+    id: string,
+    action: string,
+    params?: RunMemberActionGetParams, options?: Parameters<typeof apiFetch>[1]): Promise<ActionGetResponse> => {
+
+  return apiFetch<ActionGetResponse>(getRunMemberActionGetUrl(resource,id,action,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getRunMemberActionGetQueryKey = (resource: string,
+    id: string,
+    action: string,
+    params?: RunMemberActionGetParams,) => {
+    return [
+    `/admin/${resource}/${id}/${action}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getRunMemberActionGetQueryOptions = <TData = Awaited<ReturnType<typeof runMemberActionGet>>, TError = ErrorResponse | UnsupportedResponse>(resource: string,
+    id: string,
+    action: string,
+    params?: RunMemberActionGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof runMemberActionGet>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getRunMemberActionGetQueryKey(resource,id,action,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof runMemberActionGet>>> = ({ signal }) => runMemberActionGet(resource,id,action,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: resource !== null && resource !== undefined && id !== null && id !== undefined && action !== null && action !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof runMemberActionGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type RunMemberActionGetQueryResult = NonNullable<Awaited<ReturnType<typeof runMemberActionGet>>>
+export type RunMemberActionGetQueryError = ErrorResponse | UnsupportedResponse
+
+
+/**
+ * A GET member action. Its template answers as a FormResponse (a form) or a PageResponse (read-only
+ * content), as `Action.view` says; with `context=template` and `field`, that template form field's options
+ * (OptionsResponse); a redirect answers an ActionResult; an html page the API can't describe answers 501
+ * `unsupported`. Collection actions are served the same way at `/admin/{resource}/{action}`, and page actions
+ * at `/admin/{page}/{action}`: those paths can't be declared apart from `/admin/{resource}/{id}` and
+ * `/admin/{resource}`, so this operation stands for them too.
+ */
+export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMemberActionGet>>, TError = ErrorResponse | UnsupportedResponse>(
+ resource: string,
+    id: string,
+    action: string,
+    params: undefined |  RunMemberActionGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof runMemberActionGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof runMemberActionGet>>,
+          TError,
+          Awaited<ReturnType<typeof runMemberActionGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * A GET member action. Its template answers as a FormResponse (a form) or a PageResponse (read-only
+ * content), as `Action.view` says; with `context=template` and `field`, that template form field's options
+ * (OptionsResponse); a redirect answers an ActionResult; an html page the API can't describe answers 501
+ * `unsupported`. Collection actions are served the same way at `/admin/{resource}/{action}`, and page actions
+ * at `/admin/{page}/{action}`: those paths can't be declared apart from `/admin/{resource}/{id}` and
+ * `/admin/{resource}`, so this operation stands for them too.
+ */
+export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMemberActionGet>>, TError = ErrorResponse | UnsupportedResponse>(
+ resource: string,
+    id: string,
+    action: string,
+    params?: RunMemberActionGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof runMemberActionGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof runMemberActionGet>>,
+          TError,
+          Awaited<ReturnType<typeof runMemberActionGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * A GET member action. Its template answers as a FormResponse (a form) or a PageResponse (read-only
+ * content), as `Action.view` says; with `context=template` and `field`, that template form field's options
+ * (OptionsResponse); a redirect answers an ActionResult; an html page the API can't describe answers 501
+ * `unsupported`. Collection actions are served the same way at `/admin/{resource}/{action}`, and page actions
+ * at `/admin/{page}/{action}`: those paths can't be declared apart from `/admin/{resource}/{id}` and
+ * `/admin/{resource}`, so this operation stands for them too.
+ */
+export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMemberActionGet>>, TError = ErrorResponse | UnsupportedResponse>(
+ resource: string,
+    id: string,
+    action: string,
+    params?: RunMemberActionGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof runMemberActionGet>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * A GET member action. Its template answers as a FormResponse (a form) or a PageResponse (read-only
+ * content), as `Action.view` says; with `context=template` and `field`, that template form field's options
+ * (OptionsResponse); a redirect answers an ActionResult; an html page the API can't describe answers 501
+ * `unsupported`. Collection actions are served the same way at `/admin/{resource}/{action}`, and page actions
+ * at `/admin/{page}/{action}`: those paths can't be declared apart from `/admin/{resource}/{id}` and
+ * `/admin/{resource}`, so this operation stands for them too.
+ */
+export function useRunMemberActionGet<TData = Awaited<ReturnType<typeof runMemberActionGet>>, TError = ErrorResponse | UnsupportedResponse>(
+ resource: string,
+    id: string,
+    action: string,
+    params?: RunMemberActionGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof runMemberActionGet>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getRunMemberActionGetQueryOptions(resource,id,action,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getRunMemberActionPostUrl = (resource: string,
     id: string,
     action: string,) => {
@@ -1611,14 +1780,14 @@ export const getRunMemberActionPostUrl = (resource: string,
  * A member action declared with `member_action` (HTTP verb per `Action.method`). The action's
  * redirect + flash become an ActionResult; an alert/error flash becomes a 422. Authorized with
  * the same permission that gates `Action.enabled`. Collection actions are served the same way at
- * `/admin/{resource}/{action}` (no id).
+ * `/admin/{resource}/{action}` (no id), and page actions at `/admin/{page}/{action}`.
  */
 export const runMemberActionPost = async (resource: string,
     id: string,
     action: string,
-    actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionResultResponse> => {
+    actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionWriteResponse> => {
 
-  return apiFetch<ActionResultResponse>(getRunMemberActionPostUrl(resource,id,action),
+  return apiFetch<ActionWriteResponse>(getRunMemberActionPostUrl(resource,id,action),
   {
     ...options,
     method: 'POST',
@@ -1633,7 +1802,7 @@ export const runMemberActionPost = async (resource: string,
 
 export const getRunMemberActionPostMutationKey = () => ['runMemberActionPost'] as const;
 
-export const getRunMemberActionPostMutationOptions = <TError = ErrorResponse | InvalidResponse,
+export const getRunMemberActionPostMutationOptions = <TError = ErrorResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPost>>, TError,RunMemberActionPostMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPost>>, TError,RunMemberActionPostMutationVariables, TContext> => {
 
@@ -1662,16 +1831,16 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RunMemberActionPostMutationResult = NonNullable<Awaited<ReturnType<typeof runMemberActionPost>>>
     export type RunMemberActionPostMutationBody = ActionParamsBody | undefined
-    export type RunMemberActionPostMutationError = ErrorResponse | InvalidResponse
+    export type RunMemberActionPostMutationError = ErrorResponse | InvalidResponse | UnsupportedResponse
     export type RunMemberActionPostMutationVariables = {resource: string;id: string;action: string;data?: ActionParamsBody}
 
     /**
  * A member action declared with `member_action` (HTTP verb per `Action.method`). The action's
  * redirect + flash become an ActionResult; an alert/error flash becomes a 422. Authorized with
  * the same permission that gates `Action.enabled`. Collection actions are served the same way at
- * `/admin/{resource}/{action}` (no id).
+ * `/admin/{resource}/{action}` (no id), and page actions at `/admin/{page}/{action}`.
  */
-export const useRunMemberActionPost = <TError = ErrorResponse | InvalidResponse,
+export const useRunMemberActionPost = <TError = ErrorResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPost>>, TError,RunMemberActionPostMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof runMemberActionPost>>,
@@ -1698,9 +1867,9 @@ export const getRunMemberActionPutUrl = (resource: string,
 export const runMemberActionPut = async (resource: string,
     id: string,
     action: string,
-    actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionResultResponse> => {
+    actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionWriteResponse> => {
 
-  return apiFetch<ActionResultResponse>(getRunMemberActionPutUrl(resource,id,action),
+  return apiFetch<ActionWriteResponse>(getRunMemberActionPutUrl(resource,id,action),
   {
     ...options,
     method: 'PUT',
@@ -1715,7 +1884,7 @@ export const runMemberActionPut = async (resource: string,
 
 export const getRunMemberActionPutMutationKey = () => ['runMemberActionPut'] as const;
 
-export const getRunMemberActionPutMutationOptions = <TError = ErrorResponse | ConflictResponse | InvalidResponse,
+export const getRunMemberActionPutMutationOptions = <TError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPut>>, TError,RunMemberActionPutMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPut>>, TError,RunMemberActionPutMutationVariables, TContext> => {
 
@@ -1744,11 +1913,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RunMemberActionPutMutationResult = NonNullable<Awaited<ReturnType<typeof runMemberActionPut>>>
     export type RunMemberActionPutMutationBody = ActionParamsBody | undefined
-    export type RunMemberActionPutMutationError = ErrorResponse | ConflictResponse | InvalidResponse
+    export type RunMemberActionPutMutationError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse
     export type RunMemberActionPutMutationVariables = {resource: string;id: string;action: string;data?: ActionParamsBody}
 
     /** See runMemberActionPost. */
-export const useRunMemberActionPut = <TError = ErrorResponse | ConflictResponse | InvalidResponse,
+export const useRunMemberActionPut = <TError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPut>>, TError,RunMemberActionPutMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof runMemberActionPut>>,
@@ -1775,9 +1944,9 @@ export const getRunMemberActionPatchUrl = (resource: string,
 export const runMemberActionPatch = async (resource: string,
     id: string,
     action: string,
-    actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionResultResponse> => {
+    actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionWriteResponse> => {
 
-  return apiFetch<ActionResultResponse>(getRunMemberActionPatchUrl(resource,id,action),
+  return apiFetch<ActionWriteResponse>(getRunMemberActionPatchUrl(resource,id,action),
   {
     ...options,
     method: 'PATCH',
@@ -1792,7 +1961,7 @@ export const runMemberActionPatch = async (resource: string,
 
 export const getRunMemberActionPatchMutationKey = () => ['runMemberActionPatch'] as const;
 
-export const getRunMemberActionPatchMutationOptions = <TError = ErrorResponse | ConflictResponse | InvalidResponse,
+export const getRunMemberActionPatchMutationOptions = <TError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPatch>>, TError,RunMemberActionPatchMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPatch>>, TError,RunMemberActionPatchMutationVariables, TContext> => {
 
@@ -1821,11 +1990,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RunMemberActionPatchMutationResult = NonNullable<Awaited<ReturnType<typeof runMemberActionPatch>>>
     export type RunMemberActionPatchMutationBody = ActionParamsBody | undefined
-    export type RunMemberActionPatchMutationError = ErrorResponse | ConflictResponse | InvalidResponse
+    export type RunMemberActionPatchMutationError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse
     export type RunMemberActionPatchMutationVariables = {resource: string;id: string;action: string;data?: ActionParamsBody}
 
     /** See runMemberActionPost. */
-export const useRunMemberActionPatch = <TError = ErrorResponse | ConflictResponse | InvalidResponse,
+export const useRunMemberActionPatch = <TError = ErrorResponse | ConflictResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionPatch>>, TError,RunMemberActionPatchMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof runMemberActionPatch>>,
@@ -1852,9 +2021,9 @@ export const getRunMemberActionDeleteUrl = (resource: string,
 export const runMemberActionDelete = async (resource: string,
     id: string,
     action: string,
-    actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionResultResponse> => {
+    actionParamsBody?: ActionParamsBody, options?: Parameters<typeof apiFetch>[1]): Promise<ActionWriteResponse> => {
 
-  return apiFetch<ActionResultResponse>(getRunMemberActionDeleteUrl(resource,id,action),
+  return apiFetch<ActionWriteResponse>(getRunMemberActionDeleteUrl(resource,id,action),
   {
     ...options,
     method: 'DELETE',
@@ -1869,7 +2038,7 @@ export const runMemberActionDelete = async (resource: string,
 
 export const getRunMemberActionDeleteMutationKey = () => ['runMemberActionDelete'] as const;
 
-export const getRunMemberActionDeleteMutationOptions = <TError = ErrorResponse | InvalidResponse,
+export const getRunMemberActionDeleteMutationOptions = <TError = ErrorResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionDelete>>, TError,RunMemberActionDeleteMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof runMemberActionDelete>>, TError,RunMemberActionDeleteMutationVariables, TContext> => {
 
@@ -1898,11 +2067,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RunMemberActionDeleteMutationResult = NonNullable<Awaited<ReturnType<typeof runMemberActionDelete>>>
     export type RunMemberActionDeleteMutationBody = ActionParamsBody | undefined
-    export type RunMemberActionDeleteMutationError = ErrorResponse | InvalidResponse
+    export type RunMemberActionDeleteMutationError = ErrorResponse | InvalidResponse | UnsupportedResponse
     export type RunMemberActionDeleteMutationVariables = {resource: string;id: string;action: string;data?: ActionParamsBody}
 
     /** See runMemberActionPost. */
-export const useRunMemberActionDelete = <TError = ErrorResponse | InvalidResponse,
+export const useRunMemberActionDelete = <TError = ErrorResponse | InvalidResponse | UnsupportedResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runMemberActionDelete>>, TError,RunMemberActionDeleteMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof runMemberActionDelete>>,

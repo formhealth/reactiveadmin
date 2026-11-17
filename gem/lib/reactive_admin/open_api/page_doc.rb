@@ -64,9 +64,9 @@ module ReactiveAdmin
         add(Paths.api("#{prefix}#{@key}/#{name}"), verb, operation(
           id: id("#{camel(@key).camelize(:lower)}#{camel(name)}#{suffix}"), summary: "#{name.humanize} (page action)", tags:, write: !get,
           parameters: [*parameters, *([form_query_param] if get && Ladder.action(@page, name)&.get_form)],
-          description: get ? "Answers the action's template as a form." : "Page action `#{name}`, usually the target of a form in the page's content. The redirect and flash become the result; an alert answers 422.",
+          description: get ? "Answers the action's template as a form or as its content, or its redirect as the result." : "Page action `#{name}`, usually the target of a form in the page's content. The redirect and flash become the result; an alert answers 422.",
           request_body: (ref("requestBodies", "ActionParams") unless get),
-          responses: {200 => get ? shared("FormOk") : ref("responses", "ActionResult")},
+          responses: action_responses(get),
           errors: [403, *(422 unless get)]
         ), names: [name])
       end

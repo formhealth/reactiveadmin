@@ -117,7 +117,7 @@ export function useRecordAction(ctx: ActionContext = {}) {
           response={form.response}
           submitLabel={form.action.label}
           classicHref={form.action.href ?? undefined}
-          send={(entries) => saveRecord(form.response, entries) as Promise<ActionResult>}
+          send={(entries) => saveRecord<ActionResult>(form.response, entries)}
           onDone={(result) => {
             setForm(undefined)
             done(form.action, result)
