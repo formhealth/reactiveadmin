@@ -6,7 +6,7 @@ Website and docs: <https://formhealth.github.io/reactiveadmin/>, with a [demo](h
 
 ## Status
 
-Version 0.2.0. This is early software: interfaces may change before 1.0. See the [changelog](CHANGELOG.md).
+Version 0.2.1. This is early software: interfaces may change before 1.0. See the [changelog](CHANGELOG.md).
 
 ## Requirements
 
