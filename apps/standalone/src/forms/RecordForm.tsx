@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { ConfirmDialog } from './ConfirmDialog'
 import { CompactRows } from './CompactRows'
 import { RecordFormProvider, type FieldRegistry } from './context'
-import { useRecordFormContext } from './formContext'
+import { RowBaseContext, useRecordFormContext } from './formContext'
 import { humanize } from '@/lib/humanize'
 import { changeSummary, fieldKey, isCompact, type Row } from './model'
 import { defaultRegistry } from './registry'
@@ -63,9 +63,11 @@ function RowView({ index, row, position, count, section }: { index: number; row:
   return (
     <li className="flex items-start gap-2 rounded-md border bg-background p-3">
       <div className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-4">
-        {row.fields.map((f) => (
-          <FormFieldView key={fieldKey(f)} field={f} name={fieldKey(f)} />
-        ))}
+        <RowBaseContext value={row.base}>
+          {row.fields.map((f) => (
+            <FormFieldView key={fieldKey(f)} field={f} name={fieldKey(f)} />
+          ))}
+        </RowBaseContext>
         <RowNotes notes={form.rowNotes[row.rid]} />
       </div>
       <div className="flex shrink-0 items-center gap-0.5 pt-5">

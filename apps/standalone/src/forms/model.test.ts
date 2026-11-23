@@ -5,6 +5,7 @@ import { posts } from '@/mocks/fixtures'
 import {
   activeFields,
   collectEntries,
+  contentTabPrefix,
   dayBounds,
   defaultValues,
   fieldKey,
@@ -298,5 +299,15 @@ describe('compact nested rows', () => {
     it('ignores a row it cannot find', () => {
       expect(named({ desk_members: [{ id: 'gone', errors: { user_email: ['x'] } }, { new: 9, errors: { user_email: ['x'] } }] })).toMatchObject({ byKey: {}, notes: {} })
     })
+  })
+})
+
+describe('contentTabPrefix', () => {
+  it('keeps tab params apart in rows cloned from one template', () => {
+    const notes = field({ control: 'content', name: 'notes', param: null })
+    const section = { kind: 'has_many', param: 'post[comments_attributes]', fields: [], template_fields: [notes] } as unknown as FormSection
+    const [a, b] = [newRow(section, 5), newRow(section, 6)]
+    expect(contentTabPrefix(fieldKey(a.fields[0]), a.base)).not.toBe(contentTabPrefix(fieldKey(b.fields[0]), b.base))
+    expect(contentTabPrefix('notes')).toBe('notes.tab')
   })
 })

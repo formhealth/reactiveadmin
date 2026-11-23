@@ -1,4 +1,5 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
+import { expect } from 'storybook/test'
 import type { Node as NodeData, NodeVariant } from '@/api/generated/model'
 import { NodeContext } from './context'
 import { Node } from './Node'
@@ -118,4 +119,9 @@ export const AllNodes: Story = {
   },
   decorators: [withRecord],
   parameters: { viewportSize: { width: 1024, height: 1280 } },
+  // A nested attributes table is a query container inside a flex value; it must still take the value's width.
+  play: async ({ canvasElement }) => {
+    const nested = canvasElement.querySelector<HTMLElement>('dd dl')!
+    await expect(nested.getBoundingClientRect().width).toBeGreaterThan(200)
+  },
 }

@@ -9,6 +9,9 @@ export type FormContextValue = { form: RecordFormApi; registry: FieldRegistry; p
 
 export const FormContext = createContext<FormContextValue | undefined>(undefined)
 
+// The has_many row a field renders in (`Row.base`).
+export const RowBaseContext = createContext<string | undefined>(undefined)
+
 export function useRecordFormContext() {
   const ctx = useContext(FormContext)
   if (!ctx) throw new Error('Form fields must render inside <RecordForm>')

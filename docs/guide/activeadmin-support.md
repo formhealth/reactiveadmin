@@ -66,7 +66,7 @@ Index, show, form and page responses list what they fell back to in a `degraded`
 | Construct | Status | Notes |
 | --- | --- | --- |
 | Attributes tables, panels, and tables | Supported | Typed `attributes_table`, `panel`, and `table` nodes. |
-| `tabs` and `columns` | Supported (check) | Typed `tabs` and `columns` nodes. |
+| `tabs` and `columns` | Supported (check) | Typed `tabs` and `columns` nodes. A `column` keeps `span:`, `max_width:` and `min_width:` (plain lengths: px, rem, em or %). Columns sit side by side when the content area fits them. |
 | Layout classes, such as `flex`, `lg:flex-row`, `w-2/3`, `mt-4`, `font-bold`, and `text-muted` | Supported | A safelisted subset maps to typed hints (layout, width, spacing, text alignment, marks, tone). Other classes are ignored and reported. See [Layout classes and inline styles](doctor.md#layout-classes-and-inline-styles). |
 | Inline `style:` | Partly supported | Declarations that land exactly on the same vocabulary translate (`margin-top: 8px`, `text-align: center`, `display: flex; gap: 20px`). The rest are ignored and reported. |
 | `panel header_action:` | Not supported | |

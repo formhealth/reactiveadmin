@@ -22,6 +22,10 @@ export type ActiveField = { key: string; field: FormField; assoc?: string }
 
 const NO_INPUT = new Set(['html', 'content', 'hidden'])
 
+// The query params of tab groups in a form's content field. A field without a param keeps its template name in every
+// has_many row, so the row's base tells cloned rows apart.
+export const contentTabPrefix = (name: string, rowBase?: string) => `${rowBase ? `${rowBase}.` : ''}${name}.tab`
+
 // RHF treats `.` and `[]` in names as paths, so params are flattened into plain keys.
 export const fieldKey = (field: Pick<FormField, 'name' | 'param'>) =>
   (field.param ?? field.name)

@@ -39,7 +39,8 @@ import type { Ref } from './ref';
  * | attributes_table{title?, rows[{label, value: Node[]}]} | table{headers[], rows: Node[][]}
  * | action{action: Action with placement inline}: a button or link inside content that performs a non-GET request
  *   (rails-ujs data-method/data-confirm links, button_to forms); never render these as plain links
- * | tabs{children: tab[]} | tab{title, children} | columns{children: column[]} | column{children}
+ * | tabs{children: tab[]} | tab{title, children} | columns{children: column[]} | column{span?, min_width_css?, max_width_css?, children}: side by side when there is
+ *   room, each column's width in proportion to its `span` (default 1), within its CSS width limits
  * | toolbar{align, spacing?, children: (action|link)[]}: a row of actions and links with nothing else in it (button_to forms,
  *   rails-ujs links, plain links, however deeply wrapped in divs); inside a panel it is the panel's footer actions
  * | list{ordered, children: list_item[]} | list_item{children}: ul/ol/li
@@ -163,6 +164,16 @@ export interface Node {
   spacing?: NodeSpacing;
   /** Box: the widest it grows (max-w-*) */
   max_width?: NodeMaxWidth;
+  /**
+     * Column: the narrowest it gets (AA's `min_width:`)
+     * @pattern ^\d+(\.\d+)?(px|rem|em|%)$
+     */
+  min_width_css?: string;
+  /**
+     * Column: the widest it gets (AA's `max_width:`)
+     * @pattern ^\d+(\.\d+)?(px|rem|em|%)$
+     */
+  max_width_css?: string;
   /** Box: takes the free space of its row */
   grow?: boolean;
   /** Text or box: what the color means */

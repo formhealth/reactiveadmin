@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useGetRecord } from '@/api/generated/core'
 import { openedRecordQuery } from '@/api/recordQuery'
@@ -15,7 +16,7 @@ import { ValueRefreshContext } from '@/json/expand'
 import { classicUrl } from '@/lib/classic'
 import { isUuid, shortId } from '@/lib/ids'
 import { NodeContext } from '@/nodes/context'
-import { NodeList } from '@/nodes/Node'
+import { NodeList, TabScope } from '@/nodes/Node'
 import { pluralLabel } from '@/lib/humanize'
 
 export function ResourceShow() {
@@ -29,6 +30,7 @@ export function ResourceShow() {
   useDocumentTitle(name ?? data?.title)
   useRecordVisit(!!data, resource, id)
   const refreshValues = () => refetch().then((result) => result.data)
+  const pageNodes = useMemo(() => [...(data?.layout ?? []), ...(data?.sidebars ?? []).flatMap((sidebar) => sidebar.layout ?? [])], [data])
 
   if (error) return <ErrorState error={error} label={label} onRetry={refetch} backTo={{ to: listPath, label: `Back to ${label}` }} />
 
@@ -57,10 +59,12 @@ export function ResourceShow() {
       {data ? (
         <NodeContext value={{ resource, id, name }}>
           <ValueRefreshContext value={refreshValues}>
-            <div className="flex flex-col gap-4">
-              <NodeList nodes={data.layout} />
-              {data.sidebars && data.sidebars.length > 0 && <SidebarSections sidebars={data.sidebars} ctx={{ resource, id, name }} />}
-            </div>
+            <TabScope nodes={pageNodes}>
+              <div className="flex flex-col gap-4">
+                <NodeList nodes={data.layout} />
+                {data.sidebars && data.sidebars.length > 0 && <SidebarSections sidebars={data.sidebars} ctx={{ resource, id, name }} />}
+              </div>
+            </TabScope>
           </ValueRefreshContext>
         </NodeContext>
       ) : (

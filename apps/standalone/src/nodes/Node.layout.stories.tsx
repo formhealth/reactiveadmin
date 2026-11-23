@@ -130,6 +130,114 @@ export const PanelHeaderActions: Story = {
   },
 }
 
+// Long text wraps; content that can't wrap (a datetime, an external link) widens its column instead of overflowing.
+export const PanelTableCells: Story = {
+  args: {
+    node: panel('Recent comments', {
+      type: 'table',
+      headers: ['Author', 'Posted', 'Source', 'Excerpt'],
+      rows: [
+        [
+          text('Priya Raman'),
+          { type: 'datetime', value: '2026-10-15T09:30:00.000Z' },
+          { type: 'link', label: 'newsletter.example.com/2026/10/editorial-calendars-recap', href: 'https://newsletter.example.com/2026/10/editorial-calendars-recap', external: true },
+          text('The calendar template is exactly what our desk needed, and the copy desk queue finally has one owner.'),
+        ],
+        [
+          text('Marcus Johnson'),
+          { type: 'attributes_table', rows: [{ label: 'Votes', value: [text('12')] }, { label: 'Flags', value: [text('None')] }] },
+          text('https://example.com/2026/10/how-a-small-newsroom-rebuilt-its-publishing-workflow'),
+          text('Short reply'),
+        ],
+        [
+          text('Sarah Chen'),
+          { type: 'box', children: [{ type: 'attributes_table', rows: [{ label: 'Votes', value: [text('3')] }] }] },
+          { type: 'definition_list', rows: [{ label: 'Source', value: [text('Comment form')] }] },
+          text('Thanks'),
+        ],
+        [
+          text('Jordan Johnson'),
+          {
+            type: 'group',
+            children: [
+              { type: 'attributes_table', rows: [{ label: 'Votes', value: [text('7')] }] },
+              { type: 'attributes_table', rows: [{ label: 'Flags', value: [text('1')] }] },
+            ],
+          },
+          {
+            type: 'box',
+            children: [
+              { type: 'attributes_table', rows: [{ label: 'Status', value: [text('Pending')] }] },
+              { type: 'link', label: 'newsletter.example.com/2026/10/a-much-longer-recap-of-editorial-calendars', href: 'https://newsletter.example.com/recap', external: true },
+            ],
+          },
+          text('Mixed'),
+        ],
+      ],
+    }),
+  },
+  parameters: { viewportSize: { width: 1280, height: 300 } },
+  play: async ({ canvasElement }) => {
+    for (const cell of canvasElement.querySelectorAll<HTMLElement>('td')) {
+      for (const child of cell.querySelectorAll<HTMLElement>('time, a')) {
+        await expect(child.getBoundingClientRect().right).toBeLessThanOrEqual(cell.getBoundingClientRect().right)
+      }
+    }
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/calendar template/).getBoundingClientRect().height).toBeGreaterThan(30)
+    await expect(canvas.getByText(/^https:\/\/example\.com/).getBoundingClientRect().width).toBeLessThanOrEqual(241)
+    for (const dl of canvasElement.querySelectorAll<HTMLElement>('td dl')) await expect(dl.getBoundingClientRect().width).toBeGreaterThan(100)
+  },
+}
+
+// AA's `column max_width: "320px"` and `min_width:` hold whatever the share would be.
+export const ColumnWidthLimits: Story = {
+  args: {
+    node: {
+      type: 'columns',
+      children: [
+        { type: 'column', children: [panel('Post', text('Uneven shares'))] },
+        { type: 'column', max_width_css: '320px', children: [panel('Tags', text('Capped at 320px'))] },
+        { type: 'column', min_width_css: '400px', children: [panel('Comments', text('At least 400px'))] },
+      ],
+    },
+  },
+  parameters: { viewportSize: { width: 1400, height: 300 } },
+  play: async ({ canvasElement }) => {
+    const width = (title: string) => within(canvasElement).getByText(title).closest('[data-slot=card]')!.parentElement!.getBoundingClientRect().width
+    await expect(width('Tags')).toBeLessThanOrEqual(320)
+    await expect(width('Comments')).toBeGreaterThanOrEqual(400)
+  },
+}
+
+const cardColumn = (canvasElement: HTMLElement, title: string) => within(canvasElement).getByText(title).closest('[data-slot=card]')!.parentElement!
+
+// As in AA, a percentage limit is of the whole row, and a min width holds when the columns stack.
+export const ColumnRelativeLimits: Story = {
+  args: {
+    node: {
+      type: 'columns',
+      children: [
+        { type: 'column', min_width_css: '420px', children: [panel('Post', text('At least 420px'))] },
+        { type: 'column', max_width_css: '50%', children: [panel('Tags', text('Up to half the row'))] },
+      ],
+    },
+  },
+  parameters: { viewportSize: { width: 1100, height: 300 } },
+  play: async ({ canvasElement }) => {
+    const row = canvasElement.querySelector<HTMLElement>('.\\@container')!.getBoundingClientRect().width
+    await expect(cardColumn(canvasElement, 'Tags').getBoundingClientRect().width).toBeGreaterThan(row * 0.4)
+  },
+}
+
+export const ColumnMinWidthStacked: Story = {
+  ...ColumnRelativeLimits,
+  parameters: { viewportSize: { width: 390, height: 400 } },
+  play: async ({ canvasElement }) => {
+    await expect(cardColumn(canvasElement, 'Post').getBoundingClientRect().width).toBeGreaterThanOrEqual(420)
+  },
+}
+
 export const OrderedList: Story = {
   args: { node: { type: 'list', ordered: true, children: [{ type: 'list_item', children: [text('Verify sources')] }, { type: 'list_item', children: [text('Schedule intake')] }] } },
   parameters: { viewportSize: { width: 500, height: 160 } },
