@@ -244,6 +244,46 @@ RSpec.describe ReactiveAdmin::HtmlNodes do
       expect(nodes(html).first[:children].pluck(:type)).to eq(%w[column column])
     end
 
+    it "keeps AA's column spans and width limits" do
+      html = Arbre::Context.new {
+        columns do
+          column(span: 2) { "a" }
+          column(max_width: "320px", min_width: 200) { "b" }
+        end
+      }.to_s
+
+      expect(nodes(html).first[:children]).to eq([
+        {type: "column", span: 2, children: [{type: "text", text: "a"}]},
+        {type: "column", min_width_css: "200px", max_width_css: "320px", children: [{type: "text", text: "b"}]}
+      ])
+    end
+
+    it "tells close and wide span ratios apart" do
+      spans = ->(a, b) {
+        html = Arbre::Context.new {
+          columns do
+            column(span: a) { "a" }
+            column(span: b) { "b" }
+          end
+        }.to_s
+        nodes(html).first[:children].map { it[:span] }
+      }
+
+      expect(spans.call(12, 1)).to eq([12, nil])
+      expect(spans.call(12, 11)).to eq([12, 11])
+    end
+
+    it "keeps equal columns plain and drops width limits that aren't simple lengths" do
+      html = Arbre::Context.new {
+        columns do
+          column(span: 3) { "a" }
+          column(span: 3, max_width: "calc(100% - 1px)") { "b" }
+        end
+      }.to_s
+
+      expect(nodes(html).first[:children]).to eq([{type: "column", children: [{type: "text", text: "a"}]}, {type: "column", children: [{type: "text", text: "b"}]}])
+    end
+
     it "walks tabs" do
       html = '<div class="tabs"><ul class="nav-tabs"><li>One</li></ul><div class="tab-content"><div>x</div></div></div>'
 

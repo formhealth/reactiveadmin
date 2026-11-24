@@ -1,12 +1,13 @@
-import { useMemo } from 'react'
+import { useContext, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { classicUrl } from '@/lib/classic'
 import { cn } from '@/lib/utils'
 import { NodeContext } from '@/nodes/context'
-import { NodeList } from '@/nodes/Node'
+import { NodeList, TabScope } from '@/nodes/Node'
 import { purify } from '@/sanitize/purify'
 import type { FieldProps } from '../context'
-import { useRecordFormContext } from '../formContext'
+import { RowBaseContext, useRecordFormContext } from '../formContext'
+import { contentTabPrefix } from '../model'
 import { FieldShell } from './shell'
 import { useField } from './useField'
 
@@ -44,14 +45,17 @@ export function HtmlField({ field }: FieldProps) {
 }
 
 // What the form block printed around its inputs, laid out as a page's content within the form's record.
-export function ContentField({ field }: FieldProps) {
+export function ContentField({ field, name: path }: FieldProps) {
   const { form } = useRecordFormContext()
   const { resource, id, display_name: name } = form.response
+  const prefix = contentTabPrefix(path, useContext(RowBaseContext))
   return (
     <NodeContext value={{ resource, id, name }}>
-      <div className="flex min-w-0 flex-col gap-4">
-        <NodeList nodes={field.layout} />
-      </div>
+      <TabScope nodes={field.layout ?? []} prefix={prefix}>
+        <div className="flex min-w-0 flex-col gap-4">
+          <NodeList nodes={field.layout} />
+        </div>
+      </TabScope>
     </NodeContext>
   )
 }

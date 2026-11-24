@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow [Semantic Versioning](https://semver.org/) from 1.0.
 
+## Unreleased
+
+### Added
+
+- `columns` keep ActiveAdmin's `column span:`, `max_width:` and `min_width:`: the `column` node carries `span`, `min_width_css` and `max_width_css`, and the client sizes each column in proportion to its span within those limits. They were dropped, and every column was the same width.
+
+### Fixed
+
+- `columns` go side by side by the width of the content area instead of the viewport, so the nav rail no longer squeezes them: two columns from 48rem, three from 64rem, more from 80rem.
+- Attributes tables size the label column to the longest label (up to 12rem) and stack labels over values when the panel is narrow, so values no longer collapse in a side column.
+- Tables in show panels (`table_for`) wrap long cells instead of keeping every cell on one line, so they no longer scroll sideways in a card or widen their column. Index tables are unchanged.
+- Each tab group on a page keeps its own query param (`?tab=` for the first, then `?tab2=`, ...), so choosing a tab in one group no longer resets the others or switches tabs with the same title.
+
 ## 0.3.0
 
 ### Changed

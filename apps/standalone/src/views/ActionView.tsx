@@ -16,7 +16,7 @@ import { FrameBoundary } from '@/boundaries/FrameBoundary'
 import { FrameView } from '@/frame/FrameView'
 import { IframeView } from '@/frame/IframeView'
 import { NodeContext, OwnFormContext, ViewQueryContext, useViewQuery } from '@/nodes/context'
-import { NodeList } from '@/nodes/Node'
+import { NodeList, TabScope } from '@/nodes/Node'
 import { customPages } from './customPages'
 import { fallbackMode, presentationOf } from './presentation'
 
@@ -53,9 +53,12 @@ type PageFormProps = {
 function Content({ nodes, ctx }: { nodes: PageResponse['layout']; ctx: { resource?: string; id?: string } }) {
   return (
     <NodeContext.Provider value={ctx}>
-      <div className="flex flex-col gap-4">
-        <NodeList nodes={nodes} />
-      </div>
+      {/* Opened over a page, whose own tab groups already hold `?tab=`. */}
+      <TabScope nodes={nodes} prefix="action.tab">
+        <div className="flex flex-col gap-4">
+          <NodeList nodes={nodes} />
+        </div>
+      </TabScope>
     </NodeContext.Provider>
   )
 }

@@ -57,6 +57,24 @@ module ReactiveAdmin
 
         def markup = MARKUP
 
+        # The contract's `span` limit.
+        MAX_COLUMN_SPAN = 12
+
+        # AA 3 sizes `column span:, max_width:, min_width:` only as inline styles: `width: N%`, with a 2% margin between
+        # columns, so each width plus 2 is the column's span times one shared unit (the widths and margins add up to 102).
+        # Answers each column's span (the smallest whole numbers in that ratio) and its raw `max-width` and `min-width`.
+        # AA prints the widths at full Float precision, so the ratio only has to absorb rounding.
+        def column_sizes(styles)
+          css = styles.map { |style| style.to_s.split(";").filter_map { it.split(":", 2).map(&:strip) if it.include?(":") }.to_h }
+          shares = css.map { it["width"].to_f + 2 }
+          count = (1..(MAX_COLUMN_SPAN * shares.size)).find do |n|
+            shares.all? { (it * n / shares.sum).then { |span| span >= 1 - 1e-6 && (span - span.round).abs < 1e-6 } }
+          end
+          css.zip(shares).map do |props, share|
+            {span: count && (share * count / shares.sum).round, max_width: props["max-width"], min_width: props["min-width"]}
+          end
+        end
+
         # Containers whose children HtmlNodes must not flatten into a toolbar or pass through.
         def structural_classes = STRUCTURAL
 

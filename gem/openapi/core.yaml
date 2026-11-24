@@ -1539,7 +1539,8 @@ components:
         | attributes_table{title?, rows[{label, value: Node[]}]} | table{headers[], rows: Node[][]}
         | action{action: Action with placement inline}: a button or link inside content that performs a non-GET request
           (rails-ujs data-method/data-confirm links, button_to forms); never render these as plain links
-        | tabs{children: tab[]} | tab{title, children} | columns{children: column[]} | column{children}
+        | tabs{children: tab[]} | tab{title, children} | columns{children: column[]} | column{span?, min_width_css?, max_width_css?, children}: side by side when there is
+          room, each column's width in proportion to its `span` (default 1), within its CSS width limits
         | toolbar{align, spacing?, children: (action|link)[]}: a row of actions and links with nothing else in it (button_to forms,
           rails-ujs links, plain links, however deeply wrapped in divs); inside a panel it is the panel's footer actions
         | list{ordered, children: list_item[]} | list_item{children}: ul/ol/li
@@ -1637,6 +1638,8 @@ components:
         text_align: { type: string, enum: [left, center, right] }
         spacing: { $ref: "#/components/schemas/NodeSpacing" }
         max_width: { type: string, enum: [sm, md, lg, xl, 2xl], description: "Box: the widest it grows (max-w-*)" }
+        min_width_css: { type: string, pattern: '^\d+(\.\d+)?(px|rem|em|%)$', description: "Column: the narrowest it gets (AA's `min_width:`)" }
+        max_width_css: { type: string, pattern: '^\d+(\.\d+)?(px|rem|em|%)$', description: "Column: the widest it gets (AA's `max_width:`)" }
         grow: { type: boolean, description: "Box: takes the free space of its row" }
         tone: { type: string, enum: [muted, success, danger, warning], description: "Text or box: what the color means" }
         nowrap: { type: boolean, description: "Text or box: keep the text on one line" }

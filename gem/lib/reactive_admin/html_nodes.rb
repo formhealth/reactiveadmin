@@ -293,9 +293,19 @@ module ReactiveAdmin
       {type: "tabs", children: tabs}
     end
 
+    # A length the client can pass to CSS as is; anything else (calc(), var()) is left out.
+    CSS_LENGTH = /\A\d+(?:\.\d+)?(?:px|rem|em|%)\z/
+
     def columns(el)
       columns = el.element_children.select { it.classes.include?(css[:column]) }
-      {type: "columns", children: columns.map { {type: "column", children: nodes(it.inner_html)} }}
+      sizes = AA.column_sizes(columns.map { it["style"] })
+      spans = sizes.map { it[:span] }
+      uneven = spans.uniq.size > 1 && spans.all? { it.to_i <= 12 }
+      children = columns.zip(sizes).map do |column, size|
+        limits = {min_width_css: size[:min_width], max_width_css: size[:max_width]}.select { |_, value| value&.match?(CSS_LENGTH) }
+        {type: "column", span: (size[:span] if uneven && size[:span].to_i > 1), **limits, children: nodes(column.inner_html)}.compact
+      end
+      {type: "columns", children:}
     end
 
     def table(el)

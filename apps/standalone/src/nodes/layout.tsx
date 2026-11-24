@@ -1,16 +1,21 @@
+import { useContext, type CSSProperties } from 'react'
 import { useSearchParams } from 'react-router'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { uniqueKeys } from '@/lib/keys'
+import { cn } from '@/lib/utils'
+import { columnLimits, columnsLayout } from './columns'
 import { NodeList, type NodeProps } from './Node'
+import { TabParamsContext } from './tabParams'
 
 const slug = (title?: string | null) => (title ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
-// The selected tab lives in `?tab=`, so a view can be shared and survives a reload.
+// The selected tab lives in the query (`?tab=`, `?tab2=`, ... per group), so a view can be shared and survives a reload.
 export function TabsNode({ node }: NodeProps) {
   const [params, setParams] = useSearchParams()
+  const param = useContext(TabParamsContext)?.get(node) ?? 'tab'
   const tabs = node.children ?? []
   const keys = uniqueKeys(tabs.map((tab, i) => slug(tab.title) || `tab-${i + 1}`))
-  const selected = keys.find((key) => key === params.get('tab')) ?? keys[0]
+  const selected = keys.find((key) => key === params.get(param)) ?? keys[0]
 
   return (
     <Tabs
@@ -19,7 +24,7 @@ export function TabsNode({ node }: NodeProps) {
         setParams(
           (prev) => {
             const next = new URLSearchParams(prev)
-            next.set('tab', tab)
+            next.set(param, tab)
             return next
           },
           { replace: true },
@@ -47,17 +52,22 @@ export function TabsNode({ node }: NodeProps) {
 // Only reached when a `tab` or `column` appears outside its parent; the parents render their children themselves.
 export const Passthrough = ({ node }: NodeProps) => <NodeList nodes={node.children} />
 
-const GRID = ['md:grid-cols-1', 'md:grid-cols-1', 'md:grid-cols-2', 'md:grid-cols-3', 'md:grid-cols-4']
-
 export function ColumnsNode({ node }: NodeProps) {
   const columns = node.children ?? []
+  const { tracks, className } = columnsLayout(columns)
   return (
-    <div className={`grid gap-4 ${GRID[Math.min(columns.length, 4)]}`}>
-      {columns.map((column, i) => (
-        <div key={i} className="flex min-w-0 flex-col gap-4">
-          <NodeList nodes={column.children} />
-        </div>
-      ))}
+    // A query container has no width of its own content, so it takes all it's given.
+    <div className="@container w-full min-w-0">
+      <div style={{ '--tracks': tracks } as CSSProperties} className={cn('grid gap-4', className)}>
+        {columns.map((column, i) => {
+          const limits = columnLimits(column)
+          return (
+            <div key={i} style={limits.style} className={cn('flex min-w-0 flex-col gap-4', limits.className)}>
+              <NodeList nodes={column.children} />
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

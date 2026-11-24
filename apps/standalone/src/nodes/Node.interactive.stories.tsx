@@ -180,6 +180,37 @@ export const TabsSameTitle: Story = {
   },
 }
 
+// Both groups have an Overview tab; each keeps its own selection (`?tab=` and `?tab2=`).
+const twoGroups: NodeData = {
+  type: 'box',
+  children: [
+    tabs,
+    {
+      type: 'tabs',
+      children: [
+        { type: 'tab', title: 'Overview', children: [panel('Comments', text('14 approved, 2 pending'))] },
+        { type: 'tab', title: 'Moderation', children: [panel('Queue', text('2 comments wait for review'))] },
+      ],
+    },
+  ],
+}
+
+export const TwoTabGroups: Story = {
+  args: { node: twoGroups },
+  parameters: { route: '/posts/5001?tab=history', viewportSize: { width: 900, height: 420 } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Created Oct 13, published Oct 14')).toBeVisible()
+    await expect(canvas.getByText('14 approved, 2 pending')).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: 'Moderation' }))
+    await expect(await canvas.findByText('2 comments wait for review')).toBeVisible()
+    await expect(canvas.getByText('Created Oct 13, published Oct 14')).toBeVisible()
+    await userEvent.click(canvas.getAllByRole('tab', { name: 'Overview' })[0]!)
+    await expect(await canvas.findByText('Jordan Johnson, Oct 13, 2026')).toBeVisible()
+    await expect(canvas.getByText('2 comments wait for review')).toBeVisible()
+  },
+}
+
 export const ToolbarRepeatedAction: Story = {
   args: {
     node: { type: 'toolbar', children: [{ type: 'action', action: { ...retry, label: 'Refresh' } }, { type: 'action', action: { ...retry, label: 'Rebuild' } }] },
